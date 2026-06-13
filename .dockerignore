@@ -1,0 +1,10 @@
+.git
+.gitignore
+.idea
+target
+*.iml
+*.log
+specs
+prompts
+skills
+AGENTS.md

@@ -67,8 +67,9 @@ Create a runnable Java 25 and Spring Boot 4.0.x project with basic structure, te
 * [ ] Add network configuration for service-to-server communication
 * [ ] Add integration test that verifies OPC UA server availability
 * [ ] Add Node-RED service to `docker-compose.yml`
-* [ ] Install OpcUa-Server node in Node-RED
-* [ ] Use `docs/opc-us.json` flow to simulate OPC UA server
+ * [ ] Install OpcUa-Server node in Node-RED
+ * [ ] Mount `docs/opc-us.json` as a volume in the Node-RED container so the flow loads automatically on start
+ * [ ] Use `docs/opc-us.json` flow to simulate OPC UA server
 
 **Acceptance Criteria**
 

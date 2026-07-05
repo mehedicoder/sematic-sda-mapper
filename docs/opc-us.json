@@ -21,7 +21,7 @@
       "id":"8a4b4e742a3916ec",
       "type":"OpcUa-Server",
       "z":"11a578056fc3d56a",
-      "port":"53881",
+      "port":"4840",
       "name":"CSS-SDA Simulation Server",
       "endpoint":"",
       "users":"users.json",

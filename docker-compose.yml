@@ -1,3 +1,7 @@
+networks:
+  sda-network:
+    driver: bridge
+
 services:
   semantic-sda-mapper:
     image: semantic-sda-mapper:local
@@ -6,6 +10,8 @@ services:
       dockerfile: docker/Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: container
+      OPC_UA_SERVER_HOST: nodered
+      OPC_UA_SERVER_PORT: 4840
     ports:
       - "8080:8080"
     healthcheck:
@@ -15,12 +21,30 @@ services:
       retries: 6
       start_period: 30s
     restart: "no"
+    depends_on:
+      nodered:
+        condition: service_healthy
+    networks:
+      - sda-network
 
   nodered:
-    image: nodered/node-red
+    build:
+      context: .
+      dockerfile: docker/nodered/Dockerfile
     container_name: mynodered
     ports:
       - "1880:1880"
+      - "4840:4840"
+    volumes:
+      - ./docs/opc-us.json:/data/flows.json
     stdin_open: true
     tty: true
     restart: "no"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:1880/',r=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    networks:
+      - sda-network

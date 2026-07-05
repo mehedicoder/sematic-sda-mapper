@@ -48,11 +48,16 @@ Check for:
 - Unauthorized scope expansion
 - Hardcoded semantic matching in Java
 - Invalid or inconsistent Turtle data
-- SPARQL queries that do not enforce capability, protocol, access mode, connector, deployment, recall, or latency constraints
+- SPARQL queries that do not enforce capability, protocol, access mode, security properties, connector, deployment, recall, or latency constraints across all CSS-SDA dimensions
 - Query behavior that cannot explain why a service matched
+- MTP AML parser: incorrect Service/Parameter → css:Skill/css:SkillParameter mapping, wrong CommunicationBinding or DataConnector triples, missing error handling for malformed AML
+- OPC UA Server Datasheet parser: incorrect EndpointDescriptions → CommunicationBinding mapping, missing securityLevel/transportProfile/discoveryUrl, missing Configuration/NodeSets → DataConnector mapping
+- OWL reasoner inference: OfferedCapability not correctly derived from SkillParameter semantics, explicit triples overwritten by inference, wrong axiom A4 behavior
+- Cross-plant SPARQL queries: returns results from both use cases, correctly filters by site/zone
 - Jena resource leaks or unclear error handling
 - REST API validation gaps
-- Kubernetes YAML that is nondeterministic, invalid, or missing selected-service metadata
+- Docker Compose YAML that is nondeterministic, invalid, or missing selected-service metadata
+- Kubernetes YAML that is nondeterministic, invalid, or missing nodeSelector constraints from DeploymentContext
 - Missing positive and negative tests
 - Missing JavaDoc on changed public classes and public contract methods
 - Documentation claiming unsupported behavior
@@ -101,8 +106,8 @@ For implementation reviews, report findings first, ordered by severity.
 
 Severity guidance:
 
-- `HIGH`: Incorrect matching/rejection behavior, invalid ontology/query, broken API contract, build/test failure hidden by code changes, or unapproved architecture expansion.
-- `MEDIUM`: Missing important negative tests, unclear error handling, nondeterministic YAML, incomplete validation coverage, missing required JavaDoc.
+- `HIGH`: Incorrect matching/rejection behavior, invalid ontology/query, parser generates wrong triples, inference produces wrong OfferedCapability, broken API contract, build/test failure hidden by code changes, or unapproved architecture expansion.
+- `MEDIUM`: Missing important negative tests, unclear error handling, nondeterministic YAML, incomplete validation coverage, missing required JavaDoc, parser missing optional element handling.
 - `LOW`: Maintainability, naming, documentation clarity, or small consistency issues.
 
 Use file and line references when possible.

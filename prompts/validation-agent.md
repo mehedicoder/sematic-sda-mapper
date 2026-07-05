@@ -47,6 +47,19 @@ mvn spring-boot:run
 curl http://localhost:8080/actuator/health
 docker build -t semantic-sda-mapper:local -f docker/Dockerfile .
 docker compose up --build
+
+# Input file parser tests (Phase 4)
+mvn test -Dtest="MTPAmlParserTest"
+mvn test -Dtest="UaServerDatasheetParserTest"
+
+# Ontology inference tests (Phase 6)
+mvn test -Dtest="OntologyInferenceServiceTest"
+
+# Docker Compose validation (Phase 9)
+python -c "import yaml; yaml.safe_load(open('docker/examples/...'))"
+
+# Kubernetes YAML parsing (Phase 9)
+python -c "import yaml; yaml.safe_load(open('k8s/examples/...'))"
 ```
 
 Do not claim a command passed unless you ran it or the human provided trustworthy evidence.
@@ -57,14 +70,18 @@ Do not claim a command passed unless you ran it or the human provided trustworth
 
 Validate the behavior required by the active roadmap phase:
 
-- Phase 1: Maven build, application startup, Actuator health, Dockerfile, Docker Compose.
-- Phase 2: valid Turtle ontology, required classes/properties/individuals, at least one matching service, negative candidates, Jena load test.
+- Phase 1: Maven build, application startup, Actuator health, Dockerfile, Docker Compose, Node-RED + OPC UA simulation.
+- Phase 2: valid Turtle ontology with all CSS-SDA dimensions (Capability, Skill, CommunicationBinding, DataConnector, DeploymentContext), MTPModule/FieldDevice classes, CommunicationBinding with full security properties, OfferedCapability/RequiredCapability, Jena load test.
 - Phase 3: ontology loader success, missing file error, invalid content error.
-- Phase 4: SPARQL query returns `FlowmeterDiagnosticsService` for `REQ_001` and rejects wrong capability, protocol, latency, and deployment candidates.
-- Phase 5: reasoner returns complete match/no-match result without hardcoded Java selection.
-- Phase 6: REST endpoint validation, match response, no-match response, blank requirement ID error.
-- Phase 7: generated Kubernetes YAML includes selected service metadata and parses as valid YAML.
-- Phase 8+: explanation and evaluation cases are testable and traceable.
+- Phase 4: MTP AML parser generates correct CommunicationBinding/DataConnector/Skill triples from valid AML. OPC UA Server Datasheet parser generates correct CommunicationBinding triples with securityLevel/transportProfile/discoveryUrl. Both parsers fail with clear errors on invalid input. Parsed triples load into same Jena Model as ontology schema.
+- Phase 5: SPARQL query returns `FlowmeterDiagnosticsService` for `REQ_001` and rejects wrong capability, protocol, latency, sil, zone, and deployment candidates. Query evaluates multiple CSS-SDA dimensions simultaneously.
+- Phase 6: OWL reasoner derives `OfferedCapability` from `SkillParameter` semantics (functionClass, engineeringUnit, nominalRange). Existing explicit capability triples preserved. Changing SkillParameter input changes inferred capability.
+- Phase 7: reasoner returns complete match/no-match result without hardcoded Java selection. Supports extraction of endpoint, sil, zone, and connector metadata.
+- Phase 8: REST endpoint validation, match response, no-match response, blank requirement ID error.
+- Phase 9: generated Docker Compose and Kubernetes YAML include selected service metadata and parse as valid YAML. Kubernetes YAML contains nodeSelector from DeploymentContext (sil, determinism, zone).
+- Phase 10: matching explanation includes capability, protocol, access mode, deployment context reasons. No-match response explains unsatisfied constraints.
+- Phase 11: evaluation dataset with fermentation skid and HVAC plant. Cross-plant query returns temperature services from both plants. Positive and negative match tests pass for both use cases.
+- Phase 12+: Margo Sandbox, documentation, optional runtime verification, and optional Dagger as defined in roadmap.
 
 ---
 

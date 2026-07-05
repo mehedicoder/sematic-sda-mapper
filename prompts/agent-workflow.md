@@ -10,15 +10,23 @@ Agents are separated by responsibility, not by runtime environment. The human en
 
 Build a small executable prototype that maps industrial automation requirements to deployable software services using:
 
-- RDF/Turtle ontology data
+- RDF/Turtle ontology data (CSS-SDA model: Capability, Skill, CommunicationBinding, DataConnector, DeploymentContext)
 - SPARQL matching rules
 - Apache Jena reasoning/query execution
 - Java 25 and Spring Boot 4.0.x
+- Input file parsers (MTP AML, OPC UA Server Datasheet, AAS)
+- OWL reasoner inference for capability derivation
 - REST API for requirement matching
-- Deterministic Kubernetes YAML generation
+- Deterministic Docker Compose and Kubernetes manifest generation
 - Unit and integration tests proving match and rejection behavior
 
-The first target use case is Flowmeter Asset-Health Monitoring for requirement `REQ_001`.
+Target use cases:
+- Flowmeter Asset-Health Monitoring for requirement `REQ_001`
+- Fermentation Skid (Skid-A1) via MTP AML input — critical CPC, SIL-2
+- HVAC Plant (AHU-01 + EM-01) via OPC UA Server Datasheet input — non-critical M+O
+- Cross-plant semantic queries across both use cases
+
+The five-step mapping procedure is: **Parse → Instantiate → Lift → Infer → Match**.
 
 ---
 
@@ -87,7 +95,10 @@ Main outputs:
 - Tests under `src/test/java/**`
 - RDF/Turtle ontology files under `src/main/resources/ontology/**`
 - SPARQL queries under `src/main/resources/queries/**`
-- Kubernetes templates/examples under `src/main/resources/k8s/**` or `k8s/examples/**`
+- Input file parsers (MTP AML, OPC UA Server Datasheet) under parser packages
+- OWL reasoner inference service
+- Docker Compose manifests under `docker/examples/`
+- Kubernetes templates/examples under `k8s/examples/`
 - Maven and Docker configuration
 - Documentation and `tasks.md`
 
@@ -154,8 +165,13 @@ Specialist prompts live in `prompts/subagents/` and may be used by Reviewer or V
 - `spring-boot-reviewer.md`: Java/Spring Boot/API/layering review
 - `security-reviewer.md`: API, dependency, and generated-manifest security review
 - `concurrency-reviewer.md`: lifecycle, caching, thread-safety, and Jena model sharing review
-- `sql-optimizer.md`: SPARQL/Jena query performance review; SQL only if explicitly introduced later
+- `sparql-optimizer.md`: SPARQL/Jena query performance review
 - `test-coverage-reviewer.md`: test strategy and acceptance-criteria coverage review
+- `mtp-parser-reviewer.md`: MTP AML parsing, VDI/VDE/NAMUR 2658 schema review
+- `uaserver-datasheet-reviewer.md`: OPC UA Server Datasheet parsing, IDTA 02009-1-0 review
+- `ontology-inference-reviewer.md`: OWL reasoner inference and OfferedCapability derivation review
+- `k8s-manifest-reviewer.md`: Kubernetes YAML generation and nodeSelector review
+- `rdf-ontology-reviewer.md`: Turtle/RDF ontology consistency and property alignment review
 
 ---
 

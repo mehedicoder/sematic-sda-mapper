@@ -1,8 +1,6 @@
 # SPARQL and Data Access Optimizer Subagent
 
-This file keeps the historical `sql-optimizer.md` name, but the Semantic SDA Mapper MVP does not use SQL.
-
-Use this subagent to review SPARQL, Apache Jena query execution, RDF/Turtle data shape, and semantic matching performance. Only review SQL if a future human-approved roadmap change introduces a relational database.
+Use this subagent to review SPARQL, Apache Jena query execution, RDF/Turtle data shape, and semantic matching performance.
 
 ---
 

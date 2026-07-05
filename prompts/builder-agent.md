@@ -15,7 +15,9 @@ You are not the architect. The human engineer owns architecture, ontology direct
 | Architecture and service boundaries | One approved roadmap phase/task at a time |
 | Ontology modeling changes beyond specs | RDF/Turtle assets aligned to approved specs |
 | API contract changes | REST controllers, DTOs, validation, error handling |
-| Deployment strategy | Deterministic Kubernetes YAML generation |
+| Deployment strategy | Deterministic Docker Compose and Kubernetes manifest generation |
+| Input file format support | MTP AML parser (VDI/VDE/NAMUR 2658) and OPC UA Server Datasheet parser (IDTA 02009-1-0) |
+| Inference rule changes | OWL reasoner configuration, axiom A4 for OfferedCapability derivation |
 | External infrastructure decisions | Maven, Docker, tests, docs for local prototype |
 
 ---
@@ -44,23 +46,31 @@ Stop and ask the human engineer for clarification if:
 - Use Java 25 and Spring Boot 4.0.x.
 - Use Maven as the build tool.
 - Use Apache Jena for RDF/Turtle loading and SPARQL execution.
+- **Leverage modern Java features appropriately:** Prefer records for DTOs/data carriers, pattern matching for `switch`, and **Virtual Threads / Structured Concurrency** if asynchronous orchestration is explicitly required. Avoid legacy thread pools or unapproved reactive libraries.
+- **Adhere to modern Spring Boot 4.0.x patterns:** Use `RestClient` for external calls, implement `ProblemDetail` (RFC 9457) for REST error structures, and use standard Spring Boot structural conventions.
 - Keep semantic matching rules visible in `src/main/resources/queries/**`.
 - Keep ontology and catalogue examples in `src/main/resources/ontology/**`.
 - Do not hardcode service selection rules in Java.
-- Generate Kubernetes YAML deterministically from the selected match result.
+- **Follow the five-step mapping procedure:** Parse (input file validation), Instantiate (ABox triples from parsed data), Lift (MTP Service → css:Skill), Infer (OWL reasoner → OfferedCapability), Match (SPARQL query across all CSS-SDA dimensions).
+- **Implement input file parsers:** MTP AML parser reads VDI/VDE/NAMUR 2658 Service/Parameter/Communication blocks. OPC UA Server Datasheet parser reads IDTA 02009-1-0 EndpointDescriptions/Configuration/Identification. Both generate CSS-SDA triples.
+- **Configure OWL reasoner inference:** Derive `sda:OfferedCapability` from `css:SkillParameter` semantics. Preserve existing explicit capability triples. Do not overwrite inference output.
+- **Generate Docker Compose and Kubernetes YAML deterministically:** Rely on structured templates or dedicated object-mapping serializers rather than ad-hoc string concatenation to prevent formatting drift. Derive `nodeSelector` from `sda:DeploymentContext` triples (SIL, determinismClass, networkZone).
+- Implement the two-use-case evaluation dataset: fermentation skid (CPC, SIL-2) and HVAC plant (M+O, non-critical) with cross-plant SPARQL queries.
 - Keep the MVP small and executable; avoid broad modeling beyond the roadmap phase.
-- Prefer clear error messages for missing/invalid ontology files and query failures.
-- Use records or simple immutable DTOs unless the existing codebase establishes a different style.
+- Prefer clear error messages for missing/invalid input files, ontology files, and query failures.
 
 ---
 
 ## What You May Modify
 
-- `src/main/**`
+- `src/main/java/**`
+- `src/main/resources/ontology/**`
+- `src/main/resources/queries/**`
 - `src/test/**`
 - `pom.xml`
 - `docker/Dockerfile`
 - `docker-compose.yml`
+- `docker/examples/**`
 - `k8s/examples/**`
 - `README.md` and project documentation
 - `tasks.md`
@@ -97,9 +107,19 @@ Task: <Task Name> | Phase: <Roadmap Phase>
 - SPARQL query behavior affected.
 - Matching rules kept out of Java.
 
+### Input File Parser Considerations (if applicable)
+- Input file format (MTP AML or OPC UA Server Datasheet).
+- Schema validation and error handling for malformed input.
+- CSS-SDA triple generation from parsed elements.
+
+### Inference Considerations (if applicable)
+- OWL reasoner configuration and axiom definitions.
+- OfferedCapability derivation from SkillParameter semantics.
+- Preservation of explicit triples during inference.
+
 ### API and Deployment Considerations
 - REST contracts affected.
-- Kubernetes YAML fields affected.
+- Docker Compose or Kubernetes YAML fields affected.
 - Error behavior and validation behavior.
 
 ### Runtime and Performance Considerations
@@ -109,9 +129,12 @@ Task: <Task Name> | Phase: <Roadmap Phase>
 
 ### Test Coverage Plan
 - [ ] Ontology loading tests
+- [ ] Input file parser tests (valid, missing elements, invalid format)
 - [ ] SPARQL match/no-match tests
+- [ ] OWL inference tests (OfferedCapability derivation)
 - [ ] Service/unit tests
 - [ ] REST integration tests
+- [ ] Docker Compose YAML parsing tests
 - [ ] Kubernetes YAML parsing tests
 ```
 

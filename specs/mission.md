@@ -10,18 +10,19 @@ The mission of this project is to design and implement a lightweight prototype t
 
 The project demonstrates a simplified Software-Defined Automation workflow where high-level automation requirements can be matched with available automation services based on capability, protocol, data connector, performance, and deployment constraints.
 
-This prototype is inspired by the semantic chain used in Software-Defined Automation:
+This prototype demonstrates the full five-step semantic mapping procedure used in Software-Defined Automation:
 
 ```text
-UseCase
-→ Requirement
-→ Capability
-→ Skill
-→ Service
-→ CommunicationBinding
-→ DataConnector
-→ DeploymentContext
+Input Files (MTP AML, OPC UA Server Datasheet, AAS)
+→ Parse
+→ Instantiate (CSS-SDA ontology ABox triples)
+→ Lift (MTP Service → css:Skill)
+→ Infer (OWL reasoner derives OfferedCapability)
+→ Match (SPARQL multi-dimensional query)
+→ Docker Compose / Kubernetes Manifest
 ```
+
+The CSS-SDA model: SDA-Service := ⟨ Capability, Skill, Service, CommunicationBinding, DataConnector, DeploymentContext ⟩
 
 ## Problem Statement
 
@@ -38,13 +39,11 @@ For example, if an engineer needs to monitor the health of a flowmeter, they mus
 
 This project aims to show how semantic modeling can make this process more machine-understandable and partially automatable.
 
-## Target Use Case
+## Target Use Cases
 
-The first use case is:
+The project targets three use cases that span critical and non-critical automation domains, each with different input file formats:
 
-**Flowmeter Asset-Health Monitoring**
-
-Example requirement:
+### Use Case A: Flowmeter Asset-Health Monitoring (Legacy Baseline)
 
 ```text
 Monitor the health of flowmeter FT-101.
@@ -55,31 +54,57 @@ have latency <= 60 ms,
 and run in an on-premise plant-network deployment context.
 ```
 
+### Use Case B: Fermentation Skid (Skid-A1) — Critical Process Control
+
+Source: MTP AML file (VDI/VDE/NAMUR 2658)
+
+- Reaction vessel with agitator and cooling jacket
+- CPC category, SIL-2, PROFINET, OPC UA
+- Skills: FermentationControl, DosingControl
+- Inferred capabilities: TempControl, Dosing
+- Batch step 3 requires SIL-2 temperature-controlled fermentation
+
+### Use Case C: HVAC Plant (AHU-01 + EM-01) — Non-Critical Monitoring & Optimization
+
+Source: OPC UA Server Datasheet (IDTA 02009-1-0 AAS submodel)
+
+- AHU controller with BACnet gateway + energy meter with native OPC UA
+- M+O category, SoftRealTime, OT Zone 3
+- Different security modes per device (Sign vs SignAndEncrypt)
+- Cross-plant queries find temperature services across both plants
+
 ## Core Objective
 
 The core objective is to build a working prototype that can:
 
-1. Load a small ontology written in RDF/Turtle.
-2. Represent automation requirements, capabilities, skills, services, bindings, connectors, and deployment contexts.
-3. Run SPARQL queries to find a service that satisfies a given requirement.
-4. Return the selected service with an explanation.
-5. Generate a Kubernetes deployment manifest for the selected service.
-6. Provide tests that prove correct matching and rejection behavior.
+1. Parse vendor-supplied input files (MTP AML, OPC UA Server Datasheet) into CSS-SDA ontology instances.
+2. Run OWL reasoner inference to derive offered capabilities from skill parameters.
+3. Execute SPARQL queries across all CSS-SDA dimensions (Capability, Skill, Service, CommunicationBinding, DataConnector, DeploymentContext) simultaneously.
+4. Return the selected service with a multi-dimensional explanation.
+5. Generate Docker Compose and Kubernetes deployment manifests for the selected service.
+6. Support cross-plant queries that span multiple input file sources.
+7. Provide tests that prove correct matching and rejection behavior for all use cases.
 
 ## In Scope
 
 The project includes:
 
-- A small CSS-SDA-inspired ontology
-- RDF/Turtle files for requirements and service catalogue data
-- SPARQL queries for semantic matching
+- A small CSS-SDA-inspired ontology with full dimension support
+- MTP AML parser (VDI/VDE/NAMUR 2658) that generates CSS-SDA triples
+- OPC UA Server Datasheet parser (IDTA 02009-1-0) that generates CSS-SDA triples
+- OWL reasoner for inferring offered capabilities from skill parameters
+- SPARQL queries for multi-dimensional semantic matching
+- Cross-plant SPARQL queries across multiple input file sources
 - Java 25 backend implementation
 - Spring Boot 4.0.x REST API
-- Apache Jena-based RDF and SPARQL processing
-- Kubernetes YAML generation
-- Unit and integration tests
-- Docker Compose for local development
-- Documentation for usage and evaluation
+- Apache Jena-based RDF, SPARQL, and OWL processing
+- Docker Compose manifest generation (for edge/fieldbus deployment)
+- Kubernetes YAML generation with nodeSelector from deployment context
+- Unit and integration tests for all components
+- Docker Compose for local development (application + OPC UA simulation)
+- Node-RED-based OPC UA server simulation in Docker Compose
+- Evaluation dataset with three use cases (flowmeter, fermentation skid, HVAC plant)
+- Documentation for academic and engineering evaluation
 
 ## Out of Scope
 
@@ -89,11 +114,12 @@ The project does not implement:
 - Real PLC control logic
 - Real production plant control
 - Real OPC UA device communication in the first version
-- Full MTP, NOA, PA-DIM, AAS, or AutomationML parsing
+- Full AutomationML or PA-DIM parsing beyond the MTP AML scope
 - Full Kubernetes deployment automation to a real cluster
 - Safety-critical control execution
 - Real-time deterministic control guarantees
-- Full SWRL reasoning engine in the MVP
+- Full SWRL reasoning engine beyond the OWL reasoner scope
+- Full lifecycle management beyond requirement mapping and manifest generation
 
 ## Success Criteria
 
@@ -101,11 +127,16 @@ The project is successful when:
 
 - A requirement can be submitted through an API.
 - The system can load ontology and catalogue data.
-- The system can run a SPARQL matching query.
+- MTP AML input files can be parsed into valid CSS-SDA triples.
+- OPC UA Server Datasheet input files can be parsed into valid CSS-SDA triples.
+- OWL reasoner can derive offered capabilities from parsed skill parameters.
+- The system can run a SPARQL matching query across all CSS-SDA dimensions.
+- The system can run cross-plant queries spanning multiple input sources.
 - The system can select the correct service for a valid requirement.
 - The system rejects services that fail capability, protocol, latency, recall, or deployment constraints.
-- The system generates a Kubernetes deployment YAML for the selected service.
-- Tests verify positive and negative matching scenarios.
+- The system generates a Docker Compose manifest for the selected service.
+- The system generates a Kubernetes deployment YAML with nodeSelector for the selected service.
+- Tests verify positive and negative matching scenarios across all three use cases.
 - The project can be run locally by another developer.
 
 ## Example Expected Result
@@ -132,7 +163,19 @@ Output:
   "deploymentContext": "OnPremPlantNetwork",
   "recall": 0.94,
   "latencyMs": 45,
-  "kubernetesManifest": "apiVersion: apps/v1..."
+  "kubernetesManifest": "apiVersion: apps/v1...",
+  "dockerComposeManifest": "services:\n  flowmeter-diagnostics...",
+  "matchingExplanation": "The service matches..."
+}
+```
+
+Cross-plant query example — find all temperature services:
+
+```sparql
+SELECT ?service ?plant WHERE {
+  ?service a sda:Service ;
+           css:offersUseOf / css:hasParameter / sda:engineeringUnit "°C" .
+  ?service sda:belongsToSite ?plant .
 }
 ```
 
@@ -161,11 +204,11 @@ The primary users are:
 
 The long-term vision is to extend the prototype into a richer semantic automation engineering tool that can support:
 
-- Multiple industrial use cases
-- More detailed ontology modeling
-- Real OPC UA metadata ingestion
-- MTP or AAS import
-- SHACL validation
-- Kubernetes deployment execution
+- Additional industrial use cases beyond the three evaluated
+- More detailed ontology modeling with SHACL constraints
+- Real OPC UA metadata ingestion (live endpoints instead of datasheet files)
+- Full AutomationML and PA-DIM import beyond MTP AML
+- SWRL or SHACL rule-based inference alongside OWL reasoning
+- Kubernetes deployment execution and lifecycle management
 - Runtime verification status updates
 - Human-in-the-loop service approval

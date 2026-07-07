@@ -212,3 +212,38 @@ The long-term vision is to extend the prototype into a richer semantic automatio
 - Kubernetes deployment execution and lifecycle management
 - Runtime verification status updates
 - Human-in-the-loop service approval
+
+---
+
+## EKA Enterprise User Interface
+
+**Objective**
+
+Build a modern, responsive, enterprise-grade user interface (EKA UI) on top of the CSS-SDA semantic core. The UI replaces the pure REST-API interaction with a clean, intuitive, visually appealing dashboard that enables users to explore semantic models, register services, search ontology assets, upload artifacts, monitor the platform, and visualize semantic relationships.
+
+**Design Principles**
+
+- Modern and lightweight, minimal visual clutter
+- Card-based layouts instead of large forms
+- Responsive — desktop, tablet, and mobile
+- Support for light and dark themes
+- Progressive disclosure and semantic navigation
+- Enterprise UX inspired by Siemens Industrial Edge, SAP Fiori, and Azure Portal
+
+**Core Pages**
+
+| Page | Description |
+|---|---|
+| Dashboard | Animated cards showing registered services, capabilities, skills, mappings, digital twins, deployments, simulations, and live OPC UA sessions |
+| Semantic Explorer | Split layout with ontology tree (left) and entity details with tabs for Overview, Properties, Relationships, Services, History, Mappings (right) |
+| Global Search | AI-style semantic search bar with autocomplete, fuzzy, exact, and ontology-scoped search |
+| Upload Center | Drag-and-drop panel for OPC UA NodeSet, AAS, MTP, AutomationML, RDF, OWL, JSON-LD, YAML |
+| Service Registration Wizard | Multi-step wizard: General → Communication → Capabilities → Skills → Deployment → Semantic Mapping → Review → Register |
+| Ontology Visualization | Interactive Cytoscape.js graph with zoom, pan, expand/collapse, highlight paths, search |
+| Monitoring Dashboard | Real-time widgets for CPU, memory, OPC UA sessions, semantic queries, connected assets |
+| Deployment View | Cards per environment (Dev, Test, Prod, Edge, Cloud) showing status, services, assets, health |
+| Settings | Theme, language, time zone, notifications, accessibility, search preferences |
+
+**Technology**
+
+Built with Vaadin 25, Spring Security, PostgreSQL, Cytoscape.js, and ApexCharts — reusing the existing Java 25 and Spring Boot 4.0.x backend. The UI is an optional layer; the REST API and all semantic core functionality remain fully usable without it.

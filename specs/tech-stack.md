@@ -6,16 +6,21 @@
 |---|---|---|
 | Programming language | Java 25 |
 | Backend framework | Spring Boot 4.0.x |
+| UI framework | Vaadin 25.x (Lumo Theme) |
 | Build tool | Maven |
-| API style | REST |
+| API style | REST (backend) + Vaadin server-side (UI) |
 | RDF processing | Apache Jena |
 | OWL reasoning | Apache Jena OWL_MEM_MICRO_RULES_INF |
 | Semantic query language | SPARQL |
 | Ontology format | RDF/Turtle |
 | Input file format (MTP) | XML (AML Archive, VDI/VDE/NAMUR 2658) |
 | Input file format (Datasheet) | JSON (AAS, IDTA 02009-1-0) |
+| Database | PostgreSQL |
+| Security | Spring Security |
+| Ontology graph visualization | Cytoscape.js |
+| Dashboard charts | ApexCharts |
 | Deployment manifest formats | Docker Compose YAML + Kubernetes YAML |
-| Testing | JUnit 5, AssertJ, Spring Boot Test |
+| Testing | JUnit 5, AssertJ, Spring Boot Test, Vaadin Test |
 | Local development | Docker Compose |
 | Containerization | Docker |
 | Deployment targets | Docker Compose edge/fieldbus + Kubernetes-compatible YAML |
@@ -124,6 +129,56 @@ Purpose:
 - Generate Kubernetes deployment YAML
 - Validate generated YAML structure in tests
 
+### Vaadin 25
+
+Required dependency:
+
+```xml
+com.vaadin:vaadin-spring-boot-starter
+```
+
+Purpose:
+
+- Server-side UI framework with built-in Lumo theme
+- AppLayout, Grid, FormLayout, and rich component library
+- Automatic client-server data binding
+- Built-in responsive and accessibility support
+
+### PostgreSQL
+
+Required dependency:
+
+```xml
+org.springframework.boot:spring-boot-starter-data-jpa
+org.postgresql:postgresql
+```
+
+Purpose:
+
+- Persistent storage for registered services, users, deployment records, and UI state
+- JPA/Hibernate for object-relational mapping
+
+### Spring Security
+
+Required dependency:
+
+```xml
+org.springframework.boot:spring-boot-starter-security
+```
+
+Purpose:
+
+- Authentication and authorization for UI pages
+- Role-based access control
+- OAuth2 / form-login integration
+
+### Frontend Libraries (bundled via Vaadin)
+
+- **Cytoscape.js** — interactive ontology graph visualization (zoom, pan, expand/collapse, highlight paths)
+- **ApexCharts** — real-time dashboard charts (CPU, memory, OPC UA sessions, semantic queries)
+
+These are included via npm dependencies managed by Vaadin's frontend build.
+
 ## Suggested Maven Properties
 
 ```xml
@@ -173,9 +228,36 @@ semantic-sda-mapper
 │   │   │       │   ├── DockerComposeManifestService.java
 │   │   │       │   ├── KubernetesManifestService.java
 │   │   │       │   └── ManifestResult.java
-│   │   │       └── error/
-│   │   │           ├── ApiErrorResponse.java
-│   │   │           └── GlobalExceptionHandler.java
+│   │   │       ├── error/
+│   │   │       │   ├── ApiErrorResponse.java
+│   │   │       │   └── GlobalExceptionHandler.java
+│   │   │       └── ui/
+│   │   │           ├── MainLayout.java
+│   │   │           ├── DashboardView.java
+│   │   │           ├── ExplorerView.java
+│   │   │           ├── SearchView.java
+│   │   │           ├── UploadView.java
+│   │   │           ├── RegistrationWizardView.java
+│   │   │           ├── GraphView.java
+│   │   │           ├── MonitoringView.java
+│   │   │           ├── SettingsView.java
+│   │   │           ├── components/
+│   │   │           │   ├── DashboardCard.java
+│   │   │           │   ├── SearchBar.java
+│   │   │           │   ├── OntologyTree.java
+│   │   │           │   ├── UploadCard.java
+│   │   │           │   ├── ServiceCard.java
+│   │   │           │   ├── StatisticsPanel.java
+│   │   │           │   ├── NotificationPanel.java
+│   │   │           │   └── StatusBadge.java
+│   │   │           ├── services/
+│   │   │           │   └── UIService.java
+│   │   │           ├── theme/
+│   │   │           │   └── ThemeConfig.java
+│   │   │           ├── security/
+│   │   │           │   └── SecurityConfig.java
+│   │   │           └── config/
+│   │   │               └── UIConfig.java
 │   │   │
 │   │   └── resources/
 │   │       ├── application.yml
@@ -199,8 +281,12 @@ semantic-sda-mapper
 │       │       ├── deployment/
 │       │       │   ├── DockerComposeManifestServiceTest.java
 │       │       │   └── KubernetesManifestServiceTest.java
-│       │       └── api/
-│       │           └── RequirementMatchingControllerIT.java
+│       │       ├── api/
+│       │       │   └── RequirementMatchingControllerIT.java
+│       │       └── ui/
+│       │           ├── DashboardViewTest.java
+│       │           ├── ExplorerViewTest.java
+│       │           └── RegistrationWizardViewTest.java
 │       └── resources/
 │           ├── ontology/
 │           │   └── test-css-sda-small.ttl
@@ -337,6 +423,30 @@ Responsibilities:
 - Handle no matching service
 - Handle ontology loading failures
 - Handle SPARQL query failures
+
+### UI Module
+
+Package:
+
+```text
+com.example.semanticsda.ui
+```
+
+Responsibilities:
+
+- Main application layout with AppLayout, header with global search, navigation drawer, and theme toggle
+- Dashboard view with animated cards (registered services, capabilities, skills, mappings, digital twins, deployments, simulations, OPC UA sessions)
+- Semantic Explorer with split layout (ontology tree + entity details)
+- Global AI-style search with autocomplete, fuzzy, exact, and ontology-scoped filters
+- Upload Center with drag-and-drop for OPC UA NodeSet, AAS, MTP, RDF, OWL, JSON-LD, YAML
+- Service Registration Wizard (multi-step: General → Communication → Capabilities → Skills → Deployment → Mapping → Review → Register)
+- Interactive ontology graph visualization using Cytoscape.js (zoom, pan, expand/collapse, highlight paths)
+- Real-time monitoring dashboard with ApexCharts (CPU, memory, OPC UA sessions, semantic queries)
+- Deployment view grouped by environment (Dev, Test, Prod, Edge, Cloud)
+- Notification center with grouped success, info, warning, error, and background task notifications
+- User settings (theme, language, time zone, notifications, accessibility, search preferences)
+- Light/dark mode via Lumo theme variants with persisted preference
+- Responsive layouts (desktop drawer visible, tablet collapsible, mobile overlay)
 
 ## Data and Semantic Assets
 
@@ -483,6 +593,8 @@ Focus areas:
 - Reasoner no-match cases
 - Docker Compose manifest generation and YAML parsing
 - Kubernetes manifest generation with nodeSelector validation
+- UI view rendering and component behavior
+- UI service layer and security configuration
 
 ### Integration Tests
 
@@ -507,6 +619,12 @@ HVAC plant OPC UA Server Datasheet parser generates CommunicationBinding with Si
 Cross-plant query returns temperature services from both fermentation skid and HVAC plant.
 Docker Compose manifest includes restart: unless-stopped and environment block with asset ID.
 Kubernetes manifest includes nodeSelector derived from DeploymentContext SIL and zone.
+Dashboard view loads and displays animated cards with correct counts.
+Search bar autocomplete returns ontology entities matching the query.
+Service Registration Wizard navigates through all 8 steps without errors.
+Ontology graph renders nodes and supports zoom and pan.
+Upload Center validates file types and shows progress.
+Monitoring dashboard chart data updates reflect backend state.
 ```
 
 ## Quality Rules
@@ -519,3 +637,6 @@ Kubernetes manifest includes nodeSelector derived from DeploymentContext SIL and
 - API responses must explain why a service was selected or why no service matched.
 - Input file parsers must fail with clear, actionable errors on invalid input.
 - OWL inference must preserve existing explicit capability triples.
+- UI views must be responsive and work on desktop, tablet, and mobile viewports.
+- UI must support light and dark mode with persisted user preference.
+- Navigation must follow the CSS-SDA hierarchy (Intent → Capability → Skill → Service → CommunicationBinding → DataConnector → Deployment).

@@ -423,7 +423,7 @@ Document the prototype clearly for academic and engineering evaluation.
 * [ ] Document MTP vs OPC UA Server Datasheet contribution to each CSS-SDA dimension
 * [ ] Document REST API
 * [ ] Document Docker Compose and Kubernetes manifest generation strategy
-* [ ] Document optional Margo Sandbox integration
+* [ ] Document Margo Sandbox integration
 * [ ] Document evaluation cases (fermentation skid, HVAC plant, cross-plant)
 * [ ] Add limitations section
 * [ ] Add future work section
@@ -443,39 +443,87 @@ Document the prototype clearly for academic and engineering evaluation.
 
 **Goal**
 
-Document the prototype clearly for academic and engineering evaluation.
+Build a modern, responsive, enterprise-grade Vaadin 25 UI (EKA — Engineering Knowledge Application) on top of the CSS-SDA backend. The UI replaces REST-only interaction with a full-featured dashboard, semantic explorer, global search, service registration wizard, ontology visualization, upload center, and monitoring views.
 
 **Tasks**
 
-* [ ] Write project overview
-* [ ] Document architecture (five-step mapping procedure: Parse, Instantiate, Lift, Infer, Match)
-* [ ] Document input file sources (MTP AML, OPC UA Server Datasheet, AAS)
-* [ ] Document ontology classes (CSS-SDA dimensions, MTPModule, FieldDevice)
-* [ ] Document SPARQL matching logic (multi-dimensional, cross-plant queries)
-* [ ] Document MTP vs OPC UA Server Datasheet contribution to each CSS-SDA dimension
-* [ ] Document REST API
-* [ ] Document Docker Compose and Kubernetes manifest generation strategy
-* [ ] Document optional Margo Sandbox integration
-* [ ] Document evaluation cases (fermentation skid, HVAC plant, cross-plant)
-* [ ] Add limitations section
-* [ ] Add future work section
+* [ ] Add Vaadin 25 Spring Boot starter and Lumo theme dependency
+* [ ] Add PostgreSQL and Spring Data JPA for UI persistence
+* [ ] Add Spring Security for authentication and role-based access
+* [ ] Create `MainLayout` with AppLayout structure:
+  * [ ] Header with CSS-SDA logo, title, global search bar, notifications, theme switch, user profile, settings menu
+  * [ ] Collapsible navigation drawer following CSS-SDA hierarchy (Intent → Use Cases → Requirements → Capability → Capabilities → Skills → Service Layer → Services → Communication Bindings → Data Connectors → Deployment → Assets → Digital Twins → Monitoring → Administration)
+  * [ ] Main workspace with responsive routing
+* [ ] Create `DashboardView` with animated cards:
+  * [ ] Registered Services, Capabilities, Skills, Semantic Mappings, Digital Twins, Deployments, Running Simulations, Live OPC UA Sessions
+  * [ ] Each card with icon, title, value, trend, status color; clickable to navigate
+* [ ] Create global `SearchBar` component:
+  * [ ] AI-style semantic search with autocomplete, fuzzy search, exact search, recent searches
+  * [ ] Filters: Requirement, Capability, Skill, Service, Deployment, Asset
+* [ ] Create `SearchView` with results Grid:
+  * [ ] Columns: Name, Type, Description, Ontology Path, Similarity Score, Linked Services, Actions
+  * [ ] Sorting, filtering, pagination, column chooser, CSV/Excel export, context menu
+* [ ] Create `UploadView` with drag-and-drop upload panel:
+  * [ ] Support OPC UA NodeSet, AAS, MTP, AutomationML, RDF, OWL, JSON-LD, YAML
+  * [ ] Upload progress bar and validation results display
+* [ ] Create `RegistrationWizardView` (multi-step):
+  * [ ] Step 1: General Information
+  * [ ] Step 2: Communication
+  * [ ] Step 3: Capabilities
+  * [ ] Step 4: Skills
+  * [ ] Step 5: Deployment
+  * [ ] Step 6: Semantic Mapping
+  * [ ] Step 7: Review
+  * [ ] Step 8: Register
+  * [ ] Navigation: Previous, Next, Save Draft, Cancel
+* [ ] Create `ExplorerView` with split layout:
+  * [ ] Left: Ontology Tree component
+  * [ ] Right: Entity details with tabs — Overview, Properties, Relationships, Services, History, Mappings
+* [ ] Create `GraphView` with Cytoscape.js integration:
+  * [ ] Interactive ontology graph with zoom, pan, expand/collapse nodes, highlight paths, relationship labels, search nodes, center node, fullscreen
+* [ ] Create `MonitoringView` with real-time widgets:
+  * [ ] CPU, Memory, OPC UA Sessions, Connected Assets, Semantic Queries, Notifications
+  * [ ] ApexCharts with live updates
+* [ ] Create `DeploymentView`:
+  * [ ] Cards per environment: Development, Testing, Production, Edge, Cloud
+  * [ ] Each card with status, services, assets, health, region, version
+* [ ] Create `NotificationCenter`:
+  * [ ] Grouped notifications: Success, Information, Warning, Error, Background Tasks
+* [ ] Create `SettingsView`:
+  * [ ] User preferences: Theme, Language, Time Zone, Notifications, Accessibility, Search Preferences
+* [ ] Implement light/dark mode via Lumo theme variants with persisted preference
+* [ ] Implement responsive layouts:
+  * [ ] Desktop: Drawer always visible
+  * [ ] Tablet: Drawer collapses automatically
+  * [ ] Mobile: Drawer becomes overlay; dashboard rearranges to one column
+* [ ] Implement accessibility:
+  * [ ] Keyboard navigation, ARIA labels, high contrast, screen reader support, focus management
+* [ ] Implement performance optimizations:
+  * [ ] Lazy load views, virtual scrolling for grids, minimize DOM updates, avoid unnecessary server round trips
 
 **Acceptance Criteria**
 
-* [ ] README explains how to run the project
-* [ ] Documentation explains the semantic mapping chain
-* [ ] Documentation clearly explains the difference between Apache Jena, SPARQL, and Dagger
-* [ ] Documentation includes example request and response
-* [ ] Documentation includes example Docker Compose manifest output
-* [ ] Documentation clearly states limitations
+* [ ] Application starts with Vaadin UI accessible at `http://localhost:8080/`
+* [ ] Dashboard loads and displays animated cards with correct backend data
+* [ ] Navigation drawer follows CSS-SDA hierarchy and is collapsible
+* [ ] Global search returns ontology entities with autocomplete
+* [ ] Upload Center accepts valid files and rejects invalid types with clear messages
+* [ ] Service Registration Wizard creates a new service in the ontology model
+* [ ] Semantic Explorer shows ontology tree in left panel and entity details in right panel
+* [ ] Ontology graph renders nodes and supports zoom, pan, and highlight
+* [ ] Monitoring dashboard charts reflect current backend state
+* [ ] Light/dark mode toggle works and persists across sessions
+* [ ] UI is responsive on desktop, tablet, and mobile viewports
+* [ ] All views have keyboard-navigable controls and ARIA labels
+* [ ] Vaadin tests pass for view rendering and component interaction
 
 ---
 
-## Optional Phase 14: Margo Sandbox Deployment Context
+## Phase 14: Margo Sandbox Deployment Context
 
 **Goal**
 
-Use Margo Sandbox as an optional industrial edge deployment/interoperability context. This phase must not replace the semantic reasoning work. It only validates that the selected service or generated deployment artifact can fit into an edge deployment workflow.
+Use Margo Sandbox as an industrial edge deployment/interoperability context. Validate that the selected service or generated deployment artifact can fit into an edge deployment workflow.
 
 **Tasks**
 
@@ -483,13 +531,11 @@ Use Margo Sandbox as an optional industrial edge deployment/interoperability con
 * [ ] Define how the selected service maps to a Margo-style application package
 * [ ] Add a simple Margo deployment descriptor or package metadata if required
 * [ ] Document limitations of the Margo Sandbox integration
-* [ ] Keep Margo integration optional and separate from the MVP
 
 **Acceptance Criteria**
 
 * [ ] Margo integration does not replace Apache Jena or SPARQL
 * [ ] Margo integration is documented as deployment-context validation only
-* [ ] The core MVP still works without Margo
 
 ---
 
@@ -573,9 +619,10 @@ Phase 10: Matching Explanation
 Phase 11: Evaluation Dataset — Fermentation Skid and HVAC Plant
 Phase 12: Documentation and Thesis Support
 Phase 13: EKA Enterprise User Interface
+Phase 14: Margo Sandbox Deployment Context
 ```
 
-Margo Sandbox integration is optional (Optional Phase 14). Runtime Verification Status is optional (Optional Phase 15). Dagger automation is optional (Optional Phase 16).
+Runtime Verification Status is optional (Optional Phase 15). Dagger automation is optional (Optional Phase 16).
 
 ---
 
@@ -639,5 +686,5 @@ The final project should deliver:
 * Optional Dagger automation pipeline
 * Evaluation dataset with fermentation skid and HVAC plant examples + cross-plant queries
 * Documentation for academic evaluation
-* Optional Margo Sandbox deployment-context extension
+* Margo Sandbox deployment-context extension
 * EKA Enterprise User Interface (Vaadin 25 with dashboard, explorer, search, registration wizard, ontology graph, monitoring, upload center, settings, and light/dark mode)

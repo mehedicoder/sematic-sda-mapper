@@ -6,17 +6,6 @@ Use this subagent when changes affect Spring services, shared Apache Jena models
 
 ---
 
-## Read First
-
-- `specs/mission.md`
-- `specs/tech-stack.md`
-- `specs/roadmap.md`
-- Changed Java files
-- Changed configuration
-- Relevant tests
-
----
-
 ## Review Focus
 
 Check for:

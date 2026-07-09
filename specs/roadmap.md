@@ -44,20 +44,32 @@ Docker Compose = generated deployment output
 
 **Goal**
 
-Create a runnable Java 25 and Spring Boot 4.0.x project with basic structure, testing, local development setup, and automation pipeline foundation.
+Create a runnable Java 25 and Spring Boot 4.0.x project with basic structure, testing, Vaadin 25 UI foundation, local development setup, and automation pipeline foundation.
 
 **Tasks**
 
 * [ ] Create Maven-based Spring Boot 4.0.x project
-* [ ] Configure Java 25
-* [ ] Add Spring Web dependency
-* [ ] Add Spring Validation dependency
-* [ ] Add Spring Actuator dependency
-* [ ] Add Apache Jena dependency
-* [ ] Add SnakeYAML dependency
-* [ ] Add JUnit 5 and AssertJ test support
-* [ ] Create base package structure
+  * [ ] Add Spring Web, Validation, Actuator dependencies
+  * [ ] Add Apache Jena dependency
+  * [ ] Add SnakeYAML dependency
+  * [ ] Add JUnit 5 and AssertJ test support
+  * [ ] Add Vaadin 25 Spring Boot starter and Lumo theme dependency
+  * [ ] Add Spring Security dependency
+  * [ ] Add Spring Data JPA and PostgreSQL dependencies
+  * [ ] Add Flyway database migration dependencies
+* [ ] Create base Java package structure under `com.sda.mapper`
 * [ ] Add health endpoint through Spring Actuator
+* [ ] Add Vaadin `MainLayout` with AppLayout structure:
+  * [ ] Header with CSS-SDA logo, title, theme switch, user profile
+  * [ ] Collapsible navigation drawer following CSS-SDA hierarchy (Intent → Use Cases → Requirements → Capability → Capabilities → Skills → Service Layer → Services → Communication Bindings → Data Connectors → Deployment → Assets → Digital Twins → Monitoring → Administration)
+  * [ ] Main workspace with responsive routing
+* [ ] Add `ThemeConfig` with Lumo light/dark mode toggle and persisted preference
+* [ ] Add `SecurityConfig` with form-login and role-based access skeleton
+* [ ] Add `UIConfig` with Vaadin routing configuration
+* [ ] Implement responsive layout:
+  * [ ] Desktop: Drawer always visible
+  * [ ] Tablet: Drawer collapses automatically
+  * [ ] Mobile: Drawer becomes overlay
 * [ ] Add Dockerfile
 * [ ] Add docker-compose.yml
 * [ ] Add README with local run instructions
@@ -66,6 +78,9 @@ Create a runnable Java 25 and Spring Boot 4.0.x project with basic structure, te
 * [ ] Add OPC UA server health check
 * [ ] Add network configuration for service-to-server communication
 * [ ] Add integration test that verifies OPC UA server availability
+* [ ] Add Vaadin UI test for MainLayout rendering and navigation drawer interaction
+* [ ] Add Flyway migration directory `src/main/resources/db/migration/` with `V1__initial_schema.sql`
+* [ ] Configure `spring.flyway.enabled=true` and baseline settings in `application.yml`
 * [ ] Add Node-RED service to `docker-compose.yml`
  * [ ] Install OpcUa-Server node in Node-RED
  * [ ] Mount `docs/opc-us.json` as a volume in the Node-RED container so the flow loads automatically on start
@@ -76,11 +91,18 @@ Create a runnable Java 25 and Spring Boot 4.0.x project with basic structure, te
 * [ ] `mvn clean test` passes
 * [ ] Application starts locally
 * [ ] `/actuator/health` returns `UP`
+* [ ] Vaadin UI accessible at `http://localhost:8080/` with MainLayout and navigation drawer
+* [ ] Light/dark mode toggle works
+* [ ] Navigation drawer follows CSS-SDA hierarchy and is collapsible
+* [ ] UI is responsive on desktop, tablet, and mobile viewports
+* [ ] Vaadin UI test for MainLayout rendering and drawer navigation passes
 * [ ] Docker image can be built
 * [ ] Application can be started through Docker Compose
 * [ ] OPC UA server starts via `docker compose up`
 * [ ] OPC UA server is reachable from the application container
 * [ ] OPC UA server health endpoint is available
+* [ ] Flyway migrations run automatically on application startup
+* [ ] `flyway_schema_history` table is created in PostgreSQL after first startup
 
 ---
 
@@ -111,6 +133,12 @@ Create an RDF/Turtle ontology based on the CSS-SDA formal model: SDA-Service := 
 * [ ] Add `REQ_001` requirement and `FlowmeterDiagnosticsService`
 * [ ] Add negative candidate services for testing
 
+* [ ] Create `ExplorerView` with split layout:
+  * [ ] Left: Static ontology tree component showing CSS-SDA class hierarchy (Capability, Skill, Service, CommunicationBinding, DataConnector, DeploymentContext, physical asset types)
+  * [ ] Right: Entity details with Overview tab
+* [ ] Create `OntologyTree` component with expandable/collapsible nodes
+* [ ] Add Vaadin UI test for ExplorerView rendering and tree interaction
+
 **Acceptance Criteria**
 
 * [ ] Ontology file is valid Turtle
@@ -121,6 +149,10 @@ Create an RDF/Turtle ontology based on the CSS-SDA formal model: SDA-Service := 
 * [ ] Ontology contains OfferedCapability and RequiredCapability for match inference
 * [ ] Ontology can be loaded by Apache Jena in a test
 * [ ] Ontology contains at least three example devices across two use cases
+* [ ] ExplorerView shows CSS-SDA class hierarchy in tree sidebar
+* [ ] Tree nodes are expandable and collapsible
+* [ ] Selecting a tree node displays entity details in the right panel
+* [ ] ExplorerView UI test validates tree rendering and node selection
 
 ---
 
@@ -140,12 +172,19 @@ Implement Java code that loads the ontology model into Apache Jena.
 * [ ] Add unit test for successful ontology loading
 * [ ] Add unit test for missing ontology file
 * [ ] Add unit test for invalid ontology content
+* [ ] Wire `ExplorerView` to `OntologyModelLoader` — tree loads dynamically from Jena model
+* [ ] Add entity detail tabs: Overview, Properties, Relationships
+* [ ] Add Vaadin UI test for ExplorerView dynamic tree loading and tab switching
 
 **Acceptance Criteria**
 
 * [ ] Ontology loads successfully during application startup or first use
 * [ ] Invalid ontology input fails with a clear exception
 * [ ] Tests cover success and failure cases
+* [ ] ExplorerView ontology tree populates dynamically from loaded model
+* [ ] Selecting an entity shows Properties and Relationships tabs
+* [ ] Missing ontology file shows user-friendly error in ExplorerView
+* [ ] ExplorerView UI test validates dynamic loading and tab interaction
 
 ---
 
@@ -173,6 +212,11 @@ Implement parsers that read vendor-supplied device description files (MTP AML, O
 * [ ] Add unit tests for MTP AML parsing (valid, missing elements, invalid XML)
 * [ ] Add unit tests for OPC UA Server Datasheet parsing (valid, missing elements, invalid JSON)
 * [ ] Add integration test that loads parsed triples into Apache Jena Model
+* [ ] Create `UploadView` with drag-and-drop upload panel:
+  * [ ] Support OPC UA NodeSet, AAS, MTP, AutomationML, RDF, OWL, JSON-LD, YAML
+  * [ ] Upload progress bar and validation results display
+  * [ ] Preview parsed triples after successful upload
+* [ ] Add Vaadin UI test for UploadView file selection, validation, and progress display
 
 **Acceptance Criteria**
 
@@ -183,6 +227,10 @@ Implement parsers that read vendor-supplied device description files (MTP AML, O
 * [ ] Datasheet parser produces `CommunicationBinding` with securityLevel, transportProfile, discoveryUrl
 * [ ] Both parsers fail with clear errors on invalid input
 * [ ] Parsed triples can be loaded into the same Apache Jena Model as the ontology schema
+* [ ] UploadView accepts valid file types and rejects invalid types with clear messages
+* [ ] UploadView shows progress bar during upload
+* [ ] UploadView previews parsed triples on success
+* [ ] UploadView UI test validates file type acceptance, rejection, and progress display
 
 ---
 
@@ -207,6 +255,14 @@ Create SPARQL queries that select a service satisfying a requirement by matching
 * [ ] Order candidates by highest recall
 * [ ] Limit result to one best service
 * [ ] Add query test with Apache Jena
+* [ ] Create global `SearchBar` component:
+  * [ ] AI-style semantic search with autocomplete, fuzzy search, exact search, recent searches
+  * [ ] Filters: Requirement, Capability, Skill, Service, Deployment, Asset
+  * [ ] Add `SearchBar` to `MainLayout` header
+* [ ] Create `SearchView` with results Grid:
+  * [ ] Columns: Name, Type, Description, Ontology Path, Similarity Score, Linked Services, Actions
+  * [ ] Sorting, filtering, pagination, column chooser, CSV/Excel export, context menu
+* [ ] Add Vaadin UI test for SearchBar autocomplete and SearchView result grid interaction
 
 **Acceptance Criteria**
 
@@ -216,6 +272,11 @@ Create SPARQL queries that select a service satisfying a requirement by matching
 * [ ] Query excludes service with excessive latency
 * [ ] Query excludes service with incompatible deployment context
 * [ ] Query evaluates CommunicationBinding, DataConnector, and DeploymentContext simultaneously
+* [ ] SearchBar shows autocomplete suggestions as user types
+* [ ] SearchView displays results Grid with correct columns
+* [ ] Filters scope search to selected entity type
+* [ ] Results support sorting and pagination
+* [ ] SearchBar and SearchView UI tests validate autocomplete and grid interaction
 
 ---
 
@@ -235,6 +296,12 @@ Implement the OWL reasoner step (Step 4: Infer from the five-step procedure) tha
 * [ ] Ensure inference does not overwrite existing explicit `OfferedCapability` triples
 * [ ] Add unit test: parser-generated triples produce expected `OfferedCapability` after inference
 * [ ] Add unit test: changing SkillParameter semantics changes inferred capability
+* [ ] Create `DashboardView` with animated cards:
+  * [ ] Registered Services, Capabilities, Skills, Semantic Mappings
+  * [ ] Each card with icon, title, value, trend, status color; clickable to navigate
+* [ ] Create `DashboardCard` component
+* [ ] Wire DashboardView to `OntologyInferenceService` for live counts
+* [ ] Add Vaadin UI test for DashboardView card rendering and navigation
 
 **Acceptance Criteria**
 
@@ -243,6 +310,10 @@ Implement the OWL reasoner step (Step 4: Infer from the five-step procedure) tha
 * [ ] Changing SkillParameter input changes inferred capability output
 * [ ] Inference completes within acceptable time for the MVP dataset
 * [ ] Reasoner can be enabled/disabled for testing without inference
+* [ ] DashboardView loads and displays animated cards with correct backend data
+* [ ] Cards show live counts from inference results
+* [ ] Clicking a card navigates to the corresponding view
+* [ ] DashboardView UI test validates card rendering and click navigation
 
 ---
 
@@ -269,6 +340,9 @@ Implement the application service that runs the SPARQL matching query and return
 * [ ] Extract recall and latency values
 * [ ] Return no-match result when query has no result
 * [ ] Add unit tests for match and no-match scenarios
+* [ ] Wire DashboardView cards to `SemanticReasonerService` — live match counts and statistics
+* [ ] Create `StatisticsPanel` component for match/success/failure rates
+* [ ] Add Vaadin UI test for DashboardView statistics display
 
 **Acceptance Criteria**
 
@@ -277,6 +351,8 @@ Implement the application service that runs the SPARQL matching query and return
 * [ ] Reasoner does not hardcode service selection in Java
 * [ ] Matching behavior is controlled by ontology data and SPARQL rules
 * [ ] Tests prove that changing ontology data changes the selected service without Java code changes
+* [ ] DashboardView shows live match statistics from reasoner
+* [ ] DashboardView statistics UI test validates correct count display
 
 ---
 
@@ -297,6 +373,18 @@ Expose requirement matching through a REST endpoint.
 * [ ] Return no-match response when no service satisfies the requirement
 * [ ] Add global exception handling
 * [ ] Add integration tests with MockMvc or WebTestClient
+* [ ] Create `RegistrationWizardView` (multi-step):
+  * [ ] Step 1: General Information
+  * [ ] Step 2: Communication
+  * [ ] Step 3: Capabilities
+  * [ ] Step 4: Skills
+  * [ ] Step 5: Deployment
+  * [ ] Step 6: Semantic Mapping
+  * [ ] Step 7: Review
+  * [ ] Step 8: Register
+  * [ ] Navigation: Previous, Next, Save Draft, Cancel
+  * [ ] On Register, call REST API to persist new service in ontology model
+* [ ] Add Vaadin UI test for RegistrationWizardView step navigation and form interaction
 
 **Acceptance Criteria**
 
@@ -305,6 +393,10 @@ Expose requirement matching through a REST endpoint.
 * [ ] API returns no-match response for unsatisfied requirement
 * [ ] API returns validation error for blank requirement ID
 * [ ] Integration tests pass
+* [ ] RegistrationWizardView navigates through all 8 steps without errors
+* [ ] RegistrationWizardView calls REST API on final Register step
+* [ ] Draft saving preserves form state across sessions
+* [ ] RegistrationWizardView UI test validates all steps and final registration
 
 ---
 
@@ -330,6 +422,12 @@ Generate deployment manifests for the selected service. Support both Docker Comp
 * [ ] Add unit tests using SnakeYAML to parse and verify generated Docker Compose YAML
 * [ ] Add unit tests using SnakeYAML or official K8s client to verify generated Kubernetes YAML
 * [ ] Add example file output under `docker/examples/` and `k8s/examples/`
+* [ ] Create `DeploymentView`:
+  * [ ] Cards per environment: Development, Testing, Production, Edge, Cloud
+  * [ ] Each card with status, services, assets, health, region, version
+  * [ ] Click to view generated Docker Compose and Kubernetes manifests
+* [ ] Create `ManifestDisplay` component with syntax-highlighted YAML viewer
+* [ ] Add Vaadin UI test for DeploymentView card rendering and manifest display
 
 **Acceptance Criteria**
 
@@ -340,6 +438,9 @@ Generate deployment manifests for the selected service. Support both Docker Comp
 * [ ] Kubernetes YAML contains `nodeSelector` with `sda.ontology/sil`, `sda.ontology/deterministic`, `sda.ontology/zone`
 * [ ] YAML can be parsed successfully using SnakeYAML
 * [ ] Tests verify runtime property mappings
+* [ ] DeploymentView shows environment cards with status
+* [ ] Clicking a card displays generated manifests
+* [ ] DeploymentView UI test validates environment cards and manifest viewer
 
 ---
 
@@ -360,6 +461,11 @@ Make the result explainable so a user can understand why a service was selected.
 * [ ] Include deployment context reason
 * [ ] Add explanation for no-match cases where possible
 * [ ] Add tests for explanation content
+* [ ] Add explanation panel to `DashboardView` showing match/no-match reasons per dimension
+* [ ] Create `NotificationCenter` with grouped notifications:
+  * [ ] Success, Information, Warning, Error, Background Tasks
+* [ ] Create `NotificationPanel` component for header notification bell
+* [ ] Add Vaadin UI test for DashboardView explanation panel and NotificationCenter interaction
 
 **Acceptance Criteria**
 
@@ -367,6 +473,9 @@ Make the result explainable so a user can understand why a service was selected.
 * [ ] No-match response explains that constraints were not satisfied
 * [ ] Explanation is understandable without reading the SPARQL query
 * [ ] Tests verify explanation content for successful and failed matches
+* [ ] DashboardView shows explanation panel after match
+* [ ] NotificationCenter groups notifications by type
+* [ ] Explanation panel and NotificationCenter UI tests validate interaction
 
 ---
 
@@ -406,6 +515,21 @@ Create evaluation datasets based on the two real-world PDF examples: the ferment
 * [ ] No-match tests pass for wrong SIL, wrong zone, wrong protocol
 * [ ] Flowmeter `REQ_001` still matches correctly for backward compatibility
 * [ ] README documents evaluation scenarios with expected results
+* [ ] Create `MonitoringView` with real-time widgets:
+  * [ ] CPU, Memory, OPC UA Sessions, Connected Assets, Semantic Queries, Notifications
+  * [ ] ApexCharts with live updates
+* [ ] Wire NotificationCenter to system events (match, upload, inference, manifest generation)
+* [ ] Add DashboardView cards for Digital Twins, Deployments, Running Simulations, Live OPC UA Sessions
+* [ ] Add summary-card navigation: OPC UA Sessions, Connected Assets
+* [ ] Add Vaadin UI test for MonitoringView chart rendering and NotificationCenter event display
+
+**Acceptance Criteria**
+
+* [ ] MonitoringView charts reflect current backend state
+* [ ] NotificationCenter receives events from all backend services
+* [ ] DashboardView visualizes all 8 metrics with live data
+* [ ] All three use cases (flowmeter, fermentation, HVAC) render correctly in evaluation
+* [ ] MonitoringView and NotificationCenter UI tests validate chart display and event grouping
 
 ## Phase 12: Documentation and Thesis Support
 
@@ -439,83 +563,58 @@ Document the prototype clearly for academic and engineering evaluation.
 
 ---
 
-## Phase 13: EKA Enterprise User Interface
+## Phase 13: EKA UI Polish — Graph, Settings, and Cross-Cutting Views
 
 **Goal**
 
-Build a modern, responsive, enterprise-grade Vaadin 25 UI (EKA — Engineering Knowledge Application) on top of the CSS-SDA backend. The UI replaces REST-only interaction with a full-featured dashboard, semantic explorer, global search, service registration wizard, ontology visualization, upload center, and monitoring views.
+Add the remaining three EKA UI views (ontology graph visualization, settings, settings menu) that depend on all backend phases being complete. Apply cross-cutting accessibility, mobile QA, and performance optimization across all views. Add integration tests that exercise the full UI stack.
 
 **Tasks**
 
-* [ ] Add Vaadin 25 Spring Boot starter and Lumo theme dependency
-* [ ] Add PostgreSQL and Spring Data JPA for UI persistence
-* [ ] Add Spring Security for authentication and role-based access
-* [ ] Create `MainLayout` with AppLayout structure:
-  * [ ] Header with CSS-SDA logo, title, global search bar, notifications, theme switch, user profile, settings menu
-  * [ ] Collapsible navigation drawer following CSS-SDA hierarchy (Intent → Use Cases → Requirements → Capability → Capabilities → Skills → Service Layer → Services → Communication Bindings → Data Connectors → Deployment → Assets → Digital Twins → Monitoring → Administration)
-  * [ ] Main workspace with responsive routing
-* [ ] Create `DashboardView` with animated cards:
-  * [ ] Registered Services, Capabilities, Skills, Semantic Mappings, Digital Twins, Deployments, Running Simulations, Live OPC UA Sessions
-  * [ ] Each card with icon, title, value, trend, status color; clickable to navigate
-* [ ] Create global `SearchBar` component:
-  * [ ] AI-style semantic search with autocomplete, fuzzy search, exact search, recent searches
-  * [ ] Filters: Requirement, Capability, Skill, Service, Deployment, Asset
-* [ ] Create `SearchView` with results Grid:
-  * [ ] Columns: Name, Type, Description, Ontology Path, Similarity Score, Linked Services, Actions
-  * [ ] Sorting, filtering, pagination, column chooser, CSV/Excel export, context menu
-* [ ] Create `UploadView` with drag-and-drop upload panel:
-  * [ ] Support OPC UA NodeSet, AAS, MTP, AutomationML, RDF, OWL, JSON-LD, YAML
-  * [ ] Upload progress bar and validation results display
-* [ ] Create `RegistrationWizardView` (multi-step):
-  * [ ] Step 1: General Information
-  * [ ] Step 2: Communication
-  * [ ] Step 3: Capabilities
-  * [ ] Step 4: Skills
-  * [ ] Step 5: Deployment
-  * [ ] Step 6: Semantic Mapping
-  * [ ] Step 7: Review
-  * [ ] Step 8: Register
-  * [ ] Navigation: Previous, Next, Save Draft, Cancel
-* [ ] Create `ExplorerView` with split layout:
-  * [ ] Left: Ontology Tree component
-  * [ ] Right: Entity details with tabs — Overview, Properties, Relationships, Services, History, Mappings
 * [ ] Create `GraphView` with Cytoscape.js integration:
   * [ ] Interactive ontology graph with zoom, pan, expand/collapse nodes, highlight paths, relationship labels, search nodes, center node, fullscreen
-* [ ] Create `MonitoringView` with real-time widgets:
-  * [ ] CPU, Memory, OPC UA Sessions, Connected Assets, Semantic Queries, Notifications
-  * [ ] ApexCharts with live updates
-* [ ] Create `DeploymentView`:
-  * [ ] Cards per environment: Development, Testing, Production, Edge, Cloud
-  * [ ] Each card with status, services, assets, health, region, version
-* [ ] Create `NotificationCenter`:
-  * [ ] Grouped notifications: Success, Information, Warning, Error, Background Tasks
 * [ ] Create `SettingsView`:
   * [ ] User preferences: Theme, Language, Time Zone, Notifications, Accessibility, Search Preferences
-* [ ] Implement light/dark mode via Lumo theme variants with persisted preference
-* [ ] Implement responsive layouts:
-  * [ ] Desktop: Drawer always visible
-  * [ ] Tablet: Drawer collapses automatically
-  * [ ] Mobile: Drawer becomes overlay; dashboard rearranges to one column
-* [ ] Implement accessibility:
-  * [ ] Keyboard navigation, ARIA labels, high contrast, screen reader support, focus management
-* [ ] Implement performance optimizations:
-  * [ ] Lazy load views, virtual scrolling for grids, minimize DOM updates, avoid unnecessary server round trips
+* [ ] Add settings menu to `MainLayout` header
+* [ ] Add user profile menu to `MainLayout` header
+* [ ] Implement keyboard navigation across all views:
+  * [ ] Tab order, focus indicators, shortcut keys for main actions
+* [ ] Implement ARIA labels on all interactive components
+* [ ] Implement high contrast mode
+* [ ] Implement screen reader support across all views
+* [ ] Implement focus management for modals, wizards, and dialogs
+* [ ] Implement virtual scrolling for large grids (SearchView, ExplorerView entity list)
+* [ ] Implement lazy view loading for all views
+* [ ] Minimize DOM updates and avoid unnecessary server round trips
+* [ ] Add Vaadin view rendering tests for all UI views
+* [ ] Add Vaadin component interaction tests for key workflows:
+  * [ ] Dashboard navigation
+  * [ ] Search with autocomplete and result selection
+  * [ ] Service Registration Wizard complete flow
+  * [ ] Upload flow with file selection and validation
+  * [ ] Explorer tree expand/collapse
+  * [ ] Graph zoom and pan
+  * [ ] Settings save and reload
+  * [ ] Light/dark mode toggle
+* [ ] Audit all views for responsive layout on mobile viewport
+* [ ] Audit all views for accessibility compliance
 
 **Acceptance Criteria**
 
-* [ ] Application starts with Vaadin UI accessible at `http://localhost:8080/`
-* [ ] Dashboard loads and displays animated cards with correct backend data
-* [ ] Navigation drawer follows CSS-SDA hierarchy and is collapsible
-* [ ] Global search returns ontology entities with autocomplete
-* [ ] Upload Center accepts valid files and rejects invalid types with clear messages
-* [ ] Service Registration Wizard creates a new service in the ontology model
-* [ ] Semantic Explorer shows ontology tree in left panel and entity details in right panel
-* [ ] Ontology graph renders nodes and supports zoom, pan, and highlight
-* [ ] Monitoring dashboard charts reflect current backend state
-* [ ] Light/dark mode toggle works and persists across sessions
-* [ ] UI is responsive on desktop, tablet, and mobile viewports
-* [ ] All views have keyboard-navigable controls and ARIA labels
-* [ ] Vaadin tests pass for view rendering and component interaction
+* [ ] Vaadin view rendering tests pass for all UI views across all phases
+* [ ] Vaadin component interaction tests pass for all key workflows
+* [ ] Ontology graph renders nodes and supports zoom, pan, highlight, and search
+* [ ] SettingsView saves preferences and restores them on reload
+* [ ] User profile menu shows user name and settings link
+* [ ] All views have keyboard-navigable controls
+* [ ] All interactive components have ARIA labels
+* [ ] High contrast mode renders all views legibly
+* [ ] Screen readers can navigate all views
+* [ ] Large grids use virtual scrolling for performance
+* [ ] Views lazy-load to minimize initial bundle size
+* [ ] Vaadin tests pass for all view rendering scenarios
+* [ ] Vaadin integration tests pass for all key workflows
+* [ ] Responsive layout works on mobile, tablet, and desktop viewports
 
 ---
 
@@ -618,7 +717,7 @@ Phase 9:  Docker Compose and Kubernetes Manifest Generation
 Phase 10: Matching Explanation
 Phase 11: Evaluation Dataset — Fermentation Skid and HVAC Plant
 Phase 12: Documentation and Thesis Support
-Phase 13: EKA Enterprise User Interface
+Phase 13: EKA UI Polish — Graph, Settings, and Cross-Cutting Views
 Phase 14: Margo Sandbox Deployment Context
 ```
 
@@ -682,9 +781,9 @@ The final project should deliver:
 * Apache Jena-based semantic reasoner
 * Requirement matching REST API
 * Docker Compose and Kubernetes manifest generation
-* Unit and integration tests
+* Unit, integration, and Vaadin UI tests
 * Optional Dagger automation pipeline
 * Evaluation dataset with fermentation skid and HVAC plant examples + cross-plant queries
 * Documentation for academic evaluation
 * Margo Sandbox deployment-context extension
-* EKA Enterprise User Interface (Vaadin 25 with dashboard, explorer, search, registration wizard, ontology graph, monitoring, upload center, settings, and light/dark mode)
+* EKA Enterprise User Interface (Vaadin 25 with dashboard, explorer, search, registration wizard, ontology graph, monitoring, upload center, settings, deployment view, notification center, and light/dark mode)

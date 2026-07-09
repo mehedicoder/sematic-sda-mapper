@@ -6,17 +6,6 @@ Use this subagent when changes affect RDF/Turtle ontology files under `src/main/
 
 ---
 
-## Read First
-
-- `specs/mission.md`
-- `specs/tech-stack.md`
-- `specs/roadmap.md`
-- Changed ontology files under `src/main/resources/ontology/`
-- Changed SPARQL query files under `src/main/resources/queries/`
-- Relevant example instance files
-
----
-
 ## Review Focus
 
 Check for:

@@ -6,19 +6,6 @@ Use this subagent after the feature spec has been written and, when available, a
 
 ---
 
-## Read First
-
-- `specs/mission.md`
-- `specs/tech-stack.md`
-- `specs/roadmap.md`
-- Target feature folder files:
-  - `requirements.md`
-  - `plan.md`
-  - `validation.md`
-  - `spec-review-report.md` if present
-
----
-
 ## Validation Checks
 
 1. Artifact completeness

@@ -6,18 +6,6 @@ Use this subagent for feature folders under `specs/YYYY-MM-DD-<feature-name>/`.
 
 ---
 
-## Read First
-
-- `specs/mission.md`
-- `specs/tech-stack.md`
-- `specs/roadmap.md`
-- Target feature folder files:
-  - `requirements.md`
-  - `plan.md`
-  - `validation.md`
-
----
-
 ## Required Checks
 
 1. Artifact completeness

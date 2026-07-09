@@ -4,18 +4,6 @@ Use this subagent to review SPARQL, Apache Jena query execution, RDF/Turtle data
 
 ---
 
-## Read First
-
-- `specs/mission.md`
-- `specs/tech-stack.md`
-- `specs/roadmap.md`
-- Changed files under `src/main/resources/ontology/**`
-- Changed files under `src/main/resources/queries/**`
-- Java code that loads models or executes queries
-- Query-related tests
-
----
-
 ## Review Focus
 
 Check for:

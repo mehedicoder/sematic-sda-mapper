@@ -6,17 +6,6 @@ Use this subagent when implementation changes affect ontology loading, SPARQL ma
 
 ---
 
-## Read First
-
-- `specs/mission.md`
-- `specs/roadmap.md`
-- Active feature folder if present
-- Changed source files
-- Changed tests
-- Changed resources under `src/main/resources/**`
-
----
-
 ## Review Focus
 
 Check for tests covering:

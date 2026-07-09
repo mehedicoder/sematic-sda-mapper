@@ -6,18 +6,6 @@ The MVP is a local research prototype, but it still must avoid unsafe API behavi
 
 ---
 
-## Read First
-
-- `specs/mission.md`
-- `specs/tech-stack.md`
-- `specs/roadmap.md`
-- Changed API/controller files
-- Changed YAML generation code/templates
-- Changed Docker files
-- Changed Maven dependencies
-
----
-
 ## Review Focus
 
 Check for:

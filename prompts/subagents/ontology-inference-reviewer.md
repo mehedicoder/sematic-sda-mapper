@@ -6,18 +6,6 @@ Use this subagent when changes affect OWL reasoner configuration, inference axio
 
 ---
 
-## Read First
-
-- `specs/mission.md`
-- `specs/tech-stack.md`
-- `specs/roadmap.md`
-- Changed ontology files under `src/main/resources/ontology/`
-- Changed Java files for inference service
-- Changed SPARQL query files
-- Relevant tests
-
----
-
 ## Review Focus
 
 Check for:

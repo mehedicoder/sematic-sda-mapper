@@ -6,17 +6,6 @@ Use this subagent when changes affect controllers, DTOs, validation, service lay
 
 ---
 
-## Read First
-
-- `specs/tech-stack.md`
-- `specs/roadmap.md`
-- Changed Java files
-- Changed `pom.xml`
-- Changed `application.yml`
-- Changed tests
-
----
-
 ## Review Focus
 
 Check for:

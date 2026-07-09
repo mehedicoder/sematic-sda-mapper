@@ -100,7 +100,7 @@ The project includes:
 - Apache Jena-based RDF, SPARQL, and OWL processing
 - Docker Compose manifest generation (for edge/fieldbus deployment)
 - Kubernetes YAML generation with nodeSelector from deployment context
-- Unit and integration tests for all components
+- Unit, integration, and UI tests for all components
 - Docker Compose for local development (application + OPC UA simulation)
 - Node-RED-based OPC UA server simulation in Docker Compose
 - Evaluation dataset with three use cases (flowmeter, fermentation skid, HVAC plant)
@@ -246,4 +246,10 @@ Build a modern, responsive, enterprise-grade user interface (EKA UI) on top of t
 
 **Technology**
 
-Built with Vaadin 25, Spring Security, PostgreSQL, Cytoscape.js, and ApexCharts — reusing the existing Java 25 and Spring Boot 4.0.x backend. The UI is an optional layer; the REST API and all semantic core functionality remain fully usable without it.
+Built with Vaadin 25, Spring Security, PostgreSQL, Cytoscape.js, and ApexCharts — reusing the existing Java 25 and Spring Boot 4.0.x backend.
+
+**Delivery Approach**
+
+UI views are built incrementally alongside their backend dependencies across phases 1–13, not as a monolithic phase at the end. Each phase from 1 onward produces a visible UI slice alongside its backend service. Phase 13 completes the remaining cross-cutting views (ontology graph, settings), accessibility, mobile QA, and integration tests.
+
+The REST API and all semantic core functionality remain fully usable without the UI.

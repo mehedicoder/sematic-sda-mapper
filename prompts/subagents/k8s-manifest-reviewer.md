@@ -6,17 +6,6 @@ Use this subagent when changes affect Kubernetes YAML generation, `nodeSelector`
 
 ---
 
-## Read First
-
-- `specs/mission.md`
-- `specs/tech-stack.md`
-- `specs/roadmap.md`
-- Changed Java files for manifest generation services
-- Changed generated YAML examples under `k8s/examples/`
-- Relevant ontology and SPARQL files
-
----
-
 ## Review Focus
 
 Check for:

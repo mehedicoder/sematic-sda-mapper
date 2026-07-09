@@ -6,18 +6,6 @@ Use this subagent when changes affect IDTA 02009-1-0 AAS submodel parsing, OPC U
 
 ---
 
-## Read First
-
-- `specs/mission.md`
-- `specs/tech-stack.md`
-- `specs/roadmap.md`
-- Changed Java files under parser packages
-- Changed test resources under `src/test/resources/examples/`
-- Changed OPC UA Server Datasheet example files
-- Relevant SPARQL query files
-
----
-
 ## Review Focus
 
 Check for:

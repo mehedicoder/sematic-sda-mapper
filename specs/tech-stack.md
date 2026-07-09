@@ -158,6 +158,23 @@ Purpose:
 - Persistent storage for registered services, users, deployment records, and UI state
 - JPA/Hibernate for object-relational mapping
 
+### Database Migrations
+
+Required dependency:
+
+```xml
+org.flywaydb:flyway-core
+org.flywaydb:flyway-database-postgresql
+```
+
+Purpose:
+
+- Version-controlled database schema evolution
+- Automatic migration on application startup via Spring Boot auto-configuration
+- Reproducible schema state across local dev, test, and deployment environments
+
+Migration files live under `src/main/resources/db/migration/` and follow the standard Flyway naming convention (`V<version>__<description>.sql`). The initial migration creates the baseline schema for the application.
+
 ### Spring Security
 
 Required dependency:
@@ -261,6 +278,8 @@ semantic-sda-mapper
 │   │   │
 │   │   └── resources/
 │   │       ├── application.yml
+│   │       ├── db/migration/
+│   │       │   └── V1__initial_schema.sql
 │   │       ├── ontology/
 │   │       │   └── css-sda-small.ttl
 │   │       ├── queries/
@@ -429,8 +448,25 @@ Responsibilities:
 Package:
 
 ```text
-com.example.semanticsda.ui
+com.sda.mapper.ui
 ```
+
+Built incrementally across phases 1–13. Each phase adds or upgrades the views that depend on the corresponding backend service:
+
+| Phase | UI Work |
+|---|---|
+| 1 | MainLayout, ThemeConfig, SecurityConfig, responsive shell |
+| 2 | ExplorerView (static ontology tree) |
+| 3 | ExplorerView (dynamic Jena model loading, detail tabs) |
+| 4 | UploadView (drag-drop, progress, validation) |
+| 5 | SearchBar (global, autocomplete), SearchView (results grid) |
+| 6 | DashboardView (basic cards from inference) |
+| 7 | DashboardView (live match statistics) |
+| 8 | RegistrationWizardView (multi-step) |
+| 9 | DeploymentView (environment cards, manifest viewer) |
+| 10 | DashboardView explanation panel, NotificationCenter |
+| 11 | MonitoringView (ApexCharts), NotificationCenter full |
+| 13 | GraphView (Cytoscape.js), SettingsView, accessibility, mobile QA, performance, integration tests |
 
 Responsibilities:
 

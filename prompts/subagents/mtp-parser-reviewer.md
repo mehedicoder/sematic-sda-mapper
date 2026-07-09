@@ -6,18 +6,6 @@ Use this subagent when changes affect MTP AML file parsing, VDI/VDE/NAMUR 2658 s
 
 ---
 
-## Read First
-
-- `specs/mission.md`
-- `specs/tech-stack.md`
-- `specs/roadmap.md`
-- Changed Java files under parser packages
-- Changed test resources under `src/test/resources/examples/`
-- Changed MTP AML example files
-- Relevant SPARQL query files
-
----
-
 ## Review Focus
 
 Check for:

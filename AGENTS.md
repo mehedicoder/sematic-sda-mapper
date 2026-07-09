@@ -31,7 +31,12 @@ Agents must:
 - Support light and dark mode with persisted user preference.
 - Follow the CSS-SDA hierarchy (Intent → Capability → Skill → Service → CommunicationBinding → DataConnector → Deployment) for navigation.
 - Write Vaadin UI tests for view rendering and component interaction workflows alongside every phase that adds or modifies UI views.
+- Add Micrometer metrics (counters, timers) for every service-layer method that processes requests; expose via `/actuator/prometheus`.
+- Configure structured logging with trace/span correlation IDs from Phase 1 onward.
+- Add custom health indicators for ontology readiness, SPARQL query loadability, and OPC UA simulation reachability.
 - Add Flyway migration scripts for every schema change, never rely on `spring.jpa.hibernate.ddl-auto=update` for production schema evolution.
+- Implement robust, layered exception handling with Spring's `ProblemDetail` (RFC 9457) for API errors, and clear error messages for ontology loading, SPARQL execution, input parsing, and matching failures.
+- Define a custom exception hierarchy with unchecked exceptions for domain failures (`OntologyLoadingException`, `SparqlExecutionException`, `MatchingException`, etc.), and rely on `@ControllerAdvice` + `@ExceptionHandler` for consistent ProblemDetail mapping. Wrap checked exceptions at the service boundary into the appropriate custom unchecked exception.
 
 Agents must not:
 

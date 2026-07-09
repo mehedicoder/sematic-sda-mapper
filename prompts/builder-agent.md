@@ -75,4 +75,8 @@ Task: <Task Name> | Phase: <Roadmap Phase>
 - Write tests for both positive and negative matching cases.
 - Write Vaadin UI tests alongside every phase that adds or modifies UI views.
 - Validate generated YAML by parsing it in tests when YAML generation changes.
+- Implement consistent exception handling across all layers: define unchecked domain exceptions (`OntologyLoadingException`, `SparqlExecutionException`, `MatchingException`, `InputParseException`), use `@ControllerAdvice` + `@ExceptionHandler` for `ProblemDetail` (RFC 9457) mapping, and wrap checked exceptions at the service boundary.
+- Add Micrometer metrics (counters, timers) to every service-layer method that processes requests. Annotate with `@Timed` or record manually via `MeterRegistry`.
+- Configure structured logging with trace/span correlation IDs; use `MDC` to propagate context across service boundaries.
+- Add custom `HealthIndicator` beans for ontology readiness, SPARQL query loadability, and OPC UA simulation reachability.
 - Update documentation only for behavior that exists or is explicitly planned.

@@ -50,6 +50,8 @@ Create a runnable Java 25 and Spring Boot 4.0.x project with basic structure, te
 
 * [ ] Create Maven-based Spring Boot 4.0.x project
   * [ ] Add Spring Web, Validation, Actuator dependencies
+  * [ ] Add Micrometer Prometheus registry for metrics export
+  * [ ] Add Micrometer Tracing with OpenTelemetry bridge for distributed tracing
   * [ ] Add Apache Jena dependency
   * [ ] Add SnakeYAML dependency
   * [ ] Add JUnit 5 and AssertJ test support
@@ -59,6 +61,9 @@ Create a runnable Java 25 and Spring Boot 4.0.x project with basic structure, te
   * [ ] Add Flyway database migration dependencies
 * [ ] Create base Java package structure under `com.sda.mapper`
 * [ ] Add health endpoint through Spring Actuator
+* [ ] Configure `application.yml` for observability (metrics, tracing, log pattern with trace/span IDs)
+* [ ] Add custom health indicators for ontology readiness, SPARQL query loadability, OPC UA simulation reachability
+* [ ] Configure structured logging with Logback for JSON output in production
 * [ ] Add Vaadin `MainLayout` with AppLayout structure:
   * [ ] Header with CSS-SDA logo, title, theme switch, user profile
   * [ ] Collapsible navigation drawer following CSS-SDA hierarchy (Intent → Use Cases → Requirements → Capability → Capabilities → Skills → Service Layer → Services → Communication Bindings → Data Connectors → Deployment → Assets → Digital Twins → Monitoring → Administration)
@@ -101,6 +106,9 @@ Create a runnable Java 25 and Spring Boot 4.0.x project with basic structure, te
 * [ ] OPC UA server starts via `docker compose up`
 * [ ] OPC UA server is reachable from the application container
 * [ ] OPC UA server health endpoint is available
+* [ ] `/actuator/prometheus` returns metrics including JVM, request, and custom `sda.*` metrics
+* [ ] Custom health indicators (ontology, SPARQL, OPC UA) appear in `/actuator/health`
+* [ ] Log output includes trace and span correlation IDs `[traceId,spanId]`
 * [ ] Flyway migrations run automatically on application startup
 * [ ] `flyway_schema_history` table is created in PostgreSQL after first startup
 
@@ -518,6 +526,8 @@ Create evaluation datasets based on the two real-world PDF examples: the ferment
 * [ ] Create `MonitoringView` with real-time widgets:
   * [ ] CPU, Memory, OPC UA Sessions, Connected Assets, Semantic Queries, Notifications
   * [ ] ApexCharts with live updates
+  * [ ] Wire charts to `/actuator/prometheus` metrics or Micrometer MeterRegistry directly
+  * [ ] Add metric counters for match requests, parser invocations, inference runs, manifest generations
 * [ ] Wire NotificationCenter to system events (match, upload, inference, manifest generation)
 * [ ] Add DashboardView cards for Digital Twins, Deployments, Running Simulations, Live OPC UA Sessions
 * [ ] Add summary-card navigation: OPC UA Sessions, Connected Assets

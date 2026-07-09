@@ -80,6 +80,45 @@ Purpose:
 - `spring-boot-starter-actuator`: health and observability endpoints
 - `spring-boot-starter-test`: unit and integration testing
 
+### Observability
+
+Required dependencies:
+
+```xml
+io.micrometer:micrometer-registry-prometheus
+io.micrometer:micrometer-tracing-bridge-otel
+io.opentelemetry:opentelemetry-exporter-otlp
+```
+
+Purpose:
+
+- `micrometer-registry-prometheus`: expose JVM, request, and custom metrics at `/actuator/prometheus`
+- `micrometer-tracing-bridge-otel`: distributed tracing with OpenTelemetry bridge
+- `opentelemetry-exporter-otlp`: export traces to OTLP-compatible backends (e.g., Jaeger, Grafana Tempo)
+
+Logging uses Logback (bundled via `spring-boot-starter`). Configure structured JSON output for production and plain-text with correlation IDs for development.
+
+### Configuration
+
+Required `application.yml` observability block:
+
+```yaml
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, prometheus, metrics
+  metrics:
+    tags:
+      application: ${spring.application.name:semantic-sda-mapper}
+  tracing:
+    sampling:
+      probability: 1.0
+logging:
+  pattern:
+    console: "%d{ISO8601} %-5p [%t] %c{1.} [%X{traceId:-},%X{spanId:-}] %m%n"
+```
+
 ### Apache Jena
 
 Required dependency:
@@ -437,11 +476,51 @@ com.example.semanticsda.error
 
 Responsibilities:
 
-- Convert technical errors into clear API errors
+- Convert technical errors into clear API errors using Spring's `ProblemDetail` (RFC 9457)
 - Handle invalid requirement IDs
 - Handle no matching service
 - Handle ontology loading failures
 - Handle SPARQL query failures
+
+### Exception Design
+
+Define unchecked exception classes per domain concern:
+
+| Exception | Cause |
+|---|---|
+| `OntologyLoadingException` | Missing/invalid ontology file |
+| `SparqlExecutionException` | SPARQL query parse or runtime failure |
+| `MatchingException` | Unexpected condition during semantic matching |
+| `InputParseException` | Malformed MTP AML or OPC UA Server Datasheet input |
+
+All custom exceptions extend `RuntimeException`. Use `@ControllerAdvice` + `@ExceptionHandler` in `GlobalExceptionHandler` to map each exception to a consistent `ProblemDetail` response. Wrap checked exceptions (e.g., `IOException` from file loading, `SAXException` from XML parsing) at the service boundary into the appropriate custom unchecked exception.
+
+### Observability Module
+
+Package:
+
+```text
+com.sda.mapper.observability
+```
+
+Responsibilities:
+
+- Expose Micrometer metrics for service layer, parser, inference, and reasoner operations
+- Record histograms and counters for match requests, parse invocations, inference runs, manifest generations
+- Configure custom health indicators beyond the default Actuator health (ontology model loaded, SPARQL queries loadable, OPC UA simulation reachable)
+- Provide structured logging with trace and span IDs across all service boundaries
+- No external observability platform is required at MVP time; Prometheus endpoint and console-printed traces suffice
+
+Custom metrics to register:
+
+| Metric Name | Type | Description |
+|---|---|---|
+| `sda.match.requests.total` | Counter | Total match requests received |
+| `sda.match.success` | Counter | Successful matches |
+| `sda.match.failure` | Counter | No-match results |
+| `sda.parse.invocations` | Counter | Parser invocations by type |
+| `sda.inference.duration` | Timer | OWL inference duration |
+| `sda.manifest.generated` | Counter | Generated manifests by format |
 
 ### UI Module
 
@@ -670,9 +749,13 @@ Monitoring dashboard chart data updates reflect backend state.
 - The first version must be small and executable.
 - Every roadmap phase must produce a testable result.
 - Generated Docker Compose and Kubernetes YAML must be validated in tests.
+- API error responses must use Spring's `ProblemDetail` (RFC 9457) with consistent structure.
 - API responses must explain why a service was selected or why no service matched.
 - Input file parsers must fail with clear, actionable errors on invalid input.
 - OWL inference must preserve existing explicit capability triples.
 - UI views must be responsive and work on desktop, tablet, and mobile viewports.
 - UI must support light and dark mode with persisted user preference.
 - Navigation must follow the CSS-SDA hierarchy (Intent → Capability → Skill → Service → CommunicationBinding → DataConnector → Deployment).
+- Every service-layer method that processes a request must record Micrometer metrics (counter or timer).
+- Structured logging with trace and span IDs must be configured from Phase 1 onward.
+- Custom health indicators must be added for ontology readiness, SPARQL query loadability, and OPC UA simulation reachability.

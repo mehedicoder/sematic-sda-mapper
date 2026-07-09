@@ -22,11 +22,16 @@ Check for:
 - OWL reasoner inference: OfferedCapability not correctly derived, explicit triples overwritten
 - Cross-plant SPARQL: returns results from both use cases, correctly filters by site/zone
 - Jena resource leaks or unclear error handling
+- Missing or inconsistent exception handling: no `ProblemDetail` (RFC 9457) patterns, missing `@ExceptionHandler` for ontology/SPARQL/parser failures, unclear error propagation
+- Exception hierarchy: domain exceptions not extending `RuntimeException`, checked exceptions leaking past the service boundary instead of being wrapped
 - REST API validation gaps
 - Docker Compose YAML that is nondeterministic, invalid, or missing metadata
 - Kubernetes YAML that is nondeterministic, invalid, or missing nodeSelector from DeploymentContext
 - Missing positive and negative tests
 - Missing or insufficient Vaadin UI tests (view rendering, component interaction)
+- Missing Micrometer metrics on service-layer request-processing methods (counters, timers)
+- Missing structured logging configuration with trace/span correlation IDs
+- Missing custom health indicators (ontology readiness, SPARQL loadability, OPC UA reachability)
 - Missing JavaDoc on changed public classes and public contract methods
 - Documentation claiming unsupported behavior
 

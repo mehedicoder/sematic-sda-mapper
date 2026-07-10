@@ -90,6 +90,15 @@ Create a runnable Java 25 and Spring Boot 4.0.x project with basic structure, te
  * [ ] Install OpcUa-Server node in Node-RED
  * [ ] Mount `docs/opc-us.json` as a volume in the Node-RED container so the flow loads automatically on start
  * [ ] Use `docs/opc-us.json` flow to simulate OPC UA server
+* [ ] Create `src/main/resources/config/options.json` with configurable dropdown values (see `specs/config-options.md`)
+* [ ] Create `OptionsConfigService` to load options from classpath
+* [ ] Create `Option` record (`value`, `label`)
+* [ ] Add `GET /api/v1/options/{fieldName}` endpoint to serve dropdown options
+* [ ] Add unit test: options load correctly from JSON
+* [ ] Add unit test: missing `options.json` fails fast on startup
+* [ ] Add unit test: malformed JSON throws clear error
+* [ ] Add unit test: `GET /api/v1/options/{fieldName}` returns correct list
+* [ ] Add unit test: `GET /api/v1/options/nonexistent` returns 404
 
 **Acceptance Criteria**
 
@@ -111,6 +120,9 @@ Create a runnable Java 25 and Spring Boot 4.0.x project with basic structure, te
 * [ ] Log output includes trace and span correlation IDs `[traceId,spanId]`
 * [ ] Flyway migrations run automatically on application startup
 * [ ] `flyway_schema_history` table is created in PostgreSQL after first startup
+* [ ] `options.json` loads successfully on application startup
+* [ ] `GET /api/v1/options/protocol` returns the list of configured protocols
+* [ ] `GET /api/v1/options/nonexistent` returns 404
 
 ---
 
@@ -373,18 +385,21 @@ Expose requirement matching through a REST endpoint.
 **Tasks**
 
 * [ ] Create `RequirementMatchingController`
-* [ ] Create `MatchRequirementRequest`
+* [ ] Create `MatchRequirementRequest` supporting two modes:
+  * [ ] Mode A: `{ "requirementId": "REQ_001" }` — lookup existing requirement from ontology
+  * [ ] Mode B: inline fields (`functionClass`, `protocol`, `accessMode`, `engineeringUnit`, `safetyIntegrityLevel`, `networkZone`, `determinismClass`, `minRecall`, `maxLatencyMs`, `nominalRange_min`, `nominalRange_max`) — match on-the-fly without persisting a requirement
 * [ ] Create `MatchRequirementResponse`
-* [ ] Add request validation
+* [ ] Add request validation (requirementId OR inline fields required, not both)
 * [ ] Add endpoint `POST /api/v1/requirements/match`
+* [ ] Add endpoint `POST /api/v1/requirements` to persist a new requirement to the ontology
 * [ ] Return matched service details
 * [ ] Return no-match response when no service satisfies the requirement
 * [ ] Add global exception handling
-* [ ] Add integration tests with MockMvc or WebTestClient
+* [ ] Add integration tests with MockMvc or WebTestClient (both modes)
 * [ ] Create `RegistrationWizardView` (multi-step):
   * [ ] Step 1: General Information
   * [ ] Step 2: Communication
-  * [ ] Step 3: Capabilities
+  * [ ] Step 3: Capabilities (dropdowns populated from `GET /api/v1/options/{field}`)
   * [ ] Step 4: Skills
   * [ ] Step 5: Deployment
   * [ ] Step 6: Semantic Mapping
@@ -393,18 +408,43 @@ Expose requirement matching through a REST endpoint.
   * [ ] Navigation: Previous, Next, Save Draft, Cancel
   * [ ] On Register, call REST API to persist new service in ontology model
 * [ ] Add Vaadin UI test for RegistrationWizardView step navigation and form interaction
+* [ ] Create `RequirementFormView` for creating and matching requirements:
+  * [ ] Dropdown: functionClass (from `GET /api/v1/options/functionClass`)
+  * [ ] Dropdown: protocol (from `GET /api/v1/options/protocol`)
+  * [ ] Dropdown: accessMode (from `GET /api/v1/options/accessMode`)
+  * [ ] Dropdown: engineeringUnit (from `GET /api/v1/options/engineeringUnit`)
+  * [ ] Dropdown: safetyIntegrityLevel (from `GET /api/v1/options/safetyIntegrityLevel`)
+  * [ ] Dropdown: networkZone (from `GET /api/v1/options/networkZone`)
+  * [ ] Dropdown: determinismClass (from `GET /api/v1/options/determinismClass`)
+  * [ ] Numeric input: nominalRange_min
+  * [ ] Numeric input: nominalRange_max
+  * [ ] Numeric input: minRecall (0.0–1.0)
+  * [ ] Numeric input: maxLatencyMs
+  * [ ] Button: "Match" — calls `POST /api/v1/requirements/match` with inline fields
+  * [ ] Button: "Save Requirement" — calls `POST /api/v1/requirements` to persist, then match by ID
+  * [ ] Results panel: shows matched service details or no-match message
+  * [ ] All dropdown options loaded from configurable `options.json` via `GET /api/v1/options/{field}`
+* [ ] Add Vaadin UI test for RequirementFormView dropdown loading, form fill, and match result display
 
 **Acceptance Criteria**
 
-* [ ] API accepts a requirement ID
+* [ ] API accepts a requirement ID (Mode A)
+* [ ] API accepts inline requirement fields (Mode B)
 * [ ] API returns selected service for valid matching requirement
 * [ ] API returns no-match response for unsatisfied requirement
-* [ ] API returns validation error for blank requirement ID
-* [ ] Integration tests pass
+* [ ] API returns validation error when neither requirementId nor inline fields are provided
+* [ ] API returns validation error when both requirementId and inline fields are provided
+* [ ] `POST /api/v1/requirements` persists a new requirement to the ontology
+* [ ] Integration tests pass for both modes
 * [ ] RegistrationWizardView navigates through all 8 steps without errors
 * [ ] RegistrationWizardView calls REST API on final Register step
 * [ ] Draft saving preserves form state across sessions
 * [ ] RegistrationWizardView UI test validates all steps and final registration
+* [ ] RequirementFormView loads all dropdown options from `GET /api/v1/options/{field}`
+* [ ] RequirementFormView dropdowns are populated from configurable `options.json`
+* [ ] RequirementFormView "Match" button returns correct service or no-match
+* [ ] RequirementFormView "Save Requirement" persists and then matches
+* [ ] RequirementFormView UI test validates dropdown loading, form interaction, and match results
 
 ---
 

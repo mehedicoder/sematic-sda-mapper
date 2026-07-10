@@ -3,7 +3,7 @@
 ## Runtime Platform
 
 | Area | Technology |
-|---|---|---|
+|---|---|
 | Programming language | Java 25 |
 | Backend framework | Spring Boot 4.0.x |
 | UI framework | Vaadin 25.x (Lumo Theme) |
@@ -25,80 +25,26 @@
 | Containerization | Docker |
 | Deployment targets | Docker Compose edge/fieldbus + Kubernetes-compatible YAML |
 
-## Java Version
-
-The project uses:
-
-```text
-Java 25
-```
-
-Reason:
-
-- Java 25 is suitable for a current research prototype.
-- It aligns with the Spring Boot 4 generation.
-- It allows the project to use modern Java language and runtime features.
-
-## Spring Boot Version
-
-The project uses:
-
-```text
-Spring Boot 4.0.x
-```
-
-Recommended starting version:
-
-```text
-Spring Boot 4.0.6 or latest available 4.0.x patch version
-```
-
-Reason:
-
-- Spring Boot 4.0.x supports modern Java versions including Java 25.
-- Spring Boot 4 is based on the Spring Framework 7 generation.
-- It is suitable for new Java 25-based applications.
-- It aligns well with modern Jakarta EE and cloud-native application development.
-
 ## Core Dependencies
 
-### Spring Boot
-
-Required starters:
+### Spring Boot Starters
 
 ```xml
-spring-boot-starter-web
-spring-boot-starter-validation
-spring-boot-starter-actuator
-spring-boot-starter-test
+spring-boot-starter-web          <!-- REST API -->
+spring-boot-starter-validation   <!-- request validation -->
+spring-boot-starter-actuator     <!-- health/metrics endpoints -->
+spring-boot-starter-test         <!-- unit and integration testing -->
 ```
-
-Purpose:
-
-- `spring-boot-starter-web`: REST API
-- `spring-boot-starter-validation`: request validation
-- `spring-boot-starter-actuator`: health and observability endpoints
-- `spring-boot-starter-test`: unit and integration testing
 
 ### Observability
 
-Required dependencies:
-
 ```xml
-io.micrometer:micrometer-registry-prometheus
-io.micrometer:micrometer-tracing-bridge-otel
-io.opentelemetry:opentelemetry-exporter-otlp
+io.micrometer:micrometer-registry-prometheus      <!-- /actuator/prometheus metrics -->
+io.micrometer:micrometer-tracing-bridge-otel      <!-- OpenTelemetry distributed tracing -->
+io.opentelemetry:opentelemetry-exporter-otlp      <!-- export traces to OTLP backends -->
 ```
 
-Purpose:
-
-- `micrometer-registry-prometheus`: expose JVM, request, and custom metrics at `/actuator/prometheus`
-- `micrometer-tracing-bridge-otel`: distributed tracing with OpenTelemetry bridge
-- `opentelemetry-exporter-otlp`: export traces to OTLP-compatible backends (e.g., Jaeger, Grafana Tempo)
-
 Logging uses Logback (bundled via `spring-boot-starter`). Configure structured JSON output for production and plain-text with correlation IDs for development.
-
-### Configuration
 
 Required `application.yml` observability block:
 
@@ -121,119 +67,59 @@ logging:
 
 ### Apache Jena
 
-Required dependency:
-
 ```xml
-org.apache.jena:apache-jena-libs
+org.apache.jena:apache-jena-libs   <!-- includes jena-core -->
 ```
 
-Purpose:
-
-- Load RDF/Turtle ontology files
-- Execute SPARQL queries
-- Process semantic matching results
-- Represent ontology individuals and relationships
-- Run OWL reasoner for capability inference (OWL_MEM_MICRO_RULES_INF)
+Load RDF/Turtle ontology, execute SPARQL queries, run OWL reasoner (`OWL_MEM_MICRO_RULES_INF`), and process semantic matching results.
 
 ### XML Parsing (MTP AML)
-
-Required dependency:
-
-```xml
-org.apache.jena:jena-core (bundled with apache-jena-libs)
-```
 
 MTP AML files are XML archives (VDI/VDE/NAMUR 2658). Parsing uses Java's built-in XML APIs (SAX/DOM) or a lightweight XML library assured by the Spring Boot BOM.
 
 ### JSON Parsing (OPC UA Server Datasheet)
 
-Required dependency:
-
-```xml
-spring-boot-starter-json (included via spring-boot-starter-web)
-```
-
 OPC UA Server Datasheet files follow the IDTA 02009-1-0 AAS submodel JSON schema. Jackson (bundled with Spring Boot) handles parsing.
 
 ### YAML Support
 
-Recommended dependency:
-
 ```xml
-org.yaml:snakeyaml
+org.yaml:snakeyaml   <!-- Kubernetes deployment YAML generation and test validation -->
 ```
 
-Purpose:
-
-- Generate Kubernetes deployment YAML
-- Validate generated YAML structure in tests
-
 ### Vaadin 25
-
-Required dependency:
 
 ```xml
 com.vaadin:vaadin-spring-boot-starter
 ```
 
-Purpose:
-
-- Server-side UI framework with built-in Lumo theme
-- AppLayout, Grid, FormLayout, and rich component library
-- Automatic client-server data binding
-- Built-in responsive and accessibility support
+Server-side UI framework with Lumo theme, AppLayout/Grid/FormLayout components, automatic client-server data binding, and responsive/accessibility support. Cytoscape.js and ApexCharts are included via npm dependencies managed by Vaadin's frontend build.
 
 ### PostgreSQL
-
-Required dependency:
 
 ```xml
 org.springframework.boot:spring-boot-starter-data-jpa
 org.postgresql:postgresql
 ```
 
-Purpose:
-
-- Persistent storage for registered services, users, deployment records, and UI state
-- JPA/Hibernate for object-relational mapping
+Persistent storage for registered services, users, deployment records, and UI state via JPA/Hibernate ORM.
 
 ### Database Migrations
-
-Required dependency:
 
 ```xml
 org.flywaydb:flyway-core
 org.flywaydb:flyway-database-postgresql
 ```
 
-Purpose:
-
-- Version-controlled database schema evolution
-- Automatic migration on application startup via Spring Boot auto-configuration
-- Reproducible schema state across local dev, test, and deployment environments
-
-Migration files live under `src/main/resources/db/migration/` and follow the standard Flyway naming convention (`V<version>__<description>.sql`). The initial migration creates the baseline schema for the application.
+Version-controlled schema evolution. Migration files live under `src/main/resources/db/migration/` following the Flyway naming convention (`V<version>__<description>.sql`).
 
 ### Spring Security
-
-Required dependency:
 
 ```xml
 org.springframework.boot:spring-boot-starter-security
 ```
 
-Purpose:
-
-- Authentication and authorization for UI pages
-- Role-based access control
-- OAuth2 / form-login integration
-
-### Frontend Libraries (bundled via Vaadin)
-
-- **Cytoscape.js** — interactive ontology graph visualization (zoom, pan, expand/collapse, highlight paths)
-- **ApexCharts** — real-time dashboard charts (CPU, memory, OPC UA sessions, semantic queries)
-
-These are included via npm dependencies managed by Vaadin's frontend build.
+Authentication, authorization, role-based access control, and OAuth2 / form-login integration.
 
 ## Suggested Maven Properties
 
@@ -249,7 +135,6 @@ These are included via npm dependencies managed by Vaadin's frontend build.
 
 ```text
 semantic-sda-mapper
-│
 ├── pom.xml
 ├── README.md
 ├── specs/
@@ -259,232 +144,114 @@ semantic-sda-mapper
 │
 ├── src/
 │   ├── main/
-│   │   ├── java/
-│   │   │   └── com/example/semanticsda/
-│   │   │       ├── SemanticSdaApplication.java
-│   │   │       ├── api/
-│   │   │       │   ├── RequirementMatchingController.java
-│   │   │       │   └── dto/
-│   │   │       │       ├── MatchRequirementRequest.java
-│   │   │       │       └── MatchRequirementResponse.java
-│   │   │       ├── parser/
-│   │   │       │   ├── ParserFactory.java
-│   │   │       │   ├── MTPAmlParser.java
-│   │   │       │   └── UaServerDatasheetParser.java
-│   │   │       ├── inference/
-│   │   │       │   └── OntologyInferenceService.java
-│   │   │       ├── reasoning/
-│   │   │       │   ├── SemanticReasonerService.java
-│   │   │       │   ├── SparqlQueryLoader.java
-│   │   │       │   └── ServiceMatchResult.java
-│   │   │       ├── ontology/
-│   │   │       │   ├── OntologyModelLoader.java
-│   │   │       │   └── OntologyResourceProperties.java
-│   │   │       ├── deployment/
-│   │   │       │   ├── DockerComposeManifestService.java
-│   │   │       │   ├── KubernetesManifestService.java
-│   │   │       │   └── ManifestResult.java
-│   │   │       ├── error/
-│   │   │       │   ├── ApiErrorResponse.java
-│   │   │       │   └── GlobalExceptionHandler.java
-│   │   │       └── ui/
-│   │   │           ├── MainLayout.java
-│   │   │           ├── DashboardView.java
-│   │   │           ├── ExplorerView.java
-│   │   │           ├── SearchView.java
-│   │   │           ├── UploadView.java
-│   │   │           ├── RegistrationWizardView.java
-│   │   │           ├── GraphView.java
-│   │   │           ├── MonitoringView.java
-│   │   │           ├── SettingsView.java
-│   │   │           ├── components/
-│   │   │           │   ├── DashboardCard.java
-│   │   │           │   ├── SearchBar.java
-│   │   │           │   ├── OntologyTree.java
-│   │   │           │   ├── UploadCard.java
-│   │   │           │   ├── ServiceCard.java
-│   │   │           │   ├── StatisticsPanel.java
-│   │   │           │   ├── NotificationPanel.java
-│   │   │           │   └── StatusBadge.java
-│   │   │           ├── services/
-│   │   │           │   └── UIService.java
-│   │   │           ├── theme/
-│   │   │           │   └── ThemeConfig.java
-│   │   │           ├── security/
-│   │   │           │   └── SecurityConfig.java
-│   │   │           └── config/
-│   │   │               └── UIConfig.java
+│   │   ├── java/com/example/semanticsda/
+│   │   │   ├── SemanticSdaApplication.java
+│   │   │   ├── api/
+│   │   │   │   ├── RequirementMatchingController.java
+│   │   │   │   └── dto/
+│   │   │   │       ├── MatchRequirementRequest.java
+│   │   │   │       └── MatchRequirementResponse.java
+│   │   │   ├── parser/
+│   │   │   │   ├── ParserFactory.java
+│   │   │   │   ├── MTPAmlParser.java
+│   │   │   │   └── UaServerDatasheetParser.java
+│   │   │   ├── inference/
+│   │   │   │   └── OntologyInferenceService.java
+│   │   │   ├── reasoning/
+│   │   │   │   ├── SemanticReasonerService.java
+│   │   │   │   ├── SparqlQueryLoader.java
+│   │   │   │   └── ServiceMatchResult.java
+│   │   │   ├── ontology/
+│   │   │   │   ├── OntologyModelLoader.java
+│   │   │   │   └── OntologyResourceProperties.java
+│   │   │   ├── deployment/
+│   │   │   │   ├── DockerComposeManifestService.java
+│   │   │   │   ├── KubernetesManifestService.java
+│   │   │   │   └── ManifestResult.java
+│   │   │   ├── error/
+│   │   │   │   ├── ApiErrorResponse.java
+│   │   │   │   └── GlobalExceptionHandler.java
+│   │   │   ├── observability/
+│   │   │   │   └── (metrics, health indicators, structured logging config)
+│   │   │   └── ui/
+│   │   │       ├── MainLayout.java
+│   │   │       ├── DashboardView.java
+│   │   │       ├── ExplorerView.java
+│   │   │       ├── SearchView.java
+│   │   │       ├── UploadView.java
+│   │   │       ├── RegistrationWizardView.java
+│   │   │       ├── GraphView.java
+│   │   │       ├── MonitoringView.java
+│   │   │       ├── SettingsView.java
+│   │   │       ├── components/
+│   │   │       │   ├── DashboardCard.java
+│   │   │       │   ├── SearchBar.java
+│   │   │       │   ├── OntologyTree.java
+│   │   │       │   ├── UploadCard.java
+│   │   │       │   ├── ServiceCard.java
+│   │   │       │   ├── StatisticsPanel.java
+│   │   │       │   ├── NotificationPanel.java
+│   │   │       │   └── StatusBadge.java
+│   │   │       ├── services/UIService.java
+│   │   │       ├── theme/ThemeConfig.java
+│   │   │       ├── security/SecurityConfig.java
+│   │   │       └── config/UIConfig.java
 │   │   │
 │   │   └── resources/
 │   │       ├── application.yml
-│   │       ├── db/migration/
-│   │       │   └── V1__initial_schema.sql
-│   │       ├── ontology/
-│   │       │   └── css-sda-small.ttl
-│   │       ├── queries/
-│   │       │   └── match-service.rq
-│   │       └── k8s/
-│   │           └── deployment-template.yaml
+│   │       ├── db/migration/V1__initial_schema.sql
+│   │       ├── ontology/css-sda-small.ttl
+│   │       ├── queries/match-service.rq
+│   │       └── k8s/deployment-template.yaml
 │   │
 │   └── test/
-│       ├── java/
-│       │   └── com/example/semanticsda/
-│       │       ├── parser/
-│       │       │   ├── MTPAmlParserTest.java
-│       │       │   └── UaServerDatasheetParserTest.java
-│       │       ├── inference/
-│       │       │   └── OntologyInferenceServiceTest.java
-│       │       ├── reasoning/
-│       │       │   └── SemanticReasonerServiceTest.java
-│       │       ├── deployment/
-│       │       │   ├── DockerComposeManifestServiceTest.java
-│       │       │   └── KubernetesManifestServiceTest.java
-│       │       ├── api/
-│       │       │   └── RequirementMatchingControllerIT.java
-│       │       └── ui/
-│       │           ├── DashboardViewTest.java
-│       │           ├── ExplorerViewTest.java
-│       │           └── RegistrationWizardViewTest.java
+│       ├── java/com/example/semanticsda/
+│       │   ├── parser/
+│       │   │   ├── MTPAmlParserTest.java
+│       │   │   └── UaServerDatasheetParserTest.java
+│       │   ├── inference/OntologyInferenceServiceTest.java
+│       │   ├── reasoning/SemanticReasonerServiceTest.java
+│       │   ├── deployment/
+│       │   │   ├── DockerComposeManifestServiceTest.java
+│       │   │   └── KubernetesManifestServiceTest.java
+│       │   ├── api/RequirementMatchingControllerIT.java
+│       │   └── ui/
+│       │       ├── DashboardViewTest.java
+│       │       ├── ExplorerViewTest.java
+│       │       └── RegistrationWizardViewTest.java
 │       └── resources/
-│           ├── ontology/
-│           │   └── test-css-sda-small.ttl
-│           ├── queries/
-│           │   └── test-match-service.rq
+│           ├── ontology/test-css-sda-small.ttl
+│           ├── queries/test-match-service.rq
 │           └── examples/
 │               ├── mtp-fermentation-skid.xml
 │               └── uaserver-ahu01.json
 │
 ├── docker/
 │   ├── Dockerfile
-│   └── examples/
-│       └── flowmeter-diagnostics-compose.yaml
+│   └── examples/flowmeter-diagnostics-compose.yaml
 ├── docker-compose.yml
-└── k8s/
-    └── examples/
-        ├── flowmeter-diagnostics-deployment.yaml
-        └── fermentation-skid-deployment.yaml
+└── k8s/examples/
+    ├── flowmeter-diagnostics-deployment.yaml
+    └── fermentation-skid-deployment.yaml
 ```
 
 ## Main Application Modules
 
-### API Module
+| Module | Package | Key Responsibilities |
+|---|---|---|
+| **API** | `api` | REST endpoints, request validation, `POST /api/v1/requirements/match` |
+| **Parser** | `parser` | Parse MTP AML (XML) and OPC UA Datasheet (JSON) into CSS-SDA triples; fail fast on invalid input |
+| **Inference** | `inference` | Run OWL reasoner to derive `sda:OfferedCapability` from `css:SkillParameter` semantics |
+| **Ontology** | `ontology` | Load RDF/Turtle files, build Jena model, fail fast on missing/invalid ontology |
+| **Reasoning** | `reasoning` | Load SPARQL queries, execute matching, convert results to DTOs, handle no-match cases |
+| **Deployment** | `deployment` | Generate Docker Compose and Kubernetes YAML, derive `nodeSelector` from `sda:DeploymentContext` |
+| **Error** | `error` | `ProblemDetail` (RFC 9457) error responses via `@ControllerAdvice` |
+| **Observability** | `observability` | Micrometer metrics, custom health indicators, structured logging with trace/span IDs |
+| **UI** | `ui` | Vaadin views built incrementally across phases 1–13 (see `specs/roadmap.md`) |
 
-Package:
+### Exception Hierarchy
 
-```text
-com.example.semanticsda.api
-```
-
-Responsibilities:
-
-- Expose REST endpoints
-- Accept requirement matching requests
-- Return matched service and deployment manifest
-- Validate request input
-
-Main endpoint:
-
-```http
-POST /api/v1/requirements/match
-```
-
-### Parser Module
-
-Package:
-
-```text
-com.example.semanticsda.parser
-```
-
-Responsibilities:
-
-- Parse MTP AML files (VDI/VDE/NAMUR 2658 XML) into CSS-SDA CommunicationBinding, DataConnector, and css:Skill triples
-- Parse OPC UA Server Datasheet files (IDTA 02009-1-0 JSON) into CSS-SDA CommunicationBinding and DataConnector triples
-- Select the correct parser via ParserFactory based on input file type
-- Fail fast with clear errors when input files are missing, malformed, or incomplete
-
-### Inference Module
-
-Package:
-
-```text
-com.example.semanticsda.inference
-```
-
-Responsibilities:
-
-- Configure and run OWL reasoner (Jena OWL_MEM_MICRO_RULES_INF) over the ontology model
-- Derive `sda:OfferedCapability` instances from `css:SkillParameter` semantics (engineeringUnit, nominalRange, functionClass)
-- Preserve existing explicit capability triples
-- Provide enable/disable switch for testing without inference
-
-### Ontology Module
-
-Package:
-
-```text
-com.example.semanticsda.ontology
-```
-
-Responsibilities:
-
-- Load RDF/Turtle files
-- Build Apache Jena model
-- Provide model to reasoning service
-- Fail fast when ontology files are missing or invalid
-
-### Reasoning Module
-
-Package:
-
-```text
-com.example.semanticsda.reasoning
-```
-
-Responsibilities:
-
-- Load SPARQL query files
-- Execute semantic matching query
-- Convert query result into Java DTO
-- Handle no-match cases
-- Keep matching logic outside Java business code as much as possible
-
-### Deployment Module
-
-Package:
-
-```text
-com.example.semanticsda.deployment
-```
-
-Responsibilities:
-
-- Generate Docker Compose YAML for the selected service (edge/fieldbus scenarios)
-- Generate Kubernetes deployment YAML for the selected service
-- Derive Kubernetes `nodeSelector` constraints from `sda:DeploymentContext` triples (safetyIntegrityLevel, determinismClass, networkZone)
-- Inject operational metadata from CommunicationBinding and DataConnector as environment variables
-- Return generated manifests as text in the API response
-- Validate generated YAML via SnakeYAML in tests
-
-### Error Handling Module
-
-Package:
-
-```text
-com.example.semanticsda.error
-```
-
-Responsibilities:
-
-- Convert technical errors into clear API errors using Spring's `ProblemDetail` (RFC 9457)
-- Handle invalid requirement IDs
-- Handle no matching service
-- Handle ontology loading failures
-- Handle SPARQL query failures
-
-### Exception Design
-
-Define unchecked exception classes per domain concern:
+All custom exceptions extend `RuntimeException`. Map each to `ProblemDetail` via `GlobalExceptionHandler`.
 
 | Exception | Cause |
 |---|---|
@@ -493,25 +260,7 @@ Define unchecked exception classes per domain concern:
 | `MatchingException` | Unexpected condition during semantic matching |
 | `InputParseException` | Malformed MTP AML or OPC UA Server Datasheet input |
 
-All custom exceptions extend `RuntimeException`. Use `@ControllerAdvice` + `@ExceptionHandler` in `GlobalExceptionHandler` to map each exception to a consistent `ProblemDetail` response. Wrap checked exceptions (e.g., `IOException` from file loading, `SAXException` from XML parsing) at the service boundary into the appropriate custom unchecked exception.
-
-### Observability Module
-
-Package:
-
-```text
-com.sda.mapper.observability
-```
-
-Responsibilities:
-
-- Expose Micrometer metrics for service layer, parser, inference, and reasoner operations
-- Record histograms and counters for match requests, parse invocations, inference runs, manifest generations
-- Configure custom health indicators beyond the default Actuator health (ontology model loaded, SPARQL queries loadable, OPC UA simulation reachable)
-- Provide structured logging with trace and span IDs across all service boundaries
-- No external observability platform is required at MVP time; Prometheus endpoint and console-printed traces suffice
-
-Custom metrics to register:
+### Custom Metrics
 
 | Metric Name | Type | Description |
 |---|---|---|
@@ -522,117 +271,28 @@ Custom metrics to register:
 | `sda.inference.duration` | Timer | OWL inference duration |
 | `sda.manifest.generated` | Counter | Generated manifests by format |
 
-### UI Module
-
-Package:
-
-```text
-com.sda.mapper.ui
-```
-
-Built incrementally across phases 1–13. Each phase adds or upgrades the views that depend on the corresponding backend service:
-
-| Phase | UI Work |
-|---|---|
-| 1 | MainLayout, ThemeConfig, SecurityConfig, responsive shell |
-| 2 | ExplorerView (static ontology tree) |
-| 3 | ExplorerView (dynamic Jena model loading, detail tabs) |
-| 4 | UploadView (drag-drop, progress, validation) |
-| 5 | SearchBar (global, autocomplete), SearchView (results grid) |
-| 6 | DashboardView (basic cards from inference) |
-| 7 | DashboardView (live match statistics) |
-| 8 | RegistrationWizardView (multi-step) |
-| 9 | DeploymentView (environment cards, manifest viewer) |
-| 10 | DashboardView explanation panel, NotificationCenter |
-| 11 | MonitoringView (ApexCharts), NotificationCenter full |
-| 13 | GraphView (Cytoscape.js), SettingsView, accessibility, mobile QA, performance, integration tests |
-
-Responsibilities:
-
-- Main application layout with AppLayout, header with global search, navigation drawer, and theme toggle
-- Dashboard view with animated cards (registered services, capabilities, skills, mappings, digital twins, deployments, simulations, OPC UA sessions)
-- Semantic Explorer with split layout (ontology tree + entity details)
-- Global AI-style search with autocomplete, fuzzy, exact, and ontology-scoped filters
-- Upload Center with drag-and-drop for OPC UA NodeSet, AAS, MTP, RDF, OWL, JSON-LD, YAML
-- Service Registration Wizard (multi-step: General → Communication → Capabilities → Skills → Deployment → Mapping → Review → Register)
-- Interactive ontology graph visualization using Cytoscape.js (zoom, pan, expand/collapse, highlight paths)
-- Real-time monitoring dashboard with ApexCharts (CPU, memory, OPC UA sessions, semantic queries)
-- Deployment view grouped by environment (Dev, Test, Prod, Edge, Cloud)
-- Notification center with grouped success, info, warning, error, and background task notifications
-- User settings (theme, language, time zone, notifications, accessibility, search preferences)
-- Light/dark mode via Lumo theme variants with persisted preference
-- Responsive layouts (desktop drawer visible, tablet collapsible, mobile overlay)
-
 ## Data and Semantic Assets
 
-### Ontology File
-
-Location:
-
-```text
-src/main/resources/ontology/css-sda-small.ttl
-```
-
-Contains:
-
-- Classes
-- Object properties
-- Data properties
-- Example individuals
-- Requirement examples
-- Service catalogue examples
-
-### SPARQL Query File
-
-Location:
-
-```text
-src/main/resources/queries/match-service.rq
-```
-
-Contains:
-
-- Requirement-to-service matching logic
-- Capability match
-- Binding match
-- Connector match
-- Deployment constraint match
-- Performance filters
-
-### Kubernetes Template
-
-Location:
-
-```text
-src/main/resources/k8s/deployment-template.yaml
-```
-
-Contains:
-
-- Deployment structure
-- Container image placeholder
-- Environment variable placeholders
+| Asset | Location |
+|---|---|
+| Ontology | `src/main/resources/ontology/css-sda-small.ttl` |
+| SPARQL query | `src/main/resources/queries/match-service.rq` |
+| Kubernetes template | `src/main/resources/k8s/deployment-template.yaml` |
 
 ## API Contract
 
 ### Match Requirement
 
-Endpoint:
-
-```http
+```
 POST /api/v1/requirements/match
 ```
 
-Request:
-
+**Request:**
 ```json
-{
-  "requirementId": "REQ_001"
-}
+{ "requirementId": "REQ_001" }
 ```
 
-Successful response:
-
+**Successful response:**
 ```json
 {
   "matched": true,
@@ -652,8 +312,7 @@ Successful response:
 }
 ```
 
-No-match response:
-
+**No-match response:**
 ```json
 {
   "matched": false,
@@ -666,96 +325,20 @@ No-match response:
 
 ### Required Tools
 
-```text
-JDK 25
-Maven 3.9+
-Docker
-Docker Compose
-IntelliJ IDEA or equivalent Java IDE
+```
+JDK 25, Maven 3.9+, Docker, Docker Compose, IntelliJ IDEA or equivalent
 ```
 
-### Run Locally
+### Commands
 
 ```bash
-mvn clean test
-mvn spring-boot:run
-```
-
-### Build Container
-
-```bash
-docker build -t semantic-sda-mapper:local -f docker/Dockerfile .
-```
-
-### Run with Docker Compose
-
-```bash
-docker compose up --build
+mvn clean test                         # run tests
+mvn spring-boot:run                    # start locally
+docker build -t semantic-sda-mapper:local -f docker/Dockerfile .   # build image
+docker compose up --build              # run with Docker Compose
 ```
 
 ## Testing Strategy
 
-### Unit Tests
-
-Focus areas:
-
-- Ontology loading
-- SPARQL query loading
-- Input file parser tests (MTP AML valid, malformed, missing elements)
-- Input file parser tests (OPC UA Server Datasheet valid, malformed, missing elements)
-- OWL inference tests (correct capability derivation, parameter sensitivity)
-- Reasoner positive match
-- Reasoner no-match cases
-- Docker Compose manifest generation and YAML parsing
-- Kubernetes manifest generation with nodeSelector validation
-- UI view rendering and component behavior
-- UI service layer and security configuration
-
-### Integration Tests
-
-Focus areas:
-
-- REST API request/response behavior
-- Full requirement-to-service matching flow
-- Error handling
-- Generated Kubernetes manifest existence
-
-### Example Test Cases
-
-```text
-REQ_001 should match FlowmeterDiagnosticsService.
-REQ_002 should not match if protocol requirement is MQTT.
-REQ_003 should not match if latency constraint is too strict.
-REQ_004 should select cloud service only when on-premise is not required.
-REQ_005 should not match if minimum recall is higher than reported service recall.
-Fermentation skid MTP AML parser generates valid CommunicationBinding triples.
-Fermentation skid OWL inference derives OfferedCapability_TempControl.
-HVAC plant OPC UA Server Datasheet parser generates CommunicationBinding with SignAndEncrypt security.
-Cross-plant query returns temperature services from both fermentation skid and HVAC plant.
-Docker Compose manifest includes restart: unless-stopped and environment block with asset ID.
-Kubernetes manifest includes nodeSelector derived from DeploymentContext SIL and zone.
-Dashboard view loads and displays animated cards with correct counts.
-Search bar autocomplete returns ontology entities matching the query.
-Service Registration Wizard navigates through all 8 steps without errors.
-Ontology graph renders nodes and supports zoom and pan.
-Upload Center validates file types and shows progress.
-Monitoring dashboard chart data updates reflect backend state.
-```
-
-## Quality Rules
-
-- No semantic matching logic should be hardcoded in Java if it belongs in SPARQL.
-- Ontology and query files must be versioned in Git.
-- The first version must be small and executable.
-- Every roadmap phase must produce a testable result.
-- Generated Docker Compose and Kubernetes YAML must be validated in tests.
-- API error responses must use Spring's `ProblemDetail` (RFC 9457) with consistent structure.
-- API responses must explain why a service was selected or why no service matched.
-- Input file parsers must fail with clear, actionable errors on invalid input.
-- OWL inference must preserve existing explicit capability triples.
-- UI views must be responsive and work on desktop, tablet, and mobile viewports.
-- UI must support light and dark mode with persisted user preference.
-- Navigation must follow the CSS-SDA hierarchy (Intent → Capability → Skill → Service → CommunicationBinding → DataConnector → Deployment).
-- Every service-layer method that processes a request must record Micrometer metrics (counter or timer).
-- Structured logging with trace and span IDs must be configured from Phase 1 onward.
-- Custom health indicators must be added for ontology readiness, SPARQL query loadability, and OPC UA simulation reachability.
+- **Unit tests**: ontology loading, SPARQL query loading, parsers (valid/malformed/missing), OWL inference, reasoner positive/negative match, manifest generation with YAML validation, UI view rendering
+- **Integration tests**: REST API request/response, full requirement-to-service flow, error handling, generated manifest existence

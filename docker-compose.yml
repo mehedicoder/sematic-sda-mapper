@@ -36,7 +36,7 @@ services:
       - "1880:1880"
       - "4840:4840"
     volumes:
-      - ./docs/opc-us.json:/data/flows.json
+      - ./docs/nodered-flow-fermentation-hvac.json:/data/flows.json
     stdin_open: true
     tty: true
     restart: "no"

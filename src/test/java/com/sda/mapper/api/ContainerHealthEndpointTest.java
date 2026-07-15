@@ -7,6 +7,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -17,6 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
  */
 @ActiveProfiles("container")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@DisplayName("Container Health Endpoints")
 class ContainerHealthEndpointTest {
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
@@ -25,6 +27,7 @@ class ContainerHealthEndpointTest {
     private int port;
 
     @Test
+    @DisplayName("Should expose liveness and readiness probes with UP status")
     void exposesLivenessAndReadinessProbes() throws Exception {
         HttpResponse<String> livenessResponse = get("/actuator/health/liveness");
         HttpResponse<String> readinessResponse = get("/actuator/health/readiness");

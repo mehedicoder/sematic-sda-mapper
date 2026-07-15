@@ -33,6 +33,7 @@ Check for:
 - Missing structured logging configuration with trace/span correlation IDs
 - Missing custom health indicators (ontology readiness, SPARQL loadability, OPC UA reachability)
 - Missing JavaDoc on changed public classes and public contract methods
+- Missing `@DisplayName` on test classes or test methods
 - Documentation claiming unsupported behavior
 
 ## Spec Review Mode

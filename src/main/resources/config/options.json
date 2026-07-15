@@ -1,0 +1,52 @@
+{
+  "protocol": [
+    {"value": "OPC-UA", "label": "OPC UA"},
+    {"value": "PROFINET", "label": "PROFINET"},
+    {"value": "ETHERNET/IP", "label": "Ethernet/IP"},
+    {"value": "MODBUS-TCP", "label": "Modbus TCP"},
+    {"value": "BACnet", "label": "BACnet"},
+    {"value": "MQTT", "label": "MQTT"},
+    {"value": "REST", "label": "REST API"}
+  ],
+  "accessMode": [
+    {"value": "read-only", "label": "Read Only"},
+    {"value": "write-only", "label": "Write Only"},
+    {"value": "read-write", "label": "Read/Write"},
+    {"value": "subscribe", "label": "Subscribe"}
+  ],
+  "engineeringUnit": [
+    {"value": "Cel", "label": "Celsius"},
+    {"value": "bar", "label": "Bar"},
+    {"value": "L/min", "label": "Liters per Minute"},
+    {"value": "m³/h", "label": "Cubic Meters per Hour"},
+    {"value": "%", "label": "Percent"},
+    {"value": "rpm", "label": "Revolutions per Minute"},
+    {"value": "mm/s", "label": "Millimeters per Second"},
+    {"value": "kW", "label": "Kilowatts"},
+    {"value": "mA", "label": "Milliamperes"}
+  ],
+  "safetyIntegrityLevel": [
+    {"value": "SIL-0", "label": "SIL 0 (No requirement)"},
+    {"value": "SIL-1", "label": "SIL 1"},
+    {"value": "SIL-2", "label": "SIL 2"},
+    {"value": "SIL-3", "label": "SIL 3"},
+    {"value": "SIL-4", "label": "SIL 4"}
+  ],
+  "networkZone": [
+    {"value": "OT", "label": "OT Network"},
+    {"value": "IT", "label": "IT Network"},
+    {"value": "DMZ", "label": "DMZ"},
+    {"value": "FIELD", "label": "Field Network"}
+  ],
+  "determinismClass": [
+    {"value": "HardRealTime", "label": "Hard Real-Time"},
+    {"value": "SoftRealTime", "label": "Soft Real-Time"},
+    {"value": "BestEffort", "label": "Best Effort"}
+  ],
+  "informationModel": [
+    {"value": "OPC-UA", "label": "OPC UA"},
+    {"value": "AAS", "label": "Asset Administration Shell"},
+    {"value": "MTConnect", "label": "MTConnect"},
+    {"value": "Custom", "label": "Custom Model"}
+  ]
+}

@@ -17,6 +17,7 @@ You are not the architect. The human engineer owns architecture, ontology direct
 - OWL inference: derive `OfferedCapability` from `SkillParameter` (engineeringUnit, nominalRange, functionClass). Preserve explicit triples.
 - Generate Docker Compose and Kubernetes YAML deterministically. Derive `nodeSelector` from `DeploymentContext` (SIL, determinismClass, networkZone).
 - Keep the MVP small; avoid broad modeling beyond the roadmap phase.
+- When creating a feature spec, create a feature branch named after the spec folder (e.g., `specs/2026-07-15-phase1-foundation` → branch `feature/2026-07-15-phase1-foundation`).
 
 ## Before Coding Template
 
@@ -71,6 +72,7 @@ Task: <Task Name> | Phase: <Roadmap Phase>
 ## Engineering Expectations
 
 - Add concise JavaDoc to new or modified public classes and public contract methods.
+- Add `@DisplayName` on every test class and test method with clear, human-readable descriptions (e.g. `@DisplayName("Should return Good status for healthy pump FlowRate")`).
 - Keep package structure aligned with `specs/tech-stack.md`.
 - Write tests for both positive and negative matching cases.
 - Write Vaadin UI tests alongside every phase that adds or modifies UI views.

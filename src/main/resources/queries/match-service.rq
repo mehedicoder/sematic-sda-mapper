@@ -1,0 +1,30 @@
+PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX css:  <http://www.example.org/css#>
+PREFIX sda:  <http://www.example.org/sda#>
+PREFIX :     <http://www.example.org/instance#>
+
+SELECT ?requirement ?capability ?skill ?service ?binding ?protocol ?accessMode
+WHERE {
+    # Bind the requirement to match (placeholder replaced at runtime)
+    BIND(:REQ-03 AS ?requirement)
+
+    # Traverse the CSS-SDA chain: requirement → capability → skill → service
+    ?requirement  a                  sda:RequiredCapability ;
+                 sda:mapsToCapability ?capability .
+
+    ?capability   sda:realisedBy      ?skill .
+
+    ?skill        sda:isImplementedBy  ?service .
+
+    # Optionally follow to communication binding
+    OPTIONAL {
+        ?service  sda:usesBinding     ?binding .
+        ?binding  sda:protocol        ?protocol ;
+                  sda:accessMode      ?accessMode .
+    }
+
+    # Filter by desired protocol and access mode
+    FILTER (!BOUND(?protocol) || ?protocol = "Modbus")
+    FILTER (!BOUND(?accessMode) || ?accessMode = "read-write")
+}

@@ -54,7 +54,7 @@ Do not claim a command passed unless you ran it or the human provided trustworth
 
 | Phase | Validate |
 |---|---|
-| 1 | Build, startup, Actuator health, Prometheus metrics, custom health indicators, structured logging with trace IDs, Dockerfile, Docker Compose, OPC UA simulation |
+| 1 | Build, startup, Actuator health, Prometheus metrics, custom health indicators, structured logging with trace IDs, Dockerfile, Docker Compose, OPC UA simulation, `@DisplayName` on all test classes and methods |
 | 2-3 | Turtle validity, ontology loading, error handling, ExplorerView tree and tabs |
 | 4 | Parser correctness (valid/malformed/invalid input), triple generation, UploadView |
 | 5 | SPARQL match for REQ_001, reject wrong capability/protocol/latency/SIL/zone |

@@ -48,3 +48,22 @@ services:
       start_period: 30s
     networks:
       - sda-network
+
+  tank-simulation:
+    build:
+      context: .
+      dockerfile: docker/tank-simulation/Dockerfile
+    container_name: tank-simulation
+    ports:
+      - "4334:4334"
+      - "3000:3000"
+      - "8081:8081"
+    restart: "no"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/tank/health',r=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    networks:
+      - sda-network

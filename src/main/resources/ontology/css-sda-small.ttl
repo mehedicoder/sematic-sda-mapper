@@ -1,0 +1,140 @@
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix css:  <http://www.example.org/css#> .
+@prefix sda:  <http://www.example.org/sda#> .
+@prefix :     <http://www.example.org/instance#> .
+
+# ── CSS-SDA core classes ──────────────────────────────────────────────
+
+css:Capability      a rdfs:Class ;
+    rdfs:label      "Capability" .
+
+css:Skill           a rdfs:Class ;
+    rdfs:label      "Skill" .
+
+css:SkillParameter  a rdfs:Class ;
+    rdfs:label      "SkillParameter" .
+
+sda:Service             a rdfs:Class ;
+    rdfs:label          "Service" .
+
+sda:CommunicationBinding a rdfs:Class ;
+    rdfs:label           "CommunicationBinding" .
+
+sda:DataConnector       a rdfs:Class ;
+    rdfs:label           "DataConnector" .
+
+sda:DeploymentContext   a rdfs:Class ;
+    rdfs:label           "DeploymentContext" .
+
+# ── Capability sub-classes ─────────────────────────────────────────────
+
+sda:OfferedCapability   a rdfs:Class ;
+    rdfs:subClassOf      css:Capability ;
+    rdfs:label           "OfferedCapability" .
+
+sda:RequiredCapability  a rdfs:Class ;
+    rdfs:subClassOf      css:Capability ;
+    rdfs:label           "RequiredCapability" .
+
+# ── Physical asset classes ─────────────────────────────────────────────
+
+sda:MTPModule   a rdfs:Class ;
+    rdfs:label  "MTPModule" .
+
+sda:FieldDevice a rdfs:Class ;
+    rdfs:label  "FieldDevice" .
+
+# ── Object properties ──────────────────────────────────────────────────
+
+sda:mapsToCapability  a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:RequiredCapability ;
+    rdfs:range         sda:OfferedCapability ;
+    rdfs:label         "mapsToCapability" .
+
+sda:realisedBy       a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        css:Capability ;
+    rdfs:range         css:Skill ;
+    rdfs:label         "realisedBy" .
+
+sda:isImplementedBy  a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        css:Skill ;
+    rdfs:range         sda:Service ;
+    rdfs:label         "isImplementedBy" .
+
+sda:usesBinding      a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:Service ;
+    rdfs:range         sda:CommunicationBinding ;
+    rdfs:label         "usesBinding" .
+
+sda:usesConnector    a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:CommunicationBinding ;
+    rdfs:range         sda:DataConnector ;
+    rdfs:label         "usesConnector" .
+
+# ── Data properties ────────────────────────────────────────────────────
+
+sda:protocol  a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:CommunicationBinding ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "protocol" .
+
+sda:accessMode a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:CommunicationBinding ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "accessMode" .
+
+sda:recall    a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   css:SkillParameter ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "recall" .
+
+sda:latency   a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   css:SkillParameter ;
+    rdfs:range    xsd:duration ;
+    rdfs:label    "latency" .
+
+# ── Example instances: tank-fill pump scenario ────────────────────────
+
+# Requirement
+:REQ-03  a           sda:RequiredCapability ;
+    rdfs:label       "REQ-03 tank fill pump control" ;
+    sda:mapsToCapability  :OC-Pump-Fill .
+
+# Offered capability
+:OC-Pump-Fill  a       sda:OfferedCapability ;
+    rdfs:label         "Pump Fill Capability" ;
+    sda:realisedBy     :SK-Pump-Fill .
+
+# Skill
+:SK-Pump-Fill  a       css:Skill ;
+    rdfs:label         "Pump Fill Skill" ;
+    sda:isImplementedBy :SVC-Pump-Fill .
+
+# Service (healthy variant)
+:SVC-Pump-Fill  a      sda:Service ;
+    rdfs:label         "Pump Fill Service" ;
+    sda:usesBinding    :CB-Pump-Fill-Modbus .
+
+# Communication binding
+:CB-Pump-Fill-Modbus  a  sda:CommunicationBinding ;
+    rdfs:label            "Modbus binding" ;
+    sda:protocol          "Modbus" ;
+    sda:accessMode        "read-write" ;
+    sda:usesConnector     :DC-Modbus-GW .
+
+# Data connector
+:DC-Modbus-GW  a       sda:DataConnector ;
+    rdfs:label          "Modbus gateway connector" .
+
+# Deployment contexts
+:DEPLOY-HEALTHY  a     sda:DeploymentContext ;
+    rdfs:label          "Healthy deployment" .
+
+:DEPLOY-DEGRADED  a    sda:DeploymentContext ;
+    rdfs:label          "Degraded deployment" .
+
+:DEPLOY-FAULTED  a     sda:DeploymentContext ;
+    rdfs:label          "Faulted deployment" .

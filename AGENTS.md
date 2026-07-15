@@ -26,6 +26,7 @@ Agents must:
 - Use clear errors for missing/invalid ontology files and query failures.
 - Keep Java/Spring code layered according to `specs/tech-stack.md`.
 - Add concise JavaDoc to new or modified public classes and public contract methods.
+- Add `@DisplayName` on every test class and test method with clear, human-readable descriptions (e.g. `@DisplayName("Should return Good status for healthy pump FlowRate")`).
 - Add parser and inference tests alongside matching tests for every affected phase.
 - Ensure UI views are responsive and work on desktop, tablet, and mobile viewports.
 - Support light and dark mode with persisted user preference.
@@ -37,6 +38,7 @@ Agents must:
 - Add Flyway migration scripts for every schema change, never rely on `spring.jpa.hibernate.ddl-auto=update` for production schema evolution.
 - Implement robust, layered exception handling with Spring's `ProblemDetail` (RFC 9457) for API errors, and clear error messages for ontology loading, SPARQL execution, input parsing, and matching failures.
 - Define a custom exception hierarchy with unchecked exceptions for domain failures (`OntologyLoadingException`, `SparqlExecutionException`, `MatchingException`, etc.), and rely on `@ControllerAdvice` + `@ExceptionHandler` for consistent ProblemDetail mapping. Wrap checked exceptions at the service boundary into the appropriate custom unchecked exception.
+- When creating a feature spec, create a feature branch named after the spec folder (e.g., `specs/2026-07-15-phase1-foundation` → branch `feature/2026-07-15-phase1-foundation`).
 
 Agents must not:
 
@@ -79,6 +81,42 @@ Optional unless explicitly requested. Store by scope:
 ```
 
 Only update markers with validation evidence or explicit human instruction.
+
+### Task Status Update Workflow
+
+When completing work on a phase or feature, agents MUST update both files:
+
+1. **`specs/roadmap.md`** — Mark each completed task `[x]` and each completed acceptance criteria `[x]` in the relevant phase section.
+2. **`tasks.md`** — Append a completion entry under the phase heading with:
+   - Status (`[x] Completed`)
+   - Branch name
+   - Completion date
+   - Test count and pass status
+   - Completion evidence (`mvn clean test` output, key decisions)
+   - Summary table of files created/modified
+   - Key technical decisions made during implementation
+
+Example `tasks.md` entry:
+
+```markdown
+## Phase N: Feature Name
+
+**Status:** [x] Completed
+**Branch:** `feature/YYYY-MM-DD-phaseN-name`
+**Completed:** YYYY-MM-DD
+**Tests:** N passing (0 failures)
+
+### Completion Evidence
+
+- `mvn clean test` — BUILD SUCCESS
+- Acceptance criteria all marked [x] in specs/roadmap.md
+
+### What was built
+
+| Component | Files |
+|---|---|
+| ... | ... |
+```
 
 ## Report Naming
 

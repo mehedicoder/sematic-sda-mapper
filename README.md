@@ -32,6 +32,15 @@ mvn spring-boot:run
 
 The application listens on port `8080` by default. Override it with `SERVER_PORT` when needed.
 
+### Vaadin UI
+
+Open `http://localhost:8080/` in your browser to access the Vaadin-based UI with:
+
+- **System Status** — application health and diagnostic overview
+- **Service Instances** — registered CSS-SDA service instances
+
+The UI uses the Lumo theme and supports light/dark mode.
+
 ### Smoke endpoint
 
 ```bash

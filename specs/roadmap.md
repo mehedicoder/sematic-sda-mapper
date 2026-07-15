@@ -48,146 +48,186 @@ Create a runnable Java 25 and Spring Boot 4.0.x project with basic structure, te
 
 **Tasks**
 
-* [ ] Create Maven-based Spring Boot 4.0.x project
-  * [ ] Add Spring Web, Validation, Actuator dependencies
-  * [ ] Add Micrometer Prometheus registry for metrics export
-  * [ ] Add Micrometer Tracing with OpenTelemetry bridge for distributed tracing
-  * [ ] Add Apache Jena dependency
-  * [ ] Add SnakeYAML dependency
-  * [ ] Add JUnit 5 and AssertJ test support
-  * [ ] Add Vaadin 25 Spring Boot starter and Lumo theme dependency
-  * [ ] Add Spring Security dependency
-  * [ ] Add Spring Data JPA and PostgreSQL dependencies
-  * [ ] Add Flyway database migration dependencies
-* [ ] Create base Java package structure under `com.sda.mapper`
-* [ ] Add health endpoint through Spring Actuator
-* [ ] Configure `application.yml` for observability (metrics, tracing, log pattern with trace/span IDs)
-* [ ] Add custom health indicators for ontology readiness, SPARQL query loadability, OPC UA simulation reachability
-* [ ] Configure structured logging with Logback for JSON output in production
-* [ ] Add Vaadin `MainLayout` with AppLayout structure:
-  * [ ] Header with CSS-SDA logo, title, theme switch, user profile
-  * [ ] Collapsible navigation drawer following CSS-SDA hierarchy (Intent → Use Cases → Requirements → Capability → Capabilities → Skills → Service Layer → Services → Communication Bindings → Data Connectors → Deployment → Assets → Digital Twins → Monitoring → Administration)
-  * [ ] Main workspace with responsive routing
-* [ ] Add `ThemeConfig` with Lumo light/dark mode toggle and persisted preference
-* [ ] Add `SecurityConfig` with form-login and role-based access skeleton
-* [ ] Add `UIConfig` with Vaadin routing configuration
-* [ ] Implement responsive layout:
-  * [ ] Desktop: Drawer always visible
-  * [ ] Tablet: Drawer collapses automatically
-  * [ ] Mobile: Drawer becomes overlay
-* [ ] Add Dockerfile
-* [ ] Add docker-compose.yml
-* [ ] Add README with local run instructions
-* [ ] Add OPC UA server service to `docker-compose.yml`
- * [ ] Configure OPC UA server endpoint and security settings
- * [ ] Add OPC UA server health check
- * [ ] Add network configuration for service-to-server communication
- * [ ] Add integration test that verifies OPC UA server availability
-* [ ] Add Vaadin UI test for MainLayout rendering and navigation drawer interaction
-* [ ] Add Flyway migration directory `src/main/resources/db/migration/` with `V1__initial_schema.sql`
-* [ ] Configure `spring.flyway.enabled=true` and baseline settings in `application.yml`
- * [ ] Add Node-RED service to `docker-compose.yml` (OPC UA Simulation Approach A — Fermentation + HVAC)
-  * [ ] Install OpcUa-Server node in Node-RED
-  * [ ] Mount `docs/nodered-flow-fermentation-hvac.json` as a volume in the Node-RED container so the flow loads automatically on start
-  * [ ] Use `docs/nodered-flow-fermentation-hvac.json` flow to simulate OPC UA server (Fermentation Skid ns=2, HVAC ns=3, test vars ns=1)
-  * [ ] Secure Node-RED OPC UA server with SSL certificates
-   * [ ] Generate self-signed SSL certificates (public + private key) for the OPC UA server
-   * [ ] Copy certificates into Docker image via `docker/nodered/Dockerfile`
-   * [ ] Configure Compact Server Security tab: disable anonymous access, enable individual certificate files
-   * [ ] Set certificate paths in server configuration (`server_selfsigned_cert_2048.pem`, `server_key_2048.pem`)
-   * [ ] Configure security mode: SignAndEncrypt with Aes128Sha256RsaOaep policy
-   * [ ] Export client-side DER certificate for Java Milo client trust
-   * [ ] Add integration test: Java Milo client connects with SignAndEncrypt security to Node-RED server
-   * [ ] Add integration test: anonymous connection is rejected when SSL is enabled
- * [ ] Add standalone Tank1 OPC UA simulation service to `docker-compose.yml` (OPC UA Simulation Approach B — Node.js tank process)
-  * [ ] Create `docker/tank-simulation/Dockerfile` based on `node:20-alpine`
-  * [ ] Create `docker/tank-simulation/package.json` with `node-opcua` dependency
-  * [ ] Port `docs/opcua-tank-simulation-server.js` tank simulation script into `docker/tank-simulation/server.js`
-  * [ ] Expose OPC UA server on port 4334 (`/UA/FlowMeterServer`)
-  * [ ] Expose Tank1 object with Level, FlowRateIn, FlowRateOut, Temperature variables
-  * [ ] Implement physical process model: level dynamics from net flow, temperature drift
-  * [ ] Expose SetInletFlow method for client actuation
-  * [ ] Add `tank-simulation` service to `docker-compose.yml` on port 4334 with health check
-  * [ ] Add network configuration for application-to-Tank1 communication
- * [ ] Add Java in-process OPC UA Tank1 simulation using Eclipse Milo (OPC UA Simulation Approach C — Java SDK)
-  * [ ] Add Eclipse Milo `sdk-server` and `sdk-core` dependencies to `pom.xml`
-  * [ ] Create `TankProcessState` — level, flowIn, flowOut, temperature, `stepSimulation(dt)` physics
-  * [ ] Create `TankOpcUaServer` — Milo server with Tank1 address space (Level, FlowRateIn, FlowRateOut, Temperature)
-  * [ ] Bind read callbacks for Level, Temperature (computed); write callbacks for FlowRateIn, FlowRateOut
-  * [ ] Implement `SetInletFlow` method via `InvocableNode` / `MethodInvocationHandler`
-  * [ ] Create `TankSimulationScheduler` — `ScheduledExecutorService` 1s tick calling `stepSimulation`
-  * [ ] Register as Spring `@Bean`, start on application startup, stop on shutdown
-  * [ ] Configure `simulation.opcua.enabled`, `simulation.opcua.port` in `application.yml`
-  * [ ] Add custom health indicator `OpcUaSimulationHealthIndicator` for Java in-process server
-  * [ ] Add integration test: Java OPC UA server starts, Tank1 node browsable, variables readable
-  * [ ] Add integration test: SetInletFlow method invocation changes FlowRateIn
-  * [ ] Add integration test: Level changes after simulation tick (physics model validation)
-  * [ ] Add unit test: `TankProcessState.stepSimulation` level calculation correctness
-  * [ ] Add unit test: Level clamps to [0, maxLevel] boundaries
- * [ ] Add unified OPC UA Java client to read from all simulation servers (Approach A, B, C) via Apache Milo
-  * [ ] Add Eclipse Milo `milo-client-sdk` dependency to `pom.xml`
-  * [ ] Create `OpcUaClientConfig` — configure endpoint URLs, security policy, timeout per server
-  * [ ] Create `OpcUaClientService` — reusable `readNodeValue(endpointUrl, nodeId)` method
-  * [ ] Support unencrypted (None) security policy for local simulation servers
-  * [ ] Support NodeId string identifiers (`ns=2;s=Fermentation.TempSetpoint`) and numeric identifiers
-  * [ ] Handle connection lifecycle: connect, read, disconnect with proper error handling
-  * [ ] Configure `opc-ua.client.read-timeout-ms`, `opc-ua.client.connect-timeout-ms` in `application.yml`
-  * [ ] Add integration test: read Fermentation.TempSetpoint from Node-RED server (Approach A, port 4840)
-  * [ ] Add integration test: read Tank1.Level from Node.js server (Approach B, port 4334)
-  * [ ] Add integration test: read Tank1.Level from Java Milo server (Approach C, in-process)
-  * [ ] Add integration test: read across all three servers in a single client session
-  * [ ] Add unit test: client handles connection failure gracefully (server unreachable)
-  * [ ] Add unit test: client handles invalid NodeId gracefully
-* [ ] Create `src/main/resources/config/options.json` with configurable dropdown values (see `specs/config-options.md`)
-* [ ] Create `OptionsConfigService` to load options from classpath
-* [ ] Create `Option` record (`value`, `label`)
-* [ ] Add `GET /api/v1/options/{fieldName}` endpoint to serve dropdown options
-* [ ] Add unit test: options load correctly from JSON
-* [ ] Add unit test: missing `options.json` fails fast on startup
-* [ ] Add unit test: malformed JSON throws clear error
-* [ ] Add unit test: `GET /api/v1/options/{fieldName}` returns correct list
-* [ ] Add unit test: `GET /api/v1/options/nonexistent` returns 404
+* [x] Create Maven-based Spring Boot 4.0.x project
+  * [x] Add Spring Web, Validation, Actuator dependencies
+  * [x] Add Micrometer Prometheus registry for metrics export
+  * [x] Add Micrometer Tracing with OpenTelemetry bridge for distributed tracing
+  * [x] Add Apache Jena dependency
+  * [x] Add SnakeYAML dependency
+  * [x] Add JUnit 5 and AssertJ test support
+  * [x] Add Vaadin 25 Spring Boot starter and Lumo theme dependency
+  * [x] Add Spring Security dependency
+  * [x] Add Spring Data JPA and PostgreSQL dependencies
+  * [x] Add Flyway database migration dependencies
+* [x] Create base Java package structure under `com.sda.mapper`
+* [x] Add health endpoint through Spring Actuator
+* [x] Configure `application.yml` for observability (metrics, tracing, log pattern with trace/span IDs)
+* [x] Add custom health indicators for ontology readiness, SPARQL query loadability, OPC UA simulation reachability
+* [x] Configure structured logging with Logback for JSON output in production
+* [x] Add Vaadin `MainLayout` with AppLayout structure:
+  * [x] Header with CSS-SDA logo, title, theme switch, user profile
+  * [x] Collapsible navigation drawer following CSS-SDA hierarchy (Intent → Use Cases → Requirements → Capability → Capabilities → Skills → Service Layer → Services → Communication Bindings → Data Connectors → Deployment → Assets → Digital Twins → Monitoring → Administration)
+  * [x] Main workspace with responsive routing
+* [x] Add `ThemeConfig` with Lumo light/dark mode toggle and persisted preference
+* [x] Add `SecurityConfig` with form-login and role-based access skeleton
+* [x] Add `UIConfig` with Vaadin routing configuration
+* [x] Implement responsive layout:
+  * [x] Desktop: Drawer always visible
+  * [x] Tablet: Drawer collapses automatically
+  * [x] Mobile: Drawer becomes overlay
+* [x] Add Dockerfile
+* [x] Add docker-compose.yml
+* [x] Add README with local run instructions
+* [x] Add OPC UA server service to `docker-compose.yml`
+ * [x] Configure OPC UA server endpoint and security settings
+ * [x] Add OPC UA server health check
+ * [x] Add network configuration for service-to-server communication
+ * [x] Add integration test that verifies OPC UA server availability
+* [x] Add Vaadin UI test for MainLayout rendering and navigation drawer interaction
+* [x] Add Flyway migration directory `src/main/resources/db/migration/` with `V1__initial_schema.sql`
+* [x] Configure `spring.flyway.enabled=true` and baseline settings in `application.yml`
+ * [x] Add Node-RED service to `docker-compose.yml` (OPC UA Simulation Approach A — Fermentation + HVAC)
+  * [x] Install OpcUa-Server node in Node-RED
+  * [x] Mount `docs/nodered-flow-fermentation-hvac.json` as a volume in the Node-RED container so the flow loads automatically on start
+  * [x] Use `docs/nodered-flow-fermentation-hvac.json` flow to simulate OPC UA server (Fermentation Skid ns=2, HVAC ns=3, test vars ns=1)
+  * [x] Secure Node-RED OPC UA server with SSL certificates
+   * [x] Generate self-signed SSL certificates (public + private key) for the OPC UA server
+   * [x] Copy certificates into Docker image via `docker/nodered/Dockerfile`
+   * [x] Configure Compact Server Security tab: disable anonymous access, enable individual certificate files
+   * [x] Set certificate paths in server configuration (`server_selfsigned_cert_2048.pem`, `server_key_2048.pem`)
+   * [x] Configure security mode: SignAndEncrypt with Aes128Sha256RsaOaep policy
+   * [x] Export client-side DER certificate for Java Milo client trust
+   * [x] Add integration test: Java Milo client connects with SignAndEncrypt security to Node-RED server
+   * [x] Add integration test: anonymous connection is rejected when SSL is enabled
+ * [x] Add standalone Tank1 OPC UA simulation service to `docker-compose.yml` (OPC UA Simulation Approach B — Node.js tank process)
+  * [x] Create `docker/tank-simulation/Dockerfile` based on `node:20-alpine`
+  * [x] Create `docker/tank-simulation/package.json` with `node-opcua` dependency
+  * [x] Port `docs/opcua-tank-simulation-server.js` tank simulation script into `docker/tank-simulation/server.js`
+  * [x] Expose OPC UA server on port 4334 (`/UA/FlowMeterServer`)
+  * [x] Expose Tank1 object with Level, FlowRateIn, FlowRateOut, Temperature variables
+  * [x] Implement physical process model: level dynamics from net flow, temperature drift
+  * [x] Expose SetInletFlow method for client actuation
+  * [x] Add `tank-simulation` service to `docker-compose.yml` on port 4334 with health check
+  * [x] Add network configuration for application-to-Tank1 communication
+ * [x] Add Java in-process OPC UA Tank1 simulation using Eclipse Milo (OPC UA Simulation Approach C — Java SDK)
+  * [x] Add Eclipse Milo `sdk-server` and `sdk-core` dependencies to `pom.xml`
+  * [x] Create `TankProcessState` — level, flowIn, flowOut, temperature, `stepSimulation(dt)` physics
+  * [x] Create `TankOpcUaServer` — Milo server with Tank1 address space (Level, FlowRateIn, FlowRateOut, Temperature)
+  * [x] Bind read callbacks for Level, Temperature (computed); write callbacks for FlowRateIn, FlowRateOut
+  * [x] Implement `SetInletFlow` method via `InvocableNode` / `MethodInvocationHandler`
+  * [x] Create `TankSimulationScheduler` — `ScheduledExecutorService` 1s tick calling `stepSimulation`
+  * [x] Register as Spring `@Bean`, start on application startup, stop on shutdown
+  * [x] Configure `simulation.opcua.enabled`, `simulation.opcua.port` in `application.yml`
+  * [x] Add custom health indicator `OpcUaSimulationHealthIndicator` for Java in-process server
+  * [x] Add integration test: Java OPC UA server starts, Tank1 node browsable, variables readable
+  * [x] Add integration test: SetInletFlow method invocation changes FlowRateIn
+  * [x] Add integration test: Level changes after simulation tick (physics model validation)
+  * [x] Add unit test: `TankProcessState.stepSimulation` level calculation correctness
+  * [x] Add unit test: Level clamps to [0, maxLevel] boundaries
+ * [x] Add NAMUR NE 107 pump degradation simulation — device diagnostics and condition monitoring
+  * [x] Create `PumpDegradationModel` — physical degradation physics (healthPercent, wearRate, vibration, temperature offset)
+  * [x] Implement degradation phases: Healthy → Early wear → Seal leak → Impeller erosion → Failure
+  * [x] Model accelerating degradation curve: wearRate increases as healthPercent decreases
+  * [x] Compute effective flow capacity: effectiveFlowIn = setpoint × (healthPercent / 100)
+  * [x] Model vibration amplitude increasing with degradation level
+  * [x] Model temperature offset from bearing heat during degradation
+  * [x] Create `Ne107DiagnosticSimulator` — maps degradation state to NE 107 status codes per variable
+  * [x] Define NE 107 status enum: Good (Green), Maintenance (Yellow), FunctionCheck (Blue), Failure (Red)
+  * [x] Define NE 107 sub-codes for Failure: Sensor (S), Function (F), WireBreak (W), ShortCircuit (K)
+  * [x] Expose per-variable diagnostic: value + StatusCode + DiagnosticString
+  * [x] Implement fault injection: injectFault(variable, faultType) for manual/automatic scenarios
+  * [x] Implement auto-recovery: clearFault after configurable duration
+  * [x] Extend `TankOpcUaServer` with pump variables: Pump.FlowRate, Pump.Vibration, Pump.Temperature, Pump.Status
+  * [x] Expose NE 107 diagnostic variables: Pump.FlowRate_Status, Pump.FlowRate_Diag, etc.
+  * [x] Expose device-level diagnostic: Pump.DeviceStatus (NE 107 aggregate status)
+  * [x] Create CSS-SDA ontology individuals for the pump scenario
+  * [x] Add `:AssetConditionMonitoringCapability` individual to ontology
+  * [x] Add `:PumpDiagnosticsSkill` individual with `requiresConcept :PA-DIM-FlowConcept`
+  * [x] Add `:AssetDiagnosticsService` individual with reportedRecall, reportedLatency
+  * [x] Add `:PumpBinding` CommunicationBinding (protocol OPC-UA, accessMode read-only)
+  * [x] Add `:PumpConnector` DataConnector (informationModel OPC-UA, semanticID IEC-61987-42)
+  * [x] Add `:PumpDeployment` DeploymentContext (SIL-1, SoftRealTime, onPlantNetwork true)
+  * [x] Add `:REQ-03` Requirement individual mapped to AssetConditionMonitoringCapability
+  * [x] Add SPARQL query extension: filter out devices with NE 107 Failure status
+  * [x] Add integration test: healthy pump matches REQ-03 via SPARQL query (R1–R3 satisfied)
+  * [x] Add integration test: degraded pump (Maintenance) still matches but triggers alert
+  * [x] Add integration test: failed pump (Failure) excluded by SPARQL query — no-match result
+  * [x] Add integration test: pump recovery restores match after failure cleared
+  * [x] Add unit test: PumpDegradationModel degradation curve correctness
+  * [x] Add unit test: Ne107DiagnosticSimulator status mapping per fault type
+  * [x] Add unit test: NE 107 sub-codes (Sensor, WireBreak, ShortCircuit, Function) mapped correctly
+ * [x] Add unified OPC UA Java client to read from all simulation servers (Approach A, B, C) via Apache Milo
+  * [x] Add Eclipse Milo `milo-client-sdk` dependency to `pom.xml`
+  * [x] Create `OpcUaClientConfig` — configure endpoint URLs, security policy, timeout per server
+  * [x] Create `OpcUaClientService` — reusable `readNodeValue(endpointUrl, nodeId)` method
+  * [x] Support unencrypted (None) security policy for local simulation servers
+  * [x] Support NodeId string identifiers (`ns=2;s=Fermentation.TempSetpoint`) and numeric identifiers
+  * [x] Handle connection lifecycle: connect, read, disconnect with proper error handling
+  * [x] Configure `opc-ua.client.read-timeout-ms`, `opc-ua.client.connect-timeout-ms` in `application.yml`
+  * [x] Add integration test: read Fermentation.TempSetpoint from Node-RED server (Approach A, port 4840)
+  * [x] Add integration test: read Tank1.Level from Node.js server (Approach B, port 4334)
+  * [x] Add integration test: read Tank1.Level from Java Milo server (Approach C, in-process)
+  * [x] Add integration test: read across all three servers in a single client session
+  * [x] Add unit test: client handles connection failure gracefully (server unreachable)
+  * [x] Add unit test: client handles invalid NodeId gracefully
+* [x] Create `src/main/resources/config/options.json` with configurable dropdown values (see `specs/config-options.md`)
+* [x] Create `OptionsConfigService` to load options from classpath
+* [x] Create `Option` record (`value`, `label`)
+* [x] Add `GET /api/v1/options/{fieldName}` endpoint to serve dropdown options
+* [x] Add unit test: options load correctly from JSON
+* [x] Add unit test: missing `options.json` fails fast on startup
+* [x] Add unit test: malformed JSON throws clear error
+* [x] Add unit test: `GET /api/v1/options/{fieldName}` returns correct list
+* [x] Add unit test: `GET /api/v1/options/nonexistent` returns 404
 
 **Acceptance Criteria**
 
-* [ ] `mvn clean test` passes
-* [ ] Application starts locally
-* [ ] `/actuator/health` returns `UP`
-* [ ] Vaadin UI accessible at `http://localhost:8080/` with MainLayout and navigation drawer
-* [ ] Light/dark mode toggle works
-* [ ] Navigation drawer follows CSS-SDA hierarchy and is collapsible
-* [ ] UI is responsive on desktop, tablet, and mobile viewports
-* [ ] Vaadin UI test for MainLayout rendering and drawer navigation passes
-* [ ] Docker image can be built
-* [ ] Application can be started through Docker Compose
-* [ ] Node-RED OPC UA server (Approach A) starts via `docker compose up` with Fermentation (ns=2) and HVAC (ns=3) variables
-* [ ] Node-RED OPC UA server is reachable from the application container on port 4840
-* [ ] Node-RED OPC UA server accepts SignAndEncrypt connections with Aes128Sha256RsaOaep policy
-* [ ] Node-RED OPC UA server rejects anonymous connections when SSL is enabled
-* [ ] Java Milo client connects to Node-RED server with SSL certificates and reads variables
-* [ ] Tank1 OPC UA simulation (Approach B, Node.js) starts via `docker compose up` on port 4334
-* [ ] Tank1 OPC UA server (Approach B) is reachable from the application container
-* [ ] Tank1 OPC UA server exposes Level, FlowRateIn, FlowRateOut, Temperature variables
-* [ ] Tank1 SetInletFlow method is callable from a client
-* [ ] Java in-process OPC UA Tank1 server (Approach C, Milo) starts with Spring Boot application
-* [ ] Java OPC UA server exposes Tank1 with Level, FlowRateIn, FlowRateOut, Temperature
-* [ ] Java OPC UA SetInletFlow method invocation changes FlowRateIn
-* [ ] Java OPC UA Level variable changes after simulation tick (physics model running)
-* [ ] Java OPC UA server health indicator appears in `/actuator/health`
-* [ ] All three OPC UA simulation approaches can run simultaneously without port conflicts
-* [ ] Unified Java Milo client reads Temperature from Node-RED Fermentation server (Approach A)
-* [ ] Unified Java Milo client reads Level from Node.js Tank1 server (Approach B)
-* [ ] Unified Java Milo client reads Level from Java Milo Tank1 server (Approach C)
-* [ ] Single client session can read from all three servers sequentially
-* [ ] Client handles connection failure gracefully (server unreachable, invalid NodeId)
-* [ ] `/actuator/prometheus` returns metrics including JVM, request, and custom `sda.*` metrics
-* [ ] Custom health indicators (ontology, SPARQL, OPC UA) appear in `/actuator/health`
-* [ ] Log output includes trace and span correlation IDs `[traceId,spanId]`
-* [ ] Flyway migrations run automatically on application startup
-* [ ] `flyway_schema_history` table is created in PostgreSQL after first startup
-* [ ] `options.json` loads successfully on application startup
-* [ ] `GET /api/v1/options/protocol` returns the list of configured protocols
-* [ ] `GET /api/v1/options/nonexistent` returns 404
+* [x] `mvn clean test` passes
+* [x] Application starts locally
+* [x] `/actuator/health` returns `UP`
+* [x] Vaadin UI accessible at `http://localhost:8080/` with MainLayout and navigation drawer
+* [x] Light/dark mode toggle works
+* [x] Navigation drawer follows CSS-SDA hierarchy and is collapsible
+* [x] UI is responsive on desktop, tablet, and mobile viewports
+* [x] Vaadin UI test for MainLayout rendering and drawer navigation passes
+* [x] Docker image can be built
+* [x] Application can be started through Docker Compose
+* [x] Node-RED OPC UA server (Approach A) starts via `docker compose up` with Fermentation (ns=2) and HVAC (ns=3) variables
+* [x] Node-RED OPC UA server is reachable from the application container on port 4840
+* [x] Node-RED OPC UA server accepts SignAndEncrypt connections with Aes128Sha256RsaOaep policy
+* [x] Node-RED OPC UA server rejects anonymous connections when SSL is enabled
+* [x] Java Milo client connects to Node-RED server with SSL certificates and reads variables
+* [x] Tank1 OPC UA simulation (Approach B, Node.js) starts via `docker compose up` on port 4334
+* [x] Tank1 OPC UA server (Approach B) is reachable from the application container
+* [x] Tank1 OPC UA server exposes Level, FlowRateIn, FlowRateOut, Temperature variables
+* [x] Tank1 SetInletFlow method is callable from a client
+* [x] Java in-process OPC UA Tank1 server (Approach C, Milo) starts with Spring Boot application
+* [x] Java OPC UA server exposes Tank1 with Level, FlowRateIn, FlowRateOut, Temperature
+* [x] Java OPC UA SetInletFlow method invocation changes FlowRateIn
+* [x] Java OPC UA Level variable changes after simulation tick (physics model running)
+* [x] Java OPC UA server health indicator appears in `/actuator/health`
+* [x] Pump degradation model simulates Healthy → Early wear → Seal leak → Impeller erosion → Failure phases
+* [x] NE 107 diagnostic status correctly maps degradation to Good / Maintenance / Failure per variable
+* [x] NE 107 sub-codes (Sensor, WireBreak, ShortCircuit, Function) are distinguishable
+* [x] Pump OPC UA variables expose value + StatusCode + DiagnosticString
+* [x] CSS-SDA ontology individuals for pump scenario are loadable by Apache Jena
+* [x] SPARQL query returns AssetDiagnosticsService for REQ-03 when pump is healthy
+* [x] SPARQL query excludes pump when NE 107 status is Failure
+* [x] Pump recovery after failure clears restores SPARQL match
+* [x] All three OPC UA simulation approaches can run simultaneously without port conflicts
+* [x] Unified Java Milo client reads Temperature from Node-RED Fermentation server (Approach A)
+* [x] Unified Java Milo client reads Level from Node.js Tank1 server (Approach B)
+* [x] Unified Java Milo client reads Level from Java Milo Tank1 server (Approach C)
+* [x] Single client session can read from all three servers sequentially
+* [x] Client handles connection failure gracefully (server unreachable, invalid NodeId)
+* [x] `/actuator/prometheus` returns metrics including JVM, request, and custom `sda.*` metrics
+* [x] Custom health indicators (ontology, SPARQL, OPC UA) appear in `/actuator/health`
+* [x] Log output includes trace and span correlation IDs `[traceId,spanId]`
+* [x] Flyway migrations run automatically on application startup
+* [x] `flyway_schema_history` table is created in PostgreSQL after first startup
+* [x] `options.json` loads successfully on application startup
+* [x] `GET /api/v1/options/protocol` returns the list of configured protocols
+* [x] `GET /api/v1/options/nonexistent` returns 404
 
 ---
 

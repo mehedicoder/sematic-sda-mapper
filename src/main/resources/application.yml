@@ -55,7 +55,7 @@ logging:
 # OPC UA Simulation Configuration
 simulation:
   opcua:
-    enabled: ${OPC_UA_ENABLED:false}
+    enabled: ${OPC_UA_ENABLED:true}
     port: ${OPC_UA_PORT:4840}
   tank:
     host: ${TANK_HOST:localhost}

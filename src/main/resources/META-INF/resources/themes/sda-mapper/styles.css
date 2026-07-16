@@ -40,10 +40,26 @@
     gap: 8px;
 }
 
+/* Remove AppLayout navbar container padding (Lumo default adds ~8px 16px) */
+.app-layout__navbar {
+    padding: 0 !important;
+}
+
+/* Also zero any child padding as a safeguard */
+.app-layout__navbar > * {
+    padding: 0 !important;
+}
+
+/* Drawer logo spacing */
+.drawer-logo {
+    padding: 12px 16px 40px 16px;
+}
+
 /* Navigation links styling */
 .drawer-nav-link {
     display: block;
-    padding: 8px 16px;
+    padding: 10px 16px;
+    margin: 5px 0;
     color: var(--lumo-body-text-color);
     text-decoration: none;
     border-radius: var(--lumo-border-radius-m);

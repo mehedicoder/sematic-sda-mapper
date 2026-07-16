@@ -1,0 +1,45 @@
+PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX css:  <http://www.example.org/css#>
+PREFIX sda:  <http://www.example.org/sda#>
+PREFIX :     <http://www.example.org/instance#>
+
+SELECT ?requirement ?capability ?skill ?service ?binding ?protocol ?accessMode ?recall ?latency ?networkZone
+WHERE {
+    # Bind the requirement to match (placeholder replaced at runtime)
+    BIND(:REQ-003 AS ?requirement)
+
+    # R1: Capability match chain
+    ?requirement  a                  sda:Requirement ;
+                 sda:mapsToCapability ?capability .
+
+    ?capability   sda:realisedBy      ?skill .
+
+    ?skill        sda:isImplementedBy  ?service .
+
+    # R2b: Protocol match (OPC-UA for HVAC monitoring)
+    ?service      sda:usesBinding     ?binding .
+
+    ?binding      sda:protocol        ?protocol ;
+                  sda:accessMode      ?accessMode .
+
+    FILTER (?protocol = "OPC-UA")
+    FILTER (?accessMode = "read-only")
+
+    # R3: Performance, locality, and deployment constraints
+    ?service      sda:reportedRecall  ?recall ;
+                  sda:reportedLatency ?latency .
+
+    FILTER (?recall >= 0.90)
+    FILTER (?latency <= 60)
+
+    ?service      sda:isDeployedBy    ?deploy .
+
+    ?deploy       sda:onPlantNetwork  ?onPlantNetwork ;
+                  sda:networkZone     ?networkZone .
+
+    FILTER (?onPlantNetwork = true)
+    FILTER (?networkZone = "OT-Zone-3")
+}
+ORDER BY DESC(?recall)
+LIMIT 1

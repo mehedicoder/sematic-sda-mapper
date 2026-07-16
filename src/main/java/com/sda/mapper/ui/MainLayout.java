@@ -2,17 +2,14 @@ package com.sda.mapper.ui;
 
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
-import com.vaadin.flow.component.html.H1;
-import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
-import com.vaadin.flow.component.tabs.Tab;
-import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.router.RouterLink;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 
 /**
@@ -33,8 +30,12 @@ public class MainLayout extends AppLayout {
         var toggle = new DrawerToggle();
         toggle.getElement().setAttribute("aria-label", "Toggle navigation");
 
-        var title = new H1("CSS-SDA Mapper");
-        title.addClassNames(LumoUtility.FontSize.XLARGE, LumoUtility.Margin.AUTO);
+        var banner = new Image("/images/banner.svg", "Otto von Guericke Universität Magdeburg – SDA Platform");
+        banner.setHeight("64px");
+        banner.getStyle()
+            .set("cursor", "pointer")
+            .set("flex-grow", "1");
+        banner.addClickListener(e -> UI.getCurrent().navigate(SystemStatusView.class));
 
         var themeToggle = ThemeConfig.createThemeToggleButton();
 
@@ -44,29 +45,50 @@ public class MainLayout extends AppLayout {
         var userProfile = new HorizontalLayout(userIcon, userLabel);
         userProfile.setAlignItems(FlexComponent.Alignment.CENTER);
         userProfile.setSpacing(false);
-        userProfile.addClassNames(LumoUtility.Margin.End.MEDIUM);
 
-        var headerBar = new HorizontalLayout(toggle, title, themeToggle, userProfile);
-        headerBar.setWidthFull();
-        headerBar.setAlignItems(FlexComponent.Alignment.CENTER);
-        headerBar.setJustifyContentMode(FlexComponent.JustifyContentMode.START);
-        addToNavbar(headerBar);
+        var rightControls = new HorizontalLayout(themeToggle, userProfile);
+        rightControls.setAlignItems(FlexComponent.Alignment.CENTER);
+        rightControls.setSpacing(false);
+
+        var toolbar = new HorizontalLayout(toggle, banner, rightControls);
+        toolbar.setWidthFull();
+        toolbar.setHeight("64px");
+        toolbar.setAlignItems(FlexComponent.Alignment.CENTER);
+        toolbar.setSpacing(false);
+        addToNavbar(toolbar);
     }
 
     private void createDrawerNavigation() {
-        var subtitle = new H2("Semantic Mapping");
-        subtitle.addClassNames(LumoUtility.FontSize.SMALL, LumoUtility.TextColor.SECONDARY);
-        addToDrawer(subtitle);
+        var logo = new Image("/images/industrie40_logo.png", "Plattform Industrie 4.0");
+        logo.setHeight("28px");
+        logo.addClassName("drawer-logo");
+        logo.getStyle()
+            .set("object-fit", "contain")
+            .set("object-position", "left center");
+        addToDrawer(logo);
 
-        addToDrawer(new RouterLink("System Status", SystemStatusView.class));
-        addToDrawer(new RouterLink("Service Instances", ServiceInstancesView.class));
-        addToDrawer(new RouterLink("Ontology Explorer", OntologyExplorerView.class));
-        addToDrawer(new RouterLink("Requirement Form", RequirementFormView.class));
-        addToDrawer(new RouterLink("Registration Wizard", RegistrationWizardView.class));
-        addToDrawer(new RouterLink("Search", SearchView.class));
-        addToDrawer(new RouterLink("Dashboard", DashboardView.class));
-        addToDrawer(new RouterLink("Deployment", DeploymentView.class));
-        addToDrawer(new RouterLink("Monitoring", MonitoringView.class));
-        addToDrawer(new RouterLink("Settings", SettingsView.class));
+        addToDrawer(createDrawerLink(VaadinIcon.BELL, "System Status", SystemStatusView.class));
+        addToDrawer(createDrawerLink(VaadinIcon.CONNECT, "Service Instances", ServiceInstancesView.class));
+        addToDrawer(createDrawerLink(VaadinIcon.BOOK, "Ontology Explorer", OntologyExplorerView.class));
+        addToDrawer(createDrawerLink(VaadinIcon.CLIPBOARD_TEXT, "Requirement Form", RequirementFormView.class));
+        addToDrawer(createDrawerLink(VaadinIcon.PLUS_CIRCLE, "Registration Wizard", RegistrationWizardView.class));
+        addToDrawer(createDrawerLink(VaadinIcon.SEARCH, "Search", SearchView.class));
+        addToDrawer(createDrawerLink(VaadinIcon.CHART, "Dashboard", DashboardView.class));
+        addToDrawer(createDrawerLink(VaadinIcon.ROCKET, "Deployment", DeploymentView.class));
+        addToDrawer(createDrawerLink(VaadinIcon.EYE, "Monitoring", MonitoringView.class));
+        addToDrawer(createDrawerLink(VaadinIcon.COG, "Settings", SettingsView.class));
+    }
+
+    private HorizontalLayout createDrawerLink(VaadinIcon iconType, String label, Class<? extends com.vaadin.flow.component.Component> viewClass) {
+        var icon = new Icon(iconType);
+        icon.addClassNames(LumoUtility.TextColor.SECONDARY);
+        var link = new RouterLink(label, viewClass);
+        link.addClassNames(LumoUtility.TextColor.SECONDARY);
+        var layout = new HorizontalLayout(icon, link);
+        layout.setAlignItems(FlexComponent.Alignment.CENTER);
+        layout.setSpacing(true);
+        layout.setWidthFull();
+        layout.addClassName("drawer-nav-link");
+        return layout;
     }
 }

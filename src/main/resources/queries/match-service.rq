@@ -4,27 +4,48 @@ PREFIX css:  <http://www.example.org/css#>
 PREFIX sda:  <http://www.example.org/sda#>
 PREFIX :     <http://www.example.org/instance#>
 
-SELECT ?requirement ?capability ?skill ?service ?binding ?protocol ?accessMode
+SELECT ?requirement ?capability ?skill ?service ?binding ?protocol ?accessMode ?recall ?latency ?onPlantNetwork
 WHERE {
     # Bind the requirement to match (placeholder replaced at runtime)
-    BIND(:REQ-03 AS ?requirement)
+    BIND(:REQ-001 AS ?requirement)
 
-    # Traverse the CSS-SDA chain: requirement → capability → skill → service
-    ?requirement  a                  sda:RequiredCapability ;
+    # R1: Capability match chain (paper Table I)
+    # REQ → mapsToCapability → Capability → realisedBy → Skill → isImplementedBy → Service
+    ?requirement  a                  sda:Requirement ;
                  sda:mapsToCapability ?capability .
 
     ?capability   sda:realisedBy      ?skill .
 
     ?skill        sda:isImplementedBy  ?service .
 
-    # Optionally follow to communication binding
-    OPTIONAL {
-        ?service  sda:usesBinding     ?binding .
-        ?binding  sda:protocol        ?protocol ;
-                  sda:accessMode      ?accessMode .
-    }
+    # R2b: Protocol match (paper Table I)
+    # CommunicationBinding must use OPC-UA in read-only mode
+    ?service      sda:usesBinding     ?binding .
 
-    # Filter by desired protocol and access mode
-    FILTER (!BOUND(?protocol) || ?protocol = "Modbus")
-    FILTER (!BOUND(?accessMode) || ?accessMode = "read-write")
+    ?binding      sda:protocol        ?protocol ;
+                  sda:accessMode      ?accessMode .
+
+    FILTER (?protocol = "OPC-UA")
+    FILTER (?accessMode = "read-only")
+
+    # R3: Performance and locality constraints (paper Table I)
+    # reportedRecall >= 0.90, reportedLatency <= 60, onPlantNetwork = true
+    ?service      sda:reportedRecall  ?recall ;
+                  sda:reportedLatency ?latency .
+
+    FILTER (?recall >= 0.90)
+    FILTER (?latency <= 60)
+
+    ?service      sda:isDeployedBy    ?deploy .
+
+    ?deploy       sda:onPlantNetwork  ?onPlantNetwork .
+
+    FILTER (?onPlantNetwork = true)
+
+    # Exclude services with NE 107 Failure status
+    FILTER NOT EXISTS {
+        ?device  sda:hasNE107Status  :NE107-Failure .
+    }
 }
+ORDER BY DESC(?recall)
+LIMIT 1

@@ -5,6 +5,7 @@ import com.sda.mapper.opcua.model.OpcUaNodeConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
@@ -13,8 +14,10 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * Client for connecting to the Node.js tank simulation server.
+ * Only active when the built-in Java OPC UA server is disabled.
  */
 @Component
+@ConditionalOnProperty(name = "simulation.opcua.enabled", havingValue = "false")
 public class TankSimulationClient {
 
     private static final Logger log = LoggerFactory.getLogger(TankSimulationClient.class);

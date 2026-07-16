@@ -1,0 +1,29 @@
+PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX css:  <http://www.example.org/css#>
+PREFIX sda:  <http://www.example.org/sda#>
+PREFIX :     <http://www.example.org/instance#>
+
+# Cross-plant query: find all temperature-related services across PlantA and PlantB
+SELECT ?service ?label ?site ?protocol ?recall ?latency
+WHERE {
+    ?service      a                  sda:Service ;
+                 rdfs:label          ?label ;
+                 sda:reportedRecall  ?recall ;
+                 sda:reportedLatency ?latency .
+
+    ?service      sda:usesBinding    ?binding .
+    ?binding      sda:protocol       ?protocol .
+
+    # Find the asset this service is connected to
+    ?binding      sda:usesConnector  ?connector .
+
+    # Cross-plant: find site via asset relationship
+    OPTIONAL {
+        ?asset    sda:belongsToSite  ?site .
+    }
+
+    # Filter for temperature-related services
+    FILTER CONTAINS(LCASE(?label), "temperature")
+}
+ORDER BY DESC(?recall)

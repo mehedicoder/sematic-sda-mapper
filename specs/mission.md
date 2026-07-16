@@ -75,15 +75,43 @@ Source: OPC UA Server Datasheet (IDTA 02009-1-0 AAS submodel)
 
 ## Core Objective
 
-The core objective is to build a working prototype that can:
+The core objective is to implement and validate the three target use cases end-to-end:
 
-1. Parse vendor-supplied input files (MTP AML, OPC UA Server Datasheet) into CSS-SDA ontology instances.
-2. Run OWL reasoner inference to derive offered capabilities from skill parameters.
-3. Execute SPARQL queries across all CSS-SDA dimensions (Capability, Skill, Service, CommunicationBinding, DataConnector, DeploymentContext) simultaneously.
-4. Return the selected service with a multi-dimensional explanation.
-5. Generate Docker Compose and Kubernetes deployment manifests for the selected service.
-6. Support cross-plant queries that span multiple input file sources.
-7. Provide tests that prove correct matching and rejection behavior for all use cases.
+1. **Use Case A (NE 107 Flowmeter):** Parse OPC UA Server Datasheet → CSS-SDA triples → SPARQL match → select FlowmeterDiagnosticsService → reject when NE 107 status = Failure → generate deployment manifest.
+2. **Use Case B (Fermentation Skid):** Parse MTP AML → CSS-SDA triples → OWL inference derives TempControl/Dosing capabilities → SPARQL match → select FermentationSkidService → reject when SIL or determinism mismatch.
+3. **Use Case C (HVAC Plant):** Parse OPC UA Server Datasheet → CSS-SDA triples → SPARQL match → select HVACTempAnalysisService → cross-plant query across PlantA and PlantB → reject when networkZone mismatch.
+
+Each use case follows the paper's five-step procedure:
+
+```text
+Input Files (MTP AML, OPC UA Server Datasheet, AAS)
+→ Parse (Phase 4)
+→ Instantiate (CSS-SDA ontology ABox triples — Phase 2)
+→ Lift (MTP Service → css:Skill — Phase 4)
+→ Infer (OWL reasoner derives OfferedCapability — Phase 6)
+→ Match (SPARQL multi-dimensional query — Phase 5)
+→ Docker Compose / Kubernetes Manifest (Phase 9)
+```
+
+## Roadmap Phase Mapping
+
+The 11 roadmap phases map to the 3 use cases as follows:
+
+| Phase | Use Case A | Use Case B | Use Case C | Description |
+|---|---|---|---|---|
+| 1 | Done | Done | Done | Project foundation, OPC UA simulation, NE 107 diagnostics |
+| 2 | **Primary** | Yes | Yes | CSS-SDA ontology with all 3 use case instances |
+| 3 | Yes | Yes | Yes | Jena model loader |
+| 4 | Yes | **Primary** | Yes | MTP AML parser (B), OPC UA Datasheet parser (A, C) |
+| 5 | **Primary** | Yes | Yes | SPARQL matching query (paper Table I) |
+| 6 | Yes | **Primary** | Yes | OWL reasoner (infers capabilities from skill parameters) |
+| 7 | Yes | Yes | Yes | Semantic reasoner service (orchestrates parse→infer→match) |
+| 8 | Yes | Yes | Yes | REST API (POST /api/v1/requirements/match) |
+| 9 | Yes | Yes | Yes | Docker Compose + Kubernetes manifest generation |
+| 10 | Yes | Yes | Yes | Matching explanation (multi-dimensional) |
+| 11 | Yes | Yes | Yes | Evaluation dataset validation |
+
+**All 11 phases are required to deliver all 3 use cases.**
 
 ## In Scope
 

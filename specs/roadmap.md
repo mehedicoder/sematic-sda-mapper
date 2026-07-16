@@ -30,11 +30,10 @@ The CSS-SDA model: SDA-Service := ⟨ Capability, Skill, Service, CommunicationB
 4. **Infer** — OWL reasoner derives sda:OfferedCapability from SkillParameter semantics (key novel step)
 5. **Match** — SPARQL query compares OfferedCapability against RequiredCapability across all CSS-SDA dimensions simultaneously
 
-Apache Jena and SPARQL are part of the semantic reasoning layer. Dagger is not a replacement for them. Dagger is used as an automation layer for build, test, packaging, validation, and deployment workflow.
+Apache Jena and SPARQL are part of the semantic reasoning layer.
 
 ```text
 Apache Jena + SPARQL = semantic matching core
-Dagger = automation and deployment pipeline
 Docker Compose = generated deployment output
 ```
 
@@ -84,6 +83,12 @@ Create a runnable Java 25 and Spring Boot 4.0.x project with basic structure, te
  * [x] Add network configuration for service-to-server communication
  * [x] Add integration test that verifies OPC UA server availability
 * [x] Add Vaadin UI test for MainLayout rendering and navigation drawer interaction
+* [x] Add `docs/banner.png` to MainLayout drawer as project branding
+  * [x] Copy `docs/banner.png` to `src/main/resources/META-INF/resources/images/banner.png`
+  * [x] Display banner image at top of drawer, above subtitle and navigation links
+  * [x] Make banner clickable (navigates to home view)
+  * [x] Ensure banner scales responsively and respects dark/light theme
+  * [x] Add Vaadin UI test: banner renders in drawer and is clickable
 * [x] Add Flyway migration directory `src/main/resources/db/migration/` with `V1__initial_schema.sql`
 * [x] Configure `spring.flyway.enabled=true` and baseline settings in `application.yml`
  * [x] Add Node-RED service to `docker-compose.yml` (OPC UA Simulation Approach A — Fermentation + HVAC)
@@ -235,45 +240,110 @@ Create a runnable Java 25 and Spring Boot 4.0.x project with basic structure, te
 
 **Goal**
 
-Create an RDF/Turtle ontology based on the CSS-SDA formal model: SDA-Service := ⟨ Capability, Skill, Service, CommunicationBinding, DataConnector, DeploymentContext ⟩. The ontology serves as a unifying abstraction above all input file formats (MTP AML, OPC UA Server Datasheet, AAS).
+Build the CSS-SDA ontology from the paper (Islam, Maurer, Diedrich 2026) and validate it against the paper's primary use case: **Flowmeter Asset-Health Monitoring based on NAMUR NE 107** (Section 4.4). The ontology must support the paper's SPARQL query and SWRL rules. The current stub ontology uses Modbus and a generic pump fill scenario — this phase replaces it with the paper's actual OPC-UA flowmeter diagnostics model.
+
+**Priority: Use Case A (NE 107 Flowmeter) is the MVP. Use Cases B and C are secondary.**
 
 **Tasks**
 
-* [ ] Create `src/main/resources/ontology/css-sda-small.ttl`
-* [ ] Define core CSS-SDA classes from the formal model:
-  * [ ] `sda:UseCase`, `sda:Requirement`
-  * [ ] `css:Capability` (with subclasses `sda:OfferedCapability`, `sda:RequiredCapability`)
-  * [ ] `css:Skill`, `css:SkillParameter`, `css:SkillInterface`
-  * [ ] `sda:Service`
-  * [ ] `sda:CommunicationBinding` (protocol, endpointUri, securityMode, securityPolicy, securityLevel, transportProfile, discoveryUrl, networkZone)
-  * [ ] `sda:DataConnector` (informationModel, nodeSetFile, dataFormat, semanticID/IRDI)
-  * [ ] `sda:DeploymentContext` (safetyIntegrityLevel, determinismClass, maxCycleTime_ms, requiredRuntime, networkZone)
-* [ ] Define physical asset classes: `sda:MTPModule`, `sda:FieldDevice`, `sda:BACnetDevice`, `sda:EnergyMeter`
-* [ ] Define object properties: `mapsToCapability`, `realisedBy`, `isImplementedBy`, `usesBinding`, `usesConnector`, `isDeployedBy`, `hasBinding`, `hasConnector`, `hasContext`, `offersUseOf`, `hasParameter`, `locatedIn`, `belongsToSite`, `hasAAS`, `hasSemanticID`
-* [ ] Define data properties: protocol, accessMode, recall, latency, engineeringUnit (UCUM), semanticID (IEC CDD IRDI), nominalRange_min, nominalRange_max, accuracy, image, onPremise, endpointUri, securityMode, securityPolicy, securityLevel, transportProfile, discoveryUrl, networkZone, safetyIntegrityLevel, determinismClass, maxCycleTime_ms, requiredRuntime, softwareVersion, productUri
-* [ ] Add example instances from PDF:
-  * [ ] Fermentation skid `Skid-A1` (MTPModule, SIL-2, PROFINET, OPC UA)
-  * [ ] AHU controller `AHU-01` (FieldDevice, BACnet, OPC UA gateway, M+O)
-  * [ ] Energy meter `EM-01` (EnergyMeter, native OPC UA, non-critical)
-* [ ] Add `REQ_001` requirement and `FlowmeterDiagnosticsService`
-* [ ] Add negative candidate services for testing
-
-* [ ] Create `ExplorerView` with split layout:
-  * [ ] Left: Static ontology tree component showing CSS-SDA class hierarchy (Capability, Skill, Service, CommunicationBinding, DataConnector, DeploymentContext, physical asset types)
-  * [ ] Right: Entity details with Overview tab
-* [ ] Create `OntologyTree` component with expandable/collapsible nodes
-* [ ] Add Vaadin UI test for ExplorerView rendering and tree interaction
+* [ ] **Use Case A (MVP): Flowmeter NE 107 — Ontology Instances**
+  * [ ] Replace current Modbus pump-fill instances with paper's OPC-UA flowmeter scenario
+  * [ ] Add `:REQ-001` Requirement (requirementID="REQ-001", title="Flowmeter Asset-Health", requirementType="AssetDiagnostics", lifecycleStatus="Defined")
+  * [ ] Add `:AssetConditionMonitoringCapability` OfferedCapability (capabilityID="ACM-001")
+  * [ ] Add `:SK-FlowmeterDiagnostics` Skill (realisedBy → Capability, isImplementedBy → Service)
+  * [ ] Add `:SVC-FlowmeterDiagnostics` Service (reportedRecall=0.94, reportedLatency=45, image="registry.local/flowmeter-diagnostics:1.0")
+  * [ ] Add `:CB-Flowmeter-OPCUA` CommunicationBinding (protocol="OPC-UA", accessMode="read-only", securityMode="SignAndEncrypt")
+  * [ ] Add `:DC-Flowmeter-FT101` DataConnector (informationModel="OPC-UA", semanticID="IEC-61987-42")
+  * [ ] Add `:DEPLOY-OnPrem` DeploymentContext (onPlantNetwork=true, safetyIntegrityLevel="SIL-0", determinismClass="SoftRealTime")
+  * [ ] Add negative candidate: `:SVC-WrongProtocol` (HTTP instead of OPC-UA)
+  * [ ] Add negative candidate: `:SVC-WrongCapability` (FermentationControl, wrong capability chain)
+  * [ ] Add negative candidate: `:SVC-NE107Failure` (NE 107 status = Failure, excluded by SPARQL)
+* [ ] **Use Case A (MVP): NE 107 Diagnostic Ontology**
+  * [ ] Add `sda:NE107Status` class with individuals: `:NE107-Good`, `:NE107-Maintenance`, `:NE107-Failure`
+  * [ ] Add `sda:NE107SubCode` class with individuals: `:NE107-Sensor`, `:NE107-WireBreak`, `:NE107-ShortCircuit`, `:NE107-Function`
+  * [ ] Add `sda:hasNE107Status` object property (Device/Variable → NE107Status)
+  * [ ] Add `sda:hasDiagnosticString` data property
+  * [ ] Add `sda:hasSubCode` object property (NE107Status → NE107SubCode)
+  * [ ] Add `sda:DegradedMode` class (subClassOf `css:Skill`)
+  * [ ] Add `sda:hasDegradationLevel` data property (DegradedMode → xsd:string)
+  * [ ] Add pump degradation individuals: `:pump1HealthyMode`, `:pump1DegradedMode`, `:pump1FaultedMode`
+  * [ ] Add `:pump1Asset` FieldDevice with NE 107 status linkage
+* [ ] **Use Case A (MVP): SPARQL Query (paper Table I)**
+  * [ ] Rewrite `match-service.rq` to match paper's SPARQL pattern (Section 4.4)
+  * [ ] R1: capability match chain (REQ → mapsToCapability → Capability → realisedBy → Skill → isImplementedBy → Service)
+  * [ ] R2b: protocol match (CommunicationBinding.protocol = "OPC-UA", accessMode = "read-only")
+  * [ ] R3: performance+locality (reportedRecall >= 0.90, reportedLatency <= 60, onPlantNetwork = true)
+  * [ ] FILTER NOT EXISTS for semantic identifier matching (R2a)
+  * [ ] ORDER BY DESC(?recall) LIMIT 1
+* [ ] **Use Case A (MVP): SPARQL Tests**
+  * [ ] Test: `:REQ-001` returns `:SVC-FlowmeterDiagnostics` (R1-R3 satisfied)
+  * [ ] Test: `:SVC-WrongProtocol` excluded (protocol mismatch)
+  * [ ] Test: `:SVC-WrongCapability` excluded (capability mismatch)
+  * [ ] Test: `:SVC-NE107Failure` excluded (NE 107 status = Failure)
+  * [ ] Test: pump recovery restores match after failure cleared
+* [ ] **CSS-SDA Ontology: Classes and Properties**
+  * [ ] Define Requirement class properties from paper (Figure 5): requirementID, title, description, rationale, acceptanceCondition, requirementType, lifecycleStatus, hasParameter, hasConstraint, hasPriority, specifiedBy, verifiedBy, mapsToCapability
+  * [ ] Define Capability class properties from paper (Figure 5): capabilityID, capabilityName, description, version, requiresFunction, operatesOn, realisedBy, exposedAs, mapsTo
+  * [ ] Define physical asset classes: `sda:MTPModule`, `sda:FieldDevice`, `sda:BACnetDevice`, `sda:EnergyMeter`
+  * [ ] Define object properties: mapsToCapability, realisedBy, isImplementedBy, usesBinding, usesConnector, isDeployedBy
+  * [ ] Define data properties: protocol, accessMode, reportedRecall, reportedLatency, onPlantNetwork, engineeringUnit, semanticID, nominalRange_min, nominalRange_max
+* [ ] **Use Case B: Fermentation Skid (Skid-A1) — Critical Process Control**
+  * [ ] Add `:Skid-A1` MTPModule instance (SIL-2, CPC category, PROFINET, OPC UA gateway)
+  * [ ] Add `:REQ-002` Requirement (requirementID="REQ-002", title="Fermentation Temperature Control", requirementType="CoreProcessControl")
+  * [ ] Add `:OC-TempControl` OfferedCapability (capabilityID="TC-001")
+  * [ ] Add `:OC-DosingControl` OfferedCapability (capabilityID="DC-001")
+  * [ ] Add `:SK-FermentationControl` Skill (realisedBy → OC-TempControl, isImplementedBy → SVC)
+  * [ ] Add `:SK-DosingControl` Skill (realisedBy → OC-DosingControl, isImplementedBy → SVC)
+  * [ ] Add `:SVC-FermentationSkid` Service (SIL-2, HardRealTime)
+  * [ ] Add `:CB-Skid-A1-PROFINET` CommunicationBinding (protocol="PROFINET", accessMode="read-write")
+  * [ ] Add `:CB-Skid-A1-OPCUA` CommunicationBinding (protocol="OPC-UA", accessMode="read-only", gateway)
+  * [ ] Add `:DC-Skid-A1-OPCUA` DataConnector (informationModel="OPC-UA", semanticID from MTP)
+  * [ ] Add `:DEPLOY-Critical` DeploymentContext (safetyIntegrityLevel="SIL-2", determinismClass="HardRealTime", networkZone="OT-Zone-1", onPlantNetwork=true)
+  * [ ] Add SPARQL test: REQ-002 matches SVC-FermentationSkid via PROFINET binding
+  * [ ] Add SPARQL test: wrong SIL (SIL-0) excludes service for SIL-2 requirement
+  * [ ] Add SPARQL test: wrong determinism class (SoftRealTime) excludes for HardRealTime requirement
+* [ ] **Use Case C: HVAC Plant (AHU-01 + EM-01) — Non-Critical Monitoring & Optimization**
+  * [ ] Add `:AHU-01` FieldDevice instance (BACnet, M+O category, SoftRealTime, OT-Zone-3)
+  * [ ] Add `:EM-01` EnergyMeter instance (native OPC UA, non-critical)
+  * [ ] Add `:REQ-003` Requirement (requirementID="REQ-003", title="HVAC Temperature Monitoring", requirementType="MonitoringOptimization")
+  * [ ] Add `:OC-HVACTempMonitoring` OfferedCapability (capabilityID="HVAC-001")
+  * [ ] Add `:SK-HVACTempAnalysis` Skill (realisedBy → OC-HVACTempMonitoring)
+  * [ ] Add `:SVC-HVACTempAnalysis` Service (SoftRealTime, on-premise)
+  * [ ] Add `:CB-AHU01-BACnet` CommunicationBinding (protocol="BACnet", accessMode="read-only", securityMode="Sign")
+  * [ ] Add `:CB-AHU01-OPCUA` CommunicationBinding (protocol="OPC-UA", accessMode="read-only", gateway)
+  * [ ] Add `:DC-AHU01-OPCUA` DataConnector (informationModel="OPC-UA", gateway)
+  * [ ] Add `:CB-EM01-OPCUA` CommunicationBinding (protocol="OPC-UA", accessMode="read-only", securityMode="SignAndEncrypt", native)
+  * [ ] Add `:DC-EM01-OPCUA` DataConnector (informationModel="OPC-UA", native)
+  * [ ] Add `:DEPLOY-OTZone3` DeploymentContext (safetyIntegrityLevel="SIL-0", determinismClass="SoftRealTime", networkZone="OT-Zone-3", onPlantNetwork=true)
+  * [ ] Add SPARQL test: REQ-003 matches SVC-HVACTempAnalysis
+  * [ ] Add SPARQL test: cross-plant query finds temperature services across PlantA and PlantB
+  * [ ] Add SPARQL test: wrong networkZone excludes service
+* [ ] **ExplorerView UI**
+  * [ ] Create `ExplorerView` with split layout (tree left, details right)
+  * [ ] Create `OntologyTree` component with expandable/collapsible nodes
+  * [ ] Add Vaadin UI test for ExplorerView rendering and tree interaction
 
 **Acceptance Criteria**
 
-* [ ] Ontology file is valid Turtle
-* [ ] Ontology contains all CSS-SDA dimensions
-* [ ] Ontology supports MTPModule and FieldDevice physical asset types
-* [ ] Ontology contains CommunicationBinding with full security properties (mode, policy, level, discovery)
-* [ ] Ontology contains DeploymentContext with SIL, determinism class, cycle time, and runtime
-* [ ] Ontology contains OfferedCapability and RequiredCapability for match inference
-* [ ] Ontology can be loaded by Apache Jena in a test
-* [ ] Ontology contains at least three example devices across two use cases
+* [ ] **Use Case A (MVP): Ontology supports paper's SPARQL query (Table I) without modification**
+* [ ] **Use Case A (MVP): SPARQL returns `:SVC-FlowmeterDiagnostics` for `:REQ-001`**
+* [ ] **Use Case A (MVP): SPARQL excludes `:SVC-WrongProtocol` (protocol mismatch)**
+* [ ] **Use Case A (MVP): SPARQL excludes `:SVC-WrongCapability` (capability mismatch)**
+* [ ] **Use Case A (MVP): SPARQL excludes `:SVC-NE107Failure` (NE 107 status = Failure)**
+* [ ] **Use Case A (MVP): Pump recovery restores SPARQL match after failure cleared**
+* [ ] **Use Case B: SPARQL returns `:SVC-FermentationSkid` for `:REQ-002` via PROFINET binding**
+* [ ] **Use Case B: SPARQL excludes service when SIL requirement mismatch (SIL-0 vs SIL-2)**
+* [ ] **Use Case B: SPARQL excludes service when determinism class mismatch (SoftRealTime vs HardRealTime)**
+* [ ] **Use Case C: SPARQL returns `:SVC-HVACTempAnalysis` for `:REQ-003`**
+* [ ] **Use Case C: Cross-plant query finds temperature services across PlantA and PlantB**
+* [ ] **Use Case C: SPARQL excludes service when networkZone mismatch**
+* [ ] Ontology file is valid Turtle (Jena loads without error)
+* [ ] Ontology contains all 8 CSS-SDA classes (UseCase, Requirement, Capability, Skill, Service, CommunicationBinding, DataConnector, DeploymentContext)
+* [ ] Ontology contains NE 107 status individuals (Good, Maintenance, Failure) and sub-codes
+* [ ] Ontology contains DegradedMode class with hasDegradationLevel property
+* [ ] Ontology contains Requirement class with paper's properties (Figure 5)
+* [ ] Ontology contains Capability class with paper's properties (Figure 5)
+* [ ] Ontology contains all three use cases (A: Flowmeter, B: Fermentation, C: HVAC)
 * [ ] ExplorerView shows CSS-SDA class hierarchy in tree sidebar
 * [ ] Tree nodes are expandable and collapsible
 * [ ] Selecting a tree node displays entity details in the right panel
@@ -686,6 +756,78 @@ Create evaluation datasets based on the two real-world PDF examples: the ferment
 * [ ] All three use cases (flowmeter, fermentation, HVAC) render correctly in evaluation
 * [ ] MonitoringView and NotificationCenter UI tests validate chart display and event grouping
 
+---
+
+## Phase 11b: OPC UA Data Visualization Client
+
+**Goal**
+
+Create a real-time Vaadin UI view that connects to all three OPC UA simulation servers (Approach A: Node-RED, Approach B: Node.js Tank, Approach C: Java Milo) and visualizes their data in a unified dashboard. This serves as an OPC UA visual client for monitoring tank process, pump diagnostics, and fermentation/HVAC variables live.
+
+**Tasks**
+
+* [ ] Create `OpcUaVisualizationView` with Vaadin route `/opcua-visualization`
+  * [ ] Split layout: server selector sidebar + main dashboard area
+  * [ ] Server selector: tab or dropdown to switch between Approach A (Node-RED), B (Node.js Tank), C (Java Milo)
+  * [ ] Connection status indicator per server (green/red badge)
+  * [ ] Auto-reconnect on server disconnect
+* [ ] **Approach C (Java Milo) — Tank + Pump Dashboard** (primary, always available)
+  * [ ] Tank level gauge (0–100 cm) with animated fill
+  * [ ] Tank level trend chart (ApexCharts, rolling 60s window)
+  * [ ] Flow rate in/out gauges (L/min)
+  * [ ] Temperature gauge with color coding (normal/warning/critical)
+  * [ ] Pump vibration bar chart with NE 107 status color overlay
+  * [ ] Pump temperature gauge with NE 107 diagnostic overlay
+  * [ ] Pump health status card (Healthy / Early Wear / Seal Leak / Impeller Erosion / Failure)
+  * [ ] NE 107 device status badge (Good = green, Maintenance = yellow, FunctionCheck = blue, Failure = red)
+  * [ ] Set inlet flow control slider (writes via OPC UA SetInletFlow method)
+* [ ] **Approach B (Node.js Tank) — External Tank Dashboard**
+  * [ ] Tank level gauge + trend chart (same variables: Level, FlowRateIn, FlowRateOut, Temperature)
+  * [ ] Connection status indicator (server may not be running)
+  * [ ] Graceful "server unavailable" placeholder when not connected
+* [ ] **Approach A (Node-RED) — Fermentation + HVAC Dashboard**
+  * [ ] Fermentation temperature display (ns=2 Fermentation.TempSetpoint)
+  * [ ] HVAC temperature display (ns=3 HVAC.SupplyAirTemp)
+  * [ ] Connection status indicator
+  * [ ] Graceful "server unavailable" placeholder when not connected
+* [ ] **Shared components**
+  * [ ] `OpcUaGauge` component — configurable min/max/unit/color thresholds
+  * [ ] `OpcUaTrendChart` — ApexCharts line chart with auto-scrolling time axis
+  * [ ] `OpcUaStatusBadge` — NE 107 color-coded status indicator
+  * [ ] `OpcUaConnectionPanel` — connection status, endpoint URL, latency display
+* [ ] **Backend service**
+  * [ ] Create `OpcUaVisualizationService` — periodic polling (1s interval) of all three servers
+  * [ ] Use existing `OpcUaClientWrapper` / `OpcUaClientFactory` for connections
+  * [ ] Publish reactive stream of variable snapshots to UI via `@Push` or `SseEmitter`
+  * [ ] Handle connection failures gracefully per server (don't block other servers)
+* [ ] **Navigation**
+  * [ ] Add "OPC UA Monitor" entry to `MainLayout` navigation drawer under Monitoring section
+  * [ ] Add icon and badge showing number of connected servers
+* [ ] **Tests**
+  * [ ] Add Vaadin UI test: `OpcUaVisualizationView` renders with all three server tabs
+  * [ ] Add Vaadin UI test: gauge components display correct values
+  * [ ] Add Vaadin UI test: trend chart renders and scrolls
+  * [ ] Add Vaadin UI test: connection status badge updates
+  * [ ] Add Vaadin UI test: SetInletFlow slider sends write command
+  * [ ] Add Vaadin UI test: graceful handling when server is unavailable
+
+**Acceptance Criteria**
+
+* [ ] `OpcUaVisualizationView` loads at `/opc-ua-visualization` after login
+* [ ] Java Milo server (Approach C) data displays in real-time without page refresh
+* [ ] Tank level gauge animates and trend chart scrolls with live data
+* [ ] Pump vibration and temperature show NE 107 diagnostic color overlays
+* [ ] NE 107 status badge reflects current degradation phase
+* [ ] SetInletFlow slider writes to OPC UA and level changes within 2 seconds
+* [ ] Node.js Tank (Approach B) shows data when server is running, graceful placeholder when not
+* [ ] Node-RED (Approach A) shows data when server is running, graceful placeholder when not
+* [ ] Connection status indicators correctly show green/red per server
+* [ ] All three server views accessible via tab/selector without page reload
+* [ ] Vaadin UI tests pass for rendering, gauge values, chart scroll, and connection status
+* [ ] Polling interval is configurable via `application.yml`
+
+---
+
 ## Phase 12: Documentation and Thesis Support
 
 **Goal**
@@ -702,7 +844,6 @@ Document the prototype clearly for academic and engineering evaluation.
 * [ ] Document MTP vs OPC UA Server Datasheet contribution to each CSS-SDA dimension
 * [ ] Document REST API
 * [ ] Document Docker Compose and Kubernetes manifest generation strategy
-* [ ] Document Margo Sandbox integration
 * [ ] Document evaluation cases (fermentation skid, HVAC plant, cross-plant)
 * [ ] Add limitations section
 * [ ] Add future work section
@@ -711,7 +852,6 @@ Document the prototype clearly for academic and engineering evaluation.
 
 * [ ] README explains how to run the project
 * [ ] Documentation explains the semantic mapping chain
-* [ ] Documentation clearly explains the difference between Apache Jena, SPARQL, and Dagger
 * [ ] Documentation includes example request and response
 * [ ] Documentation includes example Docker Compose manifest output
 * [ ] Documentation clearly states limitations
@@ -793,68 +933,6 @@ Use Margo Sandbox as an industrial edge deployment/interoperability context. Val
 
 ---
 
-## Optional Phase 15: Runtime Verification Status
-
-**Goal**
-
-Add a simple lifecycle status update after manifest generation.
-
-**Tasks**
-
-* [ ] Add lifecycle status property to requirement
-* [ ] Mark requirement as `Matched` after service selection
-* [ ] Mark requirement as `DeploymentManifestGenerated` after YAML generation
-* [ ] Add endpoint to read requirement status
-* [ ] Add tests for status changes
-
-**Acceptance Criteria**
-
-* [ ] Requirement status changes after successful match
-* [ ] Requirement status changes after manifest generation
-* [ ] Status can be queried through API
-
----
-
-## Optional Phase 16: Dagger Automation and Deployment Workflow
-
-**Goal**
-
-Use Dagger to automate build, test, image creation, manifest validation, and optional deployment/testing of the generated Docker Compose output.
-
-**Tasks**
-
-* [ ] Add `dagger.json`
-* [ ] Add basic Dagger pipeline using Java SDK
-* [ ] Add Dagger function for running tests
-* [ ] Add Dagger function for building the application
-* [ ] Add Dagger function for building the Docker image
-* [ ] Add Dagger function `test`
-* [ ] Add Dagger function `buildJar`
-* [ ] Add Dagger function `buildImage`
-* [ ] Add Dagger function `validateOntology`
-* [ ] Add Dagger function `validateSparql`
-* [ ] Add Dagger function `generateComposeExample`
-* [ ] Add Dagger function `validateCompose`
-* [ ] Add Dagger function `runEndToEnd`
-* [ ] Start application in a container for API tests
-* [ ] Run requirement matching API test from Dagger
-* [ ] Validate generated Docker Compose YAML
-* [ ] Document local Dagger commands
-
-**Acceptance Criteria**
-
-* [ ] Dagger can run the same workflow locally and in CI
-* [ ] Dagger test workflow fails if ontology loading fails
-* [ ] Dagger test workflow fails if SPARQL matching fails
-* [ ] Dagger test workflow fails if Docker Compose YAML is invalid
-* [ ] Dagger can build a runnable container image
-* [ ] Dagger can run tests
-* [ ] Dagger can build the application
-* [ ] Dagger can build the Docker image
-* [ ] Dagger can execute an end-to-end matching scenario
-
----
-
 ## MVP Definition
 
 The minimum viable prototype is complete when the following phases are done:
@@ -870,13 +948,14 @@ Phase 7:  Semantic Reasoner Service
 Phase 8:  REST API
 Phase 9:  Docker Compose and Kubernetes Manifest Generation
 Phase 10: Matching Explanation
-Phase 11: Evaluation Dataset — Fermentation Skid and HVAC Plant
+Phase 11:  Evaluation Dataset — Fermentation Skid and HVAC Plant
+Phase 11b: OPC UA Data Visualization Client
 Phase 12: Documentation and Thesis Support
 Phase 13: EKA UI Polish — Graph, Settings, and Cross-Cutting Views
 Phase 14: Margo Sandbox Deployment Context
 ```
 
-Runtime Verification Status is optional (Optional Phase 15). Dagger automation is optional (Optional Phase 16).
+All three use cases (A: Flowmeter NE 107, B: Fermentation Skid, C: HVAC Plant) are delivered when Phases 1-11 are complete. Phases 12-14 add documentation, UI polish, and deployment validation.
 
 ---
 
@@ -912,14 +991,6 @@ The service matches the required asset condition monitoring capability, uses OPC
 
 5. Show generated Docker Compose manifest.
 
-6. (Optional) Run Dagger workflow if Dagger is configured:
-
-```bash
-dagger call test
-dagger call build-image
-dagger call run-end-to-end
-```
-
 ---
 
 ## Final Deliverables
@@ -927,7 +998,7 @@ dagger call run-end-to-end
 The final project should deliver:
 
 * Working Java 25 and Spring Boot 4.0.x application
-* CSS-SDA-inspired ontology with full dimensions (Capability, Skill, CommunicationBinding, DataConnector, DeploymentContext)
+* CSS-SDA ontology with full 8-tuple (UseCase, Requirement, Capability, Skill, Service, CommunicationBinding, DataConnector, DeploymentContext)
 * RDF/Turtle ontology file
 * MTP AML parser — generates CSS-SDA triples from VDI/VDE/NAMUR 2658 files
 * OPC UA Server Datasheet parser — generates CSS-SDA triples from IDTA 02009-1-0 submodels
@@ -937,8 +1008,5 @@ The final project should deliver:
 * Requirement matching REST API
 * Docker Compose and Kubernetes manifest generation
 * Unit, integration, and Vaadin UI tests
-* Optional Dagger automation pipeline
-* Evaluation dataset with fermentation skid and HVAC plant examples + cross-plant queries
-* Documentation for academic evaluation
-* Margo Sandbox deployment-context extension
-* EKA Enterprise User Interface (Vaadin 25 with dashboard, explorer, search, registration wizard, ontology graph, monitoring, upload center, settings, deployment view, notification center, and light/dark mode)
+* Evaluation dataset with all 3 use cases: Flowmeter NE 107, Fermentation Skid, HVAC Plant + cross-plant queries
+* Vaadin 25 UI with ExplorerView for ontology browsing

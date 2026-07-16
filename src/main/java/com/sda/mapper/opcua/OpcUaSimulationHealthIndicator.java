@@ -20,7 +20,7 @@ public class OpcUaSimulationHealthIndicator implements HealthIndicator {
     private boolean healthy = false;
     private String lastError = "";
 
-    @Value("${simulation.opcua.enabled:false}")
+    @Value("${simulation.opcua.enabled:true}")
     private boolean simulationEnabled;
 
     @Value("${simulation.tank.host:localhost}")
@@ -35,10 +35,10 @@ public class OpcUaSimulationHealthIndicator implements HealthIndicator {
 
     @Override
     public Health health() {
-        if (!simulationEnabled) {
+        if (simulationEnabled) {
             return Health.unknown()
-                .withDetail("opcua-simulation", "disabled")
-                .withDetail("hint", "Enable with simulation.opcua.enabled=true")
+                .withDetail("opcua-external", "not-needed")
+                .withDetail("hint", "Built-in Java OPC UA server is active on port 4840")
                 .build();
         }
 

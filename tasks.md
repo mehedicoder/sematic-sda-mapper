@@ -81,3 +81,45 @@ Track completed work with validation evidence. Only the human engineer marks tas
 - SecurityConfig uses `@Profile("!test")` to disable in test profile
 - `RouterLink` requires VaadinService context — UI tests verify structure without instantiation
 - Milo `UaMethodNode` requires 9-param constructor; `MethodInvocationHandler` in `sdk.server.api.methods`
+
+---
+
+## Phase 2: CSS-SDA Ontology Model
+
+**Status:** [ ] Not started
+**Branch:** `feature/2026-07-15-phase2-css-sda-ontology`
+**Spec:** `specs/2026-07-15-phase2-css-sda-ontology/`
+
+### Scope
+
+Build the CSS-SDA ontology and validate against the paper's primary use case: **Flowmeter Asset-Health Monitoring based on NAMUR NE 107** (Section 4.4). Replace the current Modbus stub with the paper's OPC-UA flowmeter diagnostics model.
+
+**Priority: Use Case A (NE 107 Flowmeter) is the MVP.**
+
+### Key tasks — Use Case A (MVP)
+- Replace Modbus instances with paper's OPC-UA flowmeter scenario
+- REQ-001 → AssetConditionMonitoringCapability → FlowmeterDiagnosticsService
+- NE 107 diagnostic ontology: status individuals, sub-codes, DegradedMode
+- SPARQL query matching paper's Table I (R1, R2b, R3)
+- SPARQL tests: healthy match, failed exclusion, recovery
+- Negative candidates: wrong protocol, wrong capability, NE 107 Failure
+
+### Key tasks — Use Case B (Fermentation Skid)
+- Skid-A1 MTPModule, SIL-2, CPC, PROFINET + OPC UA gateway
+- REQ-002 → TempControl + DosingControl capabilities
+- SPARQL tests: SIL mismatch, determinism class mismatch
+
+### Key tasks — Use Case C (HVAC Plant)
+- AHU-01 FieldDevice (BACnet, OPC UA gateway) + EM-01 EnergyMeter (native OPC UA)
+- REQ-003 → HVACTempMonitoring capability
+- Cross-plant query across PlantA and PlantB
+- SPARQL tests: networkZone mismatch, cross-plant query
+
+### Key tasks — ExplorerView
+- Ontology tree sidebar with CSS-SDA class hierarchy
+
+### Dependencies
+
+- Phase 1: `Ne107DiagnosticSimulator.java`, `PumpDegradationModel.java`, `TankOpcUaServer.java`
+- Phase 1: `css-sda-small.ttl` stub, `match-service.rq` stub (both to be replaced)
+- Paper: Section 4.2 (ontology model), Section 4.4 (Use Case A SPARQL query, Table I rules)

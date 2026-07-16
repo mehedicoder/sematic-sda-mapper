@@ -67,3 +67,10 @@ opc-ua:
   client:
     read-timeout-ms: ${OPC_UA_READ_TIMEOUT_MS:5000}
     connect-timeout-ms: ${OPC_UA_CONNECT_TIMEOUT_MS:5000}
+
+# Ontology Inference Configuration
+app:
+  ontology:
+    file-path: ontology/css-sda-small.ttl
+    inference:
+      enabled: ${ONTOLOGY_INFERENCE_ENABLED:true}

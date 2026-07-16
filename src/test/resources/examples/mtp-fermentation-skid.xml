@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MtpAml xmlns="http://www.example.org/mtp-aml"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <Service Name="FermentationControl">
+        <Description>Fermentation temperature control service</Description>
+        <Parameter Name="Temperature"
+                   EngineeringUnit="°C"
+                   NominalRangeMin="15"
+                   NominalRangeMax="40"
+                   DataType="Double" />
+        <Parameter Name="Pressure"
+                   EngineeringUnit="bar"
+                   NominalRangeMin="0.5"
+                   NominalRangeMax="3.0"
+                   DataType="Double" />
+    </Service>
+
+    <Communication>
+        <OpcUaServer Endpoint="opc.tcp://localhost:4840"
+                     SecurityMode="SignAndEncrypt"
+                     SecurityPolicy="Basic256Sha256" />
+    </Communication>
+
+    <DataAssembly>
+        <OpcUaNode NodeId="ns=2;s=Fermentation.TempSetpoint"
+                   BrowseName="2:Fermentation.TempSetpoint"
+                   DisplayName="TempSetpoint"
+                   DataType="Double" />
+        <OpcUaNode NodeId="ns=2;s=Fermentation.TempActual"
+                   BrowseName="2:Fermentation.TempActual"
+                   DisplayName="TempActual"
+                   DataType="Double" />
+    </DataAssembly>
+
+</MtpAml>

@@ -1,5 +1,8 @@
 package com.sda.mapper.ui;
 
+import com.sda.mapper.ui.component.NotificationCenter;
+import com.sda.mapper.ui.component.NotificationPanel;
+import com.sda.mapper.ui.component.SearchBar;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.html.Image;
@@ -46,15 +49,24 @@ public class MainLayout extends AppLayout {
         userProfile.setAlignItems(FlexComponent.Alignment.CENTER);
         userProfile.setSpacing(false);
 
-        var rightControls = new HorizontalLayout(themeToggle, userProfile);
+        var searchBar = new SearchBar();
+        searchBar.setWidth("350px");
+        searchBar.addSearchListener(event ->
+            UI.getCurrent().navigate(SearchView.class));
+
+        var notificationCenter = new NotificationCenter();
+        var notificationPanel = new NotificationPanel(notificationCenter);
+
+        var rightControls = new HorizontalLayout(notificationPanel, themeToggle, userProfile);
         rightControls.setAlignItems(FlexComponent.Alignment.CENTER);
         rightControls.setSpacing(false);
 
-        var toolbar = new HorizontalLayout(toggle, banner, rightControls);
+        var toolbar = new HorizontalLayout(toggle, banner, searchBar, rightControls);
         toolbar.setWidthFull();
         toolbar.setHeight("64px");
         toolbar.setAlignItems(FlexComponent.Alignment.CENTER);
-        toolbar.setSpacing(false);
+        toolbar.setSpacing(true);
+        toolbar.setFlexGrow(1, banner);
         addToNavbar(toolbar);
     }
 
@@ -69,6 +81,7 @@ public class MainLayout extends AppLayout {
 
         addToDrawer(createDrawerLink(VaadinIcon.BELL, "System Status", SystemStatusView.class));
         addToDrawer(createDrawerLink(VaadinIcon.CONNECT, "Service Instances", ServiceInstancesView.class));
+        addToDrawer(createDrawerLink(VaadinIcon.CONNECT, "Upload", UploadView.class));
         addToDrawer(createDrawerLink(VaadinIcon.BOOK, "Ontology Explorer", OntologyExplorerView.class));
         addToDrawer(createDrawerLink(VaadinIcon.CLIPBOARD_TEXT, "Requirement Form", RequirementFormView.class));
         addToDrawer(createDrawerLink(VaadinIcon.PLUS_CIRCLE, "Registration Wizard", RegistrationWizardView.class));
@@ -76,6 +89,7 @@ public class MainLayout extends AppLayout {
         addToDrawer(createDrawerLink(VaadinIcon.CHART, "Dashboard", DashboardView.class));
         addToDrawer(createDrawerLink(VaadinIcon.ROCKET, "Deployment", DeploymentView.class));
         addToDrawer(createDrawerLink(VaadinIcon.EYE, "Monitoring", MonitoringView.class));
+        addToDrawer(createDrawerLink(VaadinIcon.DASHBOARD, "OPC UA Monitor", OpcUaVisualizationView.class));
         addToDrawer(createDrawerLink(VaadinIcon.COG, "Settings", SettingsView.class));
     }
 

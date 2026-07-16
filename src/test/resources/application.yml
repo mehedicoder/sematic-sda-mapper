@@ -47,3 +47,9 @@ logging:
   level:
     root: WARN
     com.sda.mapper: DEBUG
+
+app:
+  ontology:
+    file-path: ontology/css-sda-small.ttl
+    inference:
+      enabled: true

@@ -1,27 +1,44 @@
 package com.sda.mapper.ui;
 
+import com.sda.mapper.error.OntologyLoadingException;
+import com.sda.mapper.ontology.OntologyModelLoader;
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.splitlayout.SplitLayout;
+import com.vaadin.flow.component.tabs.Tab;
+import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.component.treegrid.TreeGrid;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.theme.lumo.LumoUtility;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.vocabulary.OWL;
+import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Explorer view for browsing the CSS-SDA ontology model.
- * Shows a tree grid of ontology classes on the left and details on the right.
+ * Dynamically loads tree from the Apache Jena Model via {@link OntologyModelLoader}.
+ * Shows a tree grid of ontology entities on the left and tabbed details on the right.
  */
 @Route(value = "ontology", layout = MainLayout.class)
 @PageTitle("Ontology Explorer")
 public class OntologyExplorerView extends VerticalLayout {
 
+    private final OntologyModelLoader ontologyModelLoader;
     private final TreeGrid<OntologyNode> treeGrid;
     private final VerticalLayout detailsPanel;
     private boolean treePopulated;
@@ -29,10 +46,12 @@ public class OntologyExplorerView extends VerticalLayout {
     /**
      * Represents a node in the ontology tree.
      */
-    public record OntologyNode(String name, String type, String description, List<OntologyNode> children) {
+    public record OntologyNode(String name, String type, String uri, String description,
+                                List<OntologyNode> children) {
     }
 
-    public OntologyExplorerView() {
+    public OntologyExplorerView(OntologyModelLoader ontologyModelLoader) {
+        this.ontologyModelLoader = ontologyModelLoader;
         setSizeFull();
         setPadding(false);
 
@@ -51,7 +70,7 @@ public class OntologyExplorerView extends VerticalLayout {
         detailsPanel = new VerticalLayout();
         detailsPanel.setPadding(true);
         detailsPanel.add(new H3("Select a node"));
-        detailsPanel.add(new Paragraph("Click on an ontology node to view its properties."));
+        detailsPanel.add(new Paragraph("Click on an ontology entity to view its details."));
 
         var splitLayout = new SplitLayout(treeGrid, detailsPanel);
         splitLayout.setSizeFull();
@@ -65,15 +84,10 @@ public class OntologyExplorerView extends VerticalLayout {
             var selected = event.getFirstSelectedItem();
             if (selected.isPresent()) {
                 var node = selected.get();
-                detailsPanel.add(new H3(node.name()));
-                detailsPanel.add(new Span("Type: " + node.type()));
-                detailsPanel.add(new Paragraph(node.description()));
-                if (!node.children().isEmpty()) {
-                    detailsPanel.add(new Paragraph("Children: " + node.children().size()));
-                }
+                showNodeDetails(node);
             } else {
                 detailsPanel.add(new H3("Select a node"));
-                detailsPanel.add(new Paragraph("Click on an ontology node to view its properties."));
+                detailsPanel.add(new Paragraph("Click on an ontology entity to view its details."));
             }
         });
     }
@@ -88,91 +102,252 @@ public class OntologyExplorerView extends VerticalLayout {
     }
 
     private void populateTree() {
-        var cssSda = buildOntologyTree();
-        treeGrid.setItems(List.of(cssSda), OntologyNode::children);
-        treeGrid.expand(cssSda);
+        if (!ontologyModelLoader.isLoaded()) {
+            treeGrid.setItems(List.of(
+                new OntologyNode("No ontology loaded", "Error",
+                    "", "Ontology file could not be loaded. Check application logs.", List.of())
+            ), OntologyNode::children);
+            return;
+        }
+
+        try {
+            Model model = ontologyModelLoader.getModel();
+            var rootNode = buildDynamicTree(model);
+            treeGrid.setItems(List.of(rootNode), OntologyNode::children);
+            treeGrid.expand(rootNode);
+        } catch (OntologyLoadingException e) {
+            treeGrid.setItems(List.of(
+                new OntologyNode("Ontology loading error", "Error",
+                    "", e.getMessage(), List.of())
+            ), OntologyNode::children);
+        }
     }
 
-    static OntologyNode buildOntologyTree() {
-        return new OntologyNode("CSS-SDA Model", "Ontology", "CSS-SDA ontology model based on the paper", List.of(
-            createCapabilityBranch(),
-            createSkillBranch(),
-            createServiceBranch(),
-            createPhysicalAssetsBranch(),
-            createNe107Branch(),
-            createInstancesBranch()
-        ));
+    private static OntologyNode buildDynamicTree(Model model) {
+        List<OntologyNode> children = new ArrayList<>();
+
+        var classes = model.listSubjectsWithProperty(RDF.type, RDFS.Class).toList();
+        var owlClasses = model.listSubjectsWithProperty(RDF.type, OWL.Class).toList();
+        classes.addAll(owlClasses);
+
+        for (var cls : classes) {
+            if (!cls.isURIResource()) continue;
+            String localName = getLocalName(cls);
+            String label = getLabel(cls);
+            String description = getDescription(cls);
+            List<OntologyNode> individuals = new ArrayList<>();
+
+            var instances = model.listSubjectsWithProperty(RDF.type, cls).toList();
+            for (var inst : instances) {
+                if (!inst.isURIResource()) continue;
+                individuals.add(new OntologyNode(
+                    getLocalName(inst),
+                    "Individual",
+                    inst.getURI(),
+                    getLabel(inst),
+                    List.of()
+                ));
+            }
+
+            children.add(new OntologyNode(label, "Class", cls.getURI(), description, individuals));
+        }
+
+        var properties = model.listSubjectsWithProperty(RDF.type, RDF.Property).toList();
+        var objProps = model.listSubjectsWithProperty(RDF.type, OWL.ObjectProperty).toList();
+        var dataProps = model.listSubjectsWithProperty(RDF.type, OWL.DatatypeProperty).toList();
+        properties.addAll(objProps);
+        properties.addAll(dataProps);
+
+        List<OntologyNode> propNodes = new ArrayList<>();
+        for (var prop : properties) {
+            if (!prop.isURIResource()) continue;
+            String type = "Property";
+            if (objProps.contains(prop)) type = "ObjectProperty";
+            else if (dataProps.contains(prop)) type = "DatatypeProperty";
+            propNodes.add(new OntologyNode(
+                getLocalName(prop),
+                type,
+                prop.getURI(),
+                getLabel(prop),
+                List.of()
+            ));
+        }
+
+        var individuals = model.listSubjectsWithProperty(RDF.type).toList();
+        List<OntologyNode> orphanNodes = new ArrayList<>();
+        for (var ind : individuals) {
+            if (!ind.isURIResource()) continue;
+            var types = ind.listProperties(RDF.type).mapWith(s -> s.getObject().asResource());
+            boolean isClass = false;
+            while (types.hasNext()) {
+                var t = types.next();
+                if (t.equals(RDFS.Class) || t.equals(OWL.Class) || t.equals(RDF.Property)
+                    || t.equals(OWL.ObjectProperty) || t.equals(OWL.DatatypeProperty)) {
+                    isClass = true;
+                    break;
+                }
+            }
+            if (!isClass) {
+                String typeLabel = getTypesLabel(ind, model);
+                orphanNodes.add(new OntologyNode(
+                    getLocalName(ind),
+                    typeLabel,
+                    ind.getURI(),
+                    getLabel(ind),
+                    List.of()
+                ));
+            }
+        }
+
+        if (!propNodes.isEmpty()) {
+            children.add(new OntologyNode("Properties", "Category", "",
+                "Object and data properties defined in the ontology", propNodes));
+        }
+
+        if (!orphanNodes.isEmpty()) {
+            children.add(new OntologyNode("Instances", "Category", "",
+                "Individual instances not grouped under a class node above", orphanNodes));
+        }
+
+        return new OntologyNode("CSS-SDA Model", "Ontology", "",
+            "CSS-SDA ontology model — " + model.size() + " triples", children);
     }
 
-    private static OntologyNode createCapabilityBranch() {
-        return new OntologyNode("Capability", "Class", "Capability class hierarchy", List.of(
-            new OntologyNode("OfferedCapability", "SubClass", "Capability offered by a service", List.of()),
-            new OntologyNode("RequiredCapability", "SubClass", "Capability required by a requirement", List.of())
-        ));
+    private static String getTypesLabel(Resource resource, Model model) {
+        var types = resource.listProperties(RDF.type).mapWith(s -> s.getObject().asResource()).toList();
+        if (types.isEmpty()) return "Resource";
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < types.size() && i < 2; i++) {
+            if (i > 0) sb.append(", ");
+            sb.append(getLocalName(types.get(i)));
+        }
+        return sb.toString();
     }
 
-    private static OntologyNode createSkillBranch() {
-        return new OntologyNode("Skill", "Class", "Skill class - implements a capability", List.of(
-            new OntologyNode("DegradedMode", "SubClass", "Degraded operation mode (NE 107)", List.of())
-        ));
+    private static String getLocalName(Resource resource) {
+        String uri = resource.getURI();
+        if (uri == null) return resource.toString();
+        int hash = uri.lastIndexOf('#');
+        if (hash >= 0) return uri.substring(hash + 1);
+        int slash = uri.lastIndexOf('/');
+        if (slash >= 0) return uri.substring(slash + 1);
+        return uri;
     }
 
-    private static OntologyNode createServiceBranch() {
-        return new OntologyNode("Service", "Class", "Service class - implements a skill", List.of(
-            new OntologyNode("CommunicationBinding", "Class", "Protocol binding for a service", List.of()),
-            new OntologyNode("DataConnector", "Class", "Data connector for a binding", List.of()),
-            new OntologyNode("DeploymentContext", "Class", "Deployment context for a service", List.of())
-        ));
+    private static String getLabel(Resource resource) {
+        var labelStmt = resource.getProperty(RDFS.label);
+        if (labelStmt != null && labelStmt.getString() != null) {
+            return labelStmt.getString();
+        }
+        return getLocalName(resource);
     }
 
-    private static OntologyNode createPhysicalAssetsBranch() {
-        return new OntologyNode("Physical Assets", "Classes", "Physical asset classes", List.of(
-            new OntologyNode("MTPModule", "Class", "MTP Module (Module Type Package)", List.of()),
-            new OntologyNode("FieldDevice", "Class", "Field device (sensor, actuator)", List.of(
-                new OntologyNode("BACnetDevice", "SubClass", "BACnet-connected device", List.of()),
-                new OntologyNode("EnergyMeter", "SubClass", "Energy metering device", List.of())
-            ))
-        ));
+    private static String getDescription(Resource resource) {
+        var commentStmt = resource.getProperty(RDFS.comment);
+        if (commentStmt != null && commentStmt.getString() != null) {
+            return commentStmt.getString();
+        }
+        return "";
     }
 
-    private static OntologyNode createNe107Branch() {
-        return new OntologyNode("NE 107 Diagnostics", "Classes", "NAMUR NE 107 diagnostic classes", List.of(
-            new OntologyNode("NE107Status", "Class", "NE 107 status code", List.of(
-                new OntologyNode("NE107-Good", "Individual", "Status: Good", List.of()),
-                new OntologyNode("NE107-Maintenance", "Individual", "Status: Maintenance required", List.of()),
-                new OntologyNode("NE107-Failure", "Individual", "Status: Failure", List.of())
-            )),
-            new OntologyNode("NE107SubCode", "Class", "NE 107 sub-code", List.of(
-                new OntologyNode("NE107-Sensor", "Individual", "Sub-code: Sensor failure", List.of()),
-                new OntologyNode("NE107-WireBreak", "Individual", "Sub-code: Wire break", List.of()),
-                new OntologyNode("NE107-ShortCircuit", "Individual", "Sub-code: Short circuit", List.of()),
-                new OntologyNode("NE107-Function", "Individual", "Sub-code: Function failure", List.of())
-            ))
-        ));
+    private void showNodeDetails(OntologyNode node) {
+        detailsPanel.add(new H3(node.name()));
+
+        var tabs = new Tabs();
+        var overviewTab = new Tab("Overview");
+        var propertiesTab = new Tab("Properties");
+        var relationshipsTab = new Tab("Relationships");
+        tabs.add(overviewTab, propertiesTab, relationshipsTab);
+
+        var overviewContent = createOverviewContent(node);
+        var propertiesContent = createPropertiesContent(node);
+        var relationshipsContent = createRelationshipsContent(node);
+
+        propertiesContent.setVisible(false);
+        relationshipsContent.setVisible(false);
+
+        tabs.addSelectedChangeListener(event -> {
+            overviewContent.setVisible(event.getSelectedTab() == overviewTab);
+            propertiesContent.setVisible(event.getSelectedTab() == propertiesTab);
+            relationshipsContent.setVisible(event.getSelectedTab() == relationshipsTab);
+        });
+
+        detailsPanel.add(tabs, overviewContent, propertiesContent, relationshipsContent);
     }
 
-    private static OntologyNode createInstancesBranch() {
-        return new OntologyNode("Instances", "Individuals", "Use case instances", List.of(
-            new OntologyNode("Use Case A: Flowmeter NE 107", "Use Case", "Asset condition monitoring", List.of(
-                new OntologyNode("REQ-001", "Requirement", "Flowmeter Asset-Health requirement", List.of()),
-                new OntologyNode("SVC-FlowmeterDiagnostics", "Service", "Flowmeter diagnostics service", List.of()),
-                new OntologyNode("CB-Flowmeter-OPCUA", "Binding", "OPC-UA read-only binding", List.of()),
-                new OntologyNode("DC-Flowmeter-FT101", "Connector", "FT101 flowmeter connector", List.of()),
-                new OntologyNode("DEPLOY-OnPrem", "Context", "On-premise deployment", List.of())
-            )),
-            new OntologyNode("Use Case B: Fermentation Skid", "Use Case", "Critical process control", List.of(
-                new OntologyNode("REQ-002", "Requirement", "Fermentation Temperature Control", List.of()),
-                new OntologyNode("SVC-FermentationSkid", "Service", "Fermentation skid service", List.of()),
-                new OntologyNode("Skid-A1", "MTPModule", "Fermentation skid physical asset", List.of()),
-                new OntologyNode("DEPLOY-Critical", "Context", "Critical process deployment", List.of())
-            )),
-            new OntologyNode("Use Case C: HVAC Plant", "Use Case", "Non-critical monitoring", List.of(
-                new OntologyNode("REQ-003", "Requirement", "HVAC Temperature Monitoring", List.of()),
-                new OntologyNode("SVC-HVACTempAnalysis", "Service", "HVAC temperature analysis", List.of()),
-                new OntologyNode("AHU-01", "BACnetDevice", "Air handling unit", List.of()),
-                new OntologyNode("EM-01", "EnergyMeter", "Energy meter", List.of()),
-                new OntologyNode("DEPLOY-OTZone3", "Context", "OT Zone 3 deployment", List.of())
-            ))
-        ));
+    private VerticalLayout createOverviewContent(OntologyNode node) {
+        var layout = new VerticalLayout();
+        layout.add(new Span("Type: " + node.type()));
+        if (node.uri() != null && !node.uri().isEmpty()) {
+            layout.add(new Span("URI: " + node.uri()));
+        }
+        if (node.description() != null && !node.description().isEmpty()) {
+            layout.add(new Paragraph(node.description()));
+        }
+        if (!node.children().isEmpty()) {
+            layout.add(new Span("Contains " + node.children().size() + " child entities"));
+        }
+        return layout;
+    }
+
+    private VerticalLayout createPropertiesContent(OntologyNode node) {
+        var layout = new VerticalLayout();
+        if (!ontologyModelLoader.isLoaded()) {
+            layout.add(new Paragraph("Ontology not loaded"));
+            return layout;
+        }
+
+        Model model = ontologyModelLoader.getModel();
+        if (node.uri() == null || node.uri().isEmpty()) {
+            layout.add(new Paragraph("No URI — properties not available"));
+            return layout;
+        }
+
+        Resource resource = model.getResource(node.uri());
+        var stmts = resource.listProperties().toList();
+        if (stmts.isEmpty()) {
+            layout.add(new Paragraph("No properties found"));
+            return layout;
+        }
+
+        for (var stmt : stmts) {
+            Property prop = stmt.getPredicate();
+            RDFNode value = stmt.getObject();
+            String propName = getLocalName(prop);
+            String valueStr = value.isURIResource() ? getLocalName(value.asResource()) :
+                value.isLiteral() ? value.asLiteral().getString() : value.toString();
+            layout.add(new Span(propName + " = " + valueStr));
+        }
+        return layout;
+    }
+
+    private VerticalLayout createRelationshipsContent(OntologyNode node) {
+        var layout = new VerticalLayout();
+        if (!ontologyModelLoader.isLoaded()) {
+            layout.add(new Paragraph("Ontology not loaded"));
+            return layout;
+        }
+
+        Model model = ontologyModelLoader.getModel();
+        if (node.uri() == null || node.uri().isEmpty()) {
+            layout.add(new Paragraph("No URI — relationships not available"));
+            return layout;
+        }
+
+        Resource resource = model.getResource(node.uri());
+        var stmts = resource.listProperties().toList();
+        if (stmts.isEmpty()) {
+            layout.add(new Paragraph("No relationships found"));
+            return layout;
+        }
+
+        for (var stmt : stmts) {
+            if (stmt.getObject().isURIResource()) {
+                String propName = getLocalName(stmt.getPredicate());
+                String targetName = getLocalName(stmt.getObject().asResource());
+                layout.add(new Span(propName + " → " + targetName));
+            }
+        }
+        return layout;
     }
 }

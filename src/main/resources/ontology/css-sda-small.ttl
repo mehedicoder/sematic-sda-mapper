@@ -117,6 +117,46 @@ sda:belongsToSite    a rdf:Property, owl:ObjectProperty ;
     rdfs:range         rdfs:Resource ;
     rdfs:label         "belongsToSite" .
 
+sda:hasParameter     a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:Requirement ;
+    rdfs:range         rdfs:Resource ;
+    rdfs:label         "hasParameter" .
+
+sda:hasConstraint    a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:Requirement ;
+    rdfs:range         rdfs:Resource ;
+    rdfs:label         "hasConstraint" .
+
+sda:specifiedBy      a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        css:Capability ;
+    rdfs:range         rdfs:Resource ;
+    rdfs:label         "specifiedBy" .
+
+sda:verifiedBy       a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:Requirement ;
+    rdfs:range         rdfs:Resource ;
+    rdfs:label         "verifiedBy" .
+
+sda:requiresFunction a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        css:Capability ;
+    rdfs:range         rdfs:Resource ;
+    rdfs:label         "requiresFunction" .
+
+sda:operatesOn       a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        css:Capability ;
+    rdfs:range         rdfs:Resource ;
+    rdfs:label         "operatesOn" .
+
+sda:exposedAs        a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        css:Capability ;
+    rdfs:range         rdfs:Resource ;
+    rdfs:label         "exposedAs" .
+
+sda:mapsTo           a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:RequiredCapability ;
+    rdfs:range         sda:OfferedCapability ;
+    rdfs:label         "mapsTo" .
+
 # ── Data properties ────────────────────────────────────────────────────
 
 sda:requirementID    a rdf:Property, owl:DatatypeProperty ;
@@ -219,6 +259,57 @@ sda:isGateway        a rdf:Property, owl:DatatypeProperty ;
     rdfs:range    xsd:boolean ;
     rdfs:label    "isGateway" .
 
+# ── Requirement data properties (paper Figure 5) ────────────────────
+
+sda:title            a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:Requirement ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "title" .
+
+sda:description      a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   rdfs:Resource ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "description" .
+
+sda:rationale        a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:Requirement ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "rationale" .
+
+sda:acceptanceCondition a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:Requirement ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "acceptanceCondition" .
+
+sda:hasPriority      a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:Requirement ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "hasPriority" .
+
+# ── Capability data properties (paper Figure 5) ─────────────────────
+
+sda:capabilityName   a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   css:Capability ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "capabilityName" .
+
+sda:version          a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   rdfs:Resource ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "version" .
+
+# ── Skill data properties (nominal range) ───────────────────────────
+
+sda:nominalRange_min a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   css:Skill ;
+    rdfs:range    xsd:double ;
+    rdfs:label    "nominalRange_min" .
+
+sda:nominalRange_max a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   css:Skill ;
+    rdfs:range    xsd:double ;
+    rdfs:label    "nominalRange_max" .
+
 # ── NE 107 status individuals ──────────────────────────────────────────
 
 :NE107-Good       a sda:NE107Status ;
@@ -253,20 +344,30 @@ sda:isGateway        a rdf:Property, owl:DatatypeProperty ;
 :REQ-001  a               sda:Requirement ;
     rdfs:label            "REQ-001 Flowmeter Asset-Health" ;
     sda:requirementID     "REQ-001" ;
+    sda:title             "Flowmeter Asset-Health Monitoring" ;
+    sda:description       "Monitor the health of flowmeter FT-101 using NAMUR NE 107 diagnostics" ;
+    sda:rationale         "Prevent unplanned downtime through predictive asset diagnostics" ;
+    sda:acceptanceCondition "Service must provide asset condition monitoring via OPC UA" ;
     sda:requirementType   "AssetDiagnostics" ;
     sda:lifecycleStatus   "Defined" ;
+    sda:hasPriority       "High" ;
     sda:mapsToCapability  :OC-ACM-Flowmeter .
 
 # Offered capability
 :OC-ACM-Flowmeter  a     sda:OfferedCapability ;
     rdfs:label            "Asset Condition Monitoring for Flowmeter" ;
     sda:capabilityID      "ACM-001" ;
+    sda:capabilityName    "AssetConditionMonitoring" ;
+    sda:description       "Monitors flowmeter health via NE 107 diagnostics" ;
+    sda:version           "1.0" ;
     sda:realisedBy        :SK-FlowmeterDiagnostics .
 
 # Skill
 :SK-FlowmeterDiagnostics  a css:Skill ;
     rdfs:label            "Flowmeter Diagnostics Skill" ;
     sda:engineeringUnit   "l/min" ;
+    sda:nominalRange_min  0.0 ;
+    sda:nominalRange_max  100.0 ;
     sda:isImplementedBy   :SVC-FlowmeterDiagnostics .
 
 # Service
@@ -391,30 +492,45 @@ sda:isGateway        a rdf:Property, owl:DatatypeProperty ;
 :REQ-002  a               sda:Requirement ;
     rdfs:label            "REQ-002 Fermentation Temperature Control" ;
     sda:requirementID     "REQ-002" ;
+    sda:title             "Fermentation Temperature Control" ;
+    sda:description       "Control temperature during batch fermentation step 3" ;
+    sda:rationale         "Critical process control requires SIL-2 safety integrity" ;
+    sda:acceptanceCondition "Service must provide HardRealTime temperature control via PROFINET" ;
     sda:requirementType   "CoreProcessControl" ;
     sda:lifecycleStatus   "Defined" ;
+    sda:hasPriority       "Critical" ;
     sda:mapsToCapability  :OC-TempControl .
 
 # Offered capabilities
 :OC-TempControl  a        sda:OfferedCapability ;
     rdfs:label            "Temperature Control Capability" ;
     sda:capabilityID      "TC-001" ;
+    sda:capabilityName    "TemperatureControl" ;
+    sda:description       "Controls fermentation vessel temperature within ±0.5°C" ;
+    sda:version           "1.0" ;
     sda:realisedBy        :SK-FermentationControl .
 
 :OC-DosingControl  a      sda:OfferedCapability ;
     rdfs:label            "Dosing Control Capability" ;
     sda:capabilityID      "DC-001" ;
+    sda:capabilityName    "DosingControl" ;
+    sda:description       "Controls nutrient dosing rate during fermentation" ;
+    sda:version           "1.0" ;
     sda:realisedBy        :SK-DosingControl .
 
 # Skills
 :SK-FermentationControl  a css:Skill ;
     rdfs:label            "Fermentation Control Skill" ;
     sda:engineeringUnit   "°C" ;
+    sda:nominalRange_min  15.0 ;
+    sda:nominalRange_max  40.0 ;
     sda:isImplementedBy   :SVC-FermentationSkid .
 
 :SK-DosingControl  a      css:Skill ;
     rdfs:label            "Dosing Control Skill" ;
     sda:engineeringUnit   "mL/min" ;
+    sda:nominalRange_min  0.0 ;
+    sda:nominalRange_max  50.0 ;
     sda:isImplementedBy   :SVC-FermentationSkid .
 
 # Service
@@ -478,20 +594,30 @@ sda:isGateway        a rdf:Property, owl:DatatypeProperty ;
 :REQ-003  a               sda:Requirement ;
     rdfs:label            "REQ-003 HVAC Temperature Monitoring" ;
     sda:requirementID     "REQ-003" ;
+    sda:title             "HVAC Temperature Monitoring" ;
+    sda:description       "Monitor supply air temperature from AHU-01 for energy optimization" ;
+    sda:rationale         "Non-critical monitoring for energy efficiency improvements" ;
+    sda:acceptanceCondition "Service must provide read-only temperature data from OT Zone 3" ;
     sda:requirementType   "MonitoringOptimization" ;
     sda:lifecycleStatus   "Defined" ;
+    sda:hasPriority       "Medium" ;
     sda:mapsToCapability  :OC-HVACTempMonitoring .
 
 # Offered capability
 :OC-HVACTempMonitoring  a sda:OfferedCapability ;
     rdfs:label            "HVAC Temperature Monitoring Capability" ;
     sda:capabilityID      "HVAC-001" ;
+    sda:capabilityName    "HVACTemperatureMonitoring" ;
+    sda:description       "Monitors HVAC supply air temperature for energy optimization" ;
+    sda:version           "1.0" ;
     sda:realisedBy        :SK-HVACTempAnalysis .
 
 # Skill
 :SK-HVACTempAnalysis  a   css:Skill ;
     rdfs:label            "HVAC Temperature Analysis Skill" ;
     sda:engineeringUnit   "°C" ;
+    sda:nominalRange_min  -10.0 ;
+    sda:nominalRange_max  50.0 ;
     sda:isImplementedBy   :SVC-HVACTempAnalysis .
 
 # Service

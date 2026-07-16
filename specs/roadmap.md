@@ -359,27 +359,27 @@ Implement Java code that loads the ontology model into Apache Jena.
 
 **Tasks**
 
-* [ ] Create `OntologyModelLoader`
-* [ ] Load ontology file from classpath
-* [ ] Return Apache Jena `Model`
-* [ ] Add clear error when ontology file is missing
-* [ ] Add clear error when ontology file is invalid
-* [ ] Add unit test for successful ontology loading
-* [ ] Add unit test for missing ontology file
-* [ ] Add unit test for invalid ontology content
-* [ ] Wire `ExplorerView` to `OntologyModelLoader` — tree loads dynamically from Jena model
-* [ ] Add entity detail tabs: Overview, Properties, Relationships
-* [ ] Add Vaadin UI test for ExplorerView dynamic tree loading and tab switching
+* [x] Create `OntologyModelLoader`
+* [x] Load ontology file from classpath
+* [x] Return Apache Jena `Model`
+* [x] Add clear error when ontology file is missing
+* [x] Add clear error when ontology file is invalid
+* [x] Add unit test for successful ontology loading
+* [x] Add unit test for missing ontology file
+* [x] Add unit test for invalid ontology content
+* [x] Wire `ExplorerView` to `OntologyModelLoader` — tree loads dynamically from Jena model
+* [x] Add entity detail tabs: Overview, Properties, Relationships
+* [x] Add Vaadin UI test for ExplorerView dynamic tree loading and tab switching
 
 **Acceptance Criteria**
 
-* [ ] Ontology loads successfully during application startup or first use
-* [ ] Invalid ontology input fails with a clear exception
-* [ ] Tests cover success and failure cases
-* [ ] ExplorerView ontology tree populates dynamically from loaded model
-* [ ] Selecting an entity shows Properties and Relationships tabs
-* [ ] Missing ontology file shows user-friendly error in ExplorerView
-* [ ] ExplorerView UI test validates dynamic loading and tab interaction
+* [x] Ontology loads successfully during application startup or first use
+* [x] Invalid ontology input fails with a clear exception
+* [x] Tests cover success and failure cases
+* [x] ExplorerView ontology tree populates dynamically from loaded model
+* [x] Selecting an entity shows Properties and Relationships tabs
+* [x] Missing ontology file shows user-friendly error in ExplorerView
+* [x] ExplorerView UI test validates dynamic loading and tab interaction
 
 ---
 

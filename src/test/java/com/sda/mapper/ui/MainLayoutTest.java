@@ -30,7 +30,10 @@ class MainLayoutTest {
     void testAllViewClassesExist() {
         assertDoesNotThrow(() -> new SystemStatusView());
         assertDoesNotThrow(() -> new ServiceInstancesView());
-        assertDoesNotThrow(() -> new OntologyExplorerView());
+        assertDoesNotThrow(() -> {
+            var loader = new com.sda.mapper.ontology.OntologyModelLoader();
+            new OntologyExplorerView(loader);
+        });
         assertDoesNotThrow(() -> new RequirementFormView());
         assertDoesNotThrow(() -> new RegistrationWizardView());
         assertDoesNotThrow(() -> new SearchView());

@@ -246,108 +246,108 @@ Build the CSS-SDA ontology from the paper (Islam, Maurer, Diedrich 2026) and val
 
 **Tasks**
 
-* [ ] **Use Case A (MVP): Flowmeter NE 107 — Ontology Instances**
-  * [ ] Replace current Modbus pump-fill instances with paper's OPC-UA flowmeter scenario
-  * [ ] Add `:REQ-001` Requirement (requirementID="REQ-001", title="Flowmeter Asset-Health", requirementType="AssetDiagnostics", lifecycleStatus="Defined")
-  * [ ] Add `:AssetConditionMonitoringCapability` OfferedCapability (capabilityID="ACM-001")
-  * [ ] Add `:SK-FlowmeterDiagnostics` Skill (realisedBy → Capability, isImplementedBy → Service)
-  * [ ] Add `:SVC-FlowmeterDiagnostics` Service (reportedRecall=0.94, reportedLatency=45, image="registry.local/flowmeter-diagnostics:1.0")
-  * [ ] Add `:CB-Flowmeter-OPCUA` CommunicationBinding (protocol="OPC-UA", accessMode="read-only", securityMode="SignAndEncrypt")
-  * [ ] Add `:DC-Flowmeter-FT101` DataConnector (informationModel="OPC-UA", semanticID="IEC-61987-42")
-  * [ ] Add `:DEPLOY-OnPrem` DeploymentContext (onPlantNetwork=true, safetyIntegrityLevel="SIL-0", determinismClass="SoftRealTime")
-  * [ ] Add negative candidate: `:SVC-WrongProtocol` (HTTP instead of OPC-UA)
-  * [ ] Add negative candidate: `:SVC-WrongCapability` (FermentationControl, wrong capability chain)
-  * [ ] Add negative candidate: `:SVC-NE107Failure` (NE 107 status = Failure, excluded by SPARQL)
-* [ ] **Use Case A (MVP): NE 107 Diagnostic Ontology**
-  * [ ] Add `sda:NE107Status` class with individuals: `:NE107-Good`, `:NE107-Maintenance`, `:NE107-Failure`
-  * [ ] Add `sda:NE107SubCode` class with individuals: `:NE107-Sensor`, `:NE107-WireBreak`, `:NE107-ShortCircuit`, `:NE107-Function`
-  * [ ] Add `sda:hasNE107Status` object property (Device/Variable → NE107Status)
-  * [ ] Add `sda:hasDiagnosticString` data property
-  * [ ] Add `sda:hasSubCode` object property (NE107Status → NE107SubCode)
-  * [ ] Add `sda:DegradedMode` class (subClassOf `css:Skill`)
-  * [ ] Add `sda:hasDegradationLevel` data property (DegradedMode → xsd:string)
-  * [ ] Add pump degradation individuals: `:pump1HealthyMode`, `:pump1DegradedMode`, `:pump1FaultedMode`
-  * [ ] Add `:pump1Asset` FieldDevice with NE 107 status linkage
-* [ ] **Use Case A (MVP): SPARQL Query (paper Table I)**
-  * [ ] Rewrite `match-service.rq` to match paper's SPARQL pattern (Section 4.4)
-  * [ ] R1: capability match chain (REQ → mapsToCapability → Capability → realisedBy → Skill → isImplementedBy → Service)
-  * [ ] R2b: protocol match (CommunicationBinding.protocol = "OPC-UA", accessMode = "read-only")
-  * [ ] R3: performance+locality (reportedRecall >= 0.90, reportedLatency <= 60, onPlantNetwork = true)
-  * [ ] FILTER NOT EXISTS for semantic identifier matching (R2a)
-  * [ ] ORDER BY DESC(?recall) LIMIT 1
-* [ ] **Use Case A (MVP): SPARQL Tests**
-  * [ ] Test: `:REQ-001` returns `:SVC-FlowmeterDiagnostics` (R1-R3 satisfied)
-  * [ ] Test: `:SVC-WrongProtocol` excluded (protocol mismatch)
-  * [ ] Test: `:SVC-WrongCapability` excluded (capability mismatch)
-  * [ ] Test: `:SVC-NE107Failure` excluded (NE 107 status = Failure)
-  * [ ] Test: pump recovery restores match after failure cleared
-* [ ] **CSS-SDA Ontology: Classes and Properties**
-  * [ ] Define Requirement class properties from paper (Figure 5): requirementID, title, description, rationale, acceptanceCondition, requirementType, lifecycleStatus, hasParameter, hasConstraint, hasPriority, specifiedBy, verifiedBy, mapsToCapability
-  * [ ] Define Capability class properties from paper (Figure 5): capabilityID, capabilityName, description, version, requiresFunction, operatesOn, realisedBy, exposedAs, mapsTo
-  * [ ] Define physical asset classes: `sda:MTPModule`, `sda:FieldDevice`, `sda:BACnetDevice`, `sda:EnergyMeter`
-  * [ ] Define object properties: mapsToCapability, realisedBy, isImplementedBy, usesBinding, usesConnector, isDeployedBy
-  * [ ] Define data properties: protocol, accessMode, reportedRecall, reportedLatency, onPlantNetwork, engineeringUnit, semanticID, nominalRange_min, nominalRange_max
-* [ ] **Use Case B: Fermentation Skid (Skid-A1) — Critical Process Control**
-  * [ ] Add `:Skid-A1` MTPModule instance (SIL-2, CPC category, PROFINET, OPC UA gateway)
-  * [ ] Add `:REQ-002` Requirement (requirementID="REQ-002", title="Fermentation Temperature Control", requirementType="CoreProcessControl")
-  * [ ] Add `:OC-TempControl` OfferedCapability (capabilityID="TC-001")
-  * [ ] Add `:OC-DosingControl` OfferedCapability (capabilityID="DC-001")
-  * [ ] Add `:SK-FermentationControl` Skill (realisedBy → OC-TempControl, isImplementedBy → SVC)
-  * [ ] Add `:SK-DosingControl` Skill (realisedBy → OC-DosingControl, isImplementedBy → SVC)
-  * [ ] Add `:SVC-FermentationSkid` Service (SIL-2, HardRealTime)
-  * [ ] Add `:CB-Skid-A1-PROFINET` CommunicationBinding (protocol="PROFINET", accessMode="read-write")
-  * [ ] Add `:CB-Skid-A1-OPCUA` CommunicationBinding (protocol="OPC-UA", accessMode="read-only", gateway)
-  * [ ] Add `:DC-Skid-A1-OPCUA` DataConnector (informationModel="OPC-UA", semanticID from MTP)
-  * [ ] Add `:DEPLOY-Critical` DeploymentContext (safetyIntegrityLevel="SIL-2", determinismClass="HardRealTime", networkZone="OT-Zone-1", onPlantNetwork=true)
-  * [ ] Add SPARQL test: REQ-002 matches SVC-FermentationSkid via PROFINET binding
-  * [ ] Add SPARQL test: wrong SIL (SIL-0) excludes service for SIL-2 requirement
-  * [ ] Add SPARQL test: wrong determinism class (SoftRealTime) excludes for HardRealTime requirement
-* [ ] **Use Case C: HVAC Plant (AHU-01 + EM-01) — Non-Critical Monitoring & Optimization**
-  * [ ] Add `:AHU-01` FieldDevice instance (BACnet, M+O category, SoftRealTime, OT-Zone-3)
-  * [ ] Add `:EM-01` EnergyMeter instance (native OPC UA, non-critical)
-  * [ ] Add `:REQ-003` Requirement (requirementID="REQ-003", title="HVAC Temperature Monitoring", requirementType="MonitoringOptimization")
-  * [ ] Add `:OC-HVACTempMonitoring` OfferedCapability (capabilityID="HVAC-001")
-  * [ ] Add `:SK-HVACTempAnalysis` Skill (realisedBy → OC-HVACTempMonitoring)
-  * [ ] Add `:SVC-HVACTempAnalysis` Service (SoftRealTime, on-premise)
-  * [ ] Add `:CB-AHU01-BACnet` CommunicationBinding (protocol="BACnet", accessMode="read-only", securityMode="Sign")
-  * [ ] Add `:CB-AHU01-OPCUA` CommunicationBinding (protocol="OPC-UA", accessMode="read-only", gateway)
-  * [ ] Add `:DC-AHU01-OPCUA` DataConnector (informationModel="OPC-UA", gateway)
-  * [ ] Add `:CB-EM01-OPCUA` CommunicationBinding (protocol="OPC-UA", accessMode="read-only", securityMode="SignAndEncrypt", native)
-  * [ ] Add `:DC-EM01-OPCUA` DataConnector (informationModel="OPC-UA", native)
-  * [ ] Add `:DEPLOY-OTZone3` DeploymentContext (safetyIntegrityLevel="SIL-0", determinismClass="SoftRealTime", networkZone="OT-Zone-3", onPlantNetwork=true)
-  * [ ] Add SPARQL test: REQ-003 matches SVC-HVACTempAnalysis
-  * [ ] Add SPARQL test: cross-plant query finds temperature services across PlantA and PlantB
-  * [ ] Add SPARQL test: wrong networkZone excludes service
-* [ ] **ExplorerView UI**
-  * [ ] Create `ExplorerView` with split layout (tree left, details right)
-  * [ ] Create `OntologyTree` component with expandable/collapsible nodes
-  * [ ] Add Vaadin UI test for ExplorerView rendering and tree interaction
+* [x] **Use Case A (MVP): Flowmeter NE 107 — Ontology Instances**
+  * [x] Replace current Modbus pump-fill instances with paper's OPC-UA flowmeter scenario
+  * [x] Add `:REQ-001` Requirement (requirementID="REQ-001", title="Flowmeter Asset-Health", requirementType="AssetDiagnostics", lifecycleStatus="Defined")
+  * [x] Add `:AssetConditionMonitoringCapability` OfferedCapability (capabilityID="ACM-001")
+  * [x] Add `:SK-FlowmeterDiagnostics` Skill (realisedBy → Capability, isImplementedBy → Service)
+  * [x] Add `:SVC-FlowmeterDiagnostics` Service (reportedRecall=0.94, reportedLatency=45, image="registry.local/flowmeter-diagnostics:1.0")
+  * [x] Add `:CB-Flowmeter-OPCUA` CommunicationBinding (protocol="OPC-UA", accessMode="read-only", securityMode="SignAndEncrypt")
+  * [x] Add `:DC-Flowmeter-FT101` DataConnector (informationModel="OPC-UA", semanticID="IEC-61987-42")
+  * [x] Add `:DEPLOY-OnPrem` DeploymentContext (onPlantNetwork=true, safetyIntegrityLevel="SIL-0", determinismClass="SoftRealTime")
+  * [x] Add negative candidate: `:SVC-WrongProtocol` (HTTP instead of OPC-UA)
+  * [x] Add negative candidate: `:SVC-WrongCapability` (FermentationControl, wrong capability chain)
+  * [x] Add negative candidate: `:SVC-NE107Failure` (NE 107 status = Failure, excluded by SPARQL)
+* [x] **Use Case A (MVP): NE 107 Diagnostic Ontology**
+  * [x] Add `sda:NE107Status` class with individuals: `:NE107-Good`, `:NE107-Maintenance`, `:NE107-Failure`
+  * [x] Add `sda:NE107SubCode` class with individuals: `:NE107-Sensor`, `:NE107-WireBreak`, `:NE107-ShortCircuit`, `:NE107-Function`
+  * [x] Add `sda:hasNE107Status` object property (Device/Variable → NE107Status)
+  * [x] Add `sda:hasDiagnosticString` data property
+  * [x] Add `sda:hasSubCode` object property (NE107Status → NE107SubCode)
+  * [x] Add `sda:DegradedMode` class (subClassOf `css:Skill`)
+  * [x] Add `sda:hasDegradationLevel` data property (DegradedMode → xsd:string)
+  * [x] Add pump degradation individuals: `:pump1HealthyMode`, `:pump1DegradedMode`, `:pump1FaultedMode`
+  * [x] Add `:pump1Asset` FieldDevice with NE 107 status linkage
+* [x] **Use Case A (MVP): SPARQL Query (paper Table I)**
+  * [x] Rewrite `match-service.rq` to match paper's SPARQL pattern (Section 4.4)
+  * [x] R1: capability match chain (REQ → mapsToCapability → Capability → realisedBy → Skill → isImplementedBy → Service)
+  * [x] R2b: protocol match (CommunicationBinding.protocol = "OPC-UA", accessMode = "read-only")
+  * [x] R3: performance+locality (reportedRecall >= 0.90, reportedLatency <= 60, onPlantNetwork = true)
+  * [x] FILTER NOT EXISTS for semantic identifier matching (R2a)
+  * [x] ORDER BY DESC(?recall) LIMIT 1
+* [x] **Use Case A (MVP): SPARQL Tests**
+  * [x] Test: `:REQ-001` returns `:SVC-FlowmeterDiagnostics` (R1-R3 satisfied)
+  * [x] Test: `:SVC-WrongProtocol` excluded (protocol mismatch)
+  * [x] Test: `:SVC-WrongCapability` excluded (capability mismatch)
+  * [x] Test: `:SVC-NE107Failure` excluded (NE 107 status = Failure)
+  * [x] Test: pump recovery restores match after failure cleared
+* [x] **CSS-SDA Ontology: Classes and Properties**
+  * [x] Define Requirement class properties from paper (Figure 5): requirementID, title, description, rationale, acceptanceCondition, requirementType, lifecycleStatus, hasParameter, hasConstraint, hasPriority, specifiedBy, verifiedBy, mapsToCapability
+  * [x] Define Capability class properties from paper (Figure 5): capabilityID, capabilityName, description, version, requiresFunction, operatesOn, realisedBy, exposedAs, mapsTo
+  * [x] Define physical asset classes: `sda:MTPModule`, `sda:FieldDevice`, `sda:BACnetDevice`, `sda:EnergyMeter`
+  * [x] Define object properties: mapsToCapability, realisedBy, isImplementedBy, usesBinding, usesConnector, isDeployedBy
+  * [x] Define data properties: protocol, accessMode, reportedRecall, reportedLatency, onPlantNetwork, engineeringUnit, semanticID, nominalRange_min, nominalRange_max
+* [x] **Use Case B: Fermentation Skid (Skid-A1) — Critical Process Control**
+  * [x] Add `:Skid-A1` MTPModule instance (SIL-2, CPC category, PROFINET, OPC UA gateway)
+  * [x] Add `:REQ-002` Requirement (requirementID="REQ-002", title="Fermentation Temperature Control", requirementType="CoreProcessControl")
+  * [x] Add `:OC-TempControl` OfferedCapability (capabilityID="TC-001")
+  * [x] Add `:OC-DosingControl` OfferedCapability (capabilityID="DC-001")
+  * [x] Add `:SK-FermentationControl` Skill (realisedBy → OC-TempControl, isImplementedBy → SVC)
+  * [x] Add `:SK-DosingControl` Skill (realisedBy → OC-DosingControl, isImplementedBy → SVC)
+  * [x] Add `:SVC-FermentationSkid` Service (SIL-2, HardRealTime)
+  * [x] Add `:CB-Skid-A1-PROFINET` CommunicationBinding (protocol="PROFINET", accessMode="read-write")
+  * [x] Add `:CB-Skid-A1-OPCUA` CommunicationBinding (protocol="OPC-UA", accessMode="read-only", gateway)
+  * [x] Add `:DC-Skid-A1-OPCUA` DataConnector (informationModel="OPC-UA", semanticID from MTP)
+  * [x] Add `:DEPLOY-Critical` DeploymentContext (safetyIntegrityLevel="SIL-2", determinismClass="HardRealTime", networkZone="OT-Zone-1", onPlantNetwork=true)
+  * [x] Add SPARQL test: REQ-002 matches SVC-FermentationSkid via PROFINET binding
+  * [x] Add SPARQL test: wrong SIL (SIL-0) excludes service for SIL-2 requirement
+  * [x] Add SPARQL test: wrong determinism class (SoftRealTime) excludes for HardRealTime requirement
+* [x] **Use Case C: HVAC Plant (AHU-01 + EM-01) — Non-Critical Monitoring & Optimization**
+  * [x] Add `:AHU-01` FieldDevice instance (BACnet, M+O category, SoftRealTime, OT-Zone-3)
+  * [x] Add `:EM-01` EnergyMeter instance (native OPC UA, non-critical)
+  * [x] Add `:REQ-003` Requirement (requirementID="REQ-003", title="HVAC Temperature Monitoring", requirementType="MonitoringOptimization")
+  * [x] Add `:OC-HVACTempMonitoring` OfferedCapability (capabilityID="HVAC-001")
+  * [x] Add `:SK-HVACTempAnalysis` Skill (realisedBy → OC-HVACTempMonitoring)
+  * [x] Add `:SVC-HVACTempAnalysis` Service (SoftRealTime, on-premise)
+  * [x] Add `:CB-AHU01-BACnet` CommunicationBinding (protocol="BACnet", accessMode="read-only", securityMode="Sign")
+  * [x] Add `:CB-AHU01-OPCUA` CommunicationBinding (protocol="OPC-UA", accessMode="read-only", gateway)
+  * [x] Add `:DC-AHU01-OPCUA` DataConnector (informationModel="OPC-UA", gateway)
+  * [x] Add `:CB-EM01-OPCUA` CommunicationBinding (protocol="OPC-UA", accessMode="read-only", securityMode="SignAndEncrypt", native)
+  * [x] Add `:DC-EM01-OPCUA` DataConnector (informationModel="OPC-UA", native)
+  * [x] Add `:DEPLOY-OTZone3` DeploymentContext (safetyIntegrityLevel="SIL-0", determinismClass="SoftRealTime", networkZone="OT-Zone-3", onPlantNetwork=true)
+  * [x] Add SPARQL test: REQ-003 matches SVC-HVACTempAnalysis
+  * [x] Add SPARQL test: cross-plant query finds temperature services across PlantA and PlantB
+  * [x] Add SPARQL test: wrong networkZone excludes service
+* [x] **ExplorerView UI**
+  * [x] Create `ExplorerView` with split layout (tree left, details right)
+  * [x] Create `OntologyTree` component with expandable/collapsible nodes
+  * [x] Add Vaadin UI test for ExplorerView rendering and tree interaction
 
 **Acceptance Criteria**
 
-* [ ] **Use Case A (MVP): Ontology supports paper's SPARQL query (Table I) without modification**
-* [ ] **Use Case A (MVP): SPARQL returns `:SVC-FlowmeterDiagnostics` for `:REQ-001`**
-* [ ] **Use Case A (MVP): SPARQL excludes `:SVC-WrongProtocol` (protocol mismatch)**
-* [ ] **Use Case A (MVP): SPARQL excludes `:SVC-WrongCapability` (capability mismatch)**
-* [ ] **Use Case A (MVP): SPARQL excludes `:SVC-NE107Failure` (NE 107 status = Failure)**
-* [ ] **Use Case A (MVP): Pump recovery restores SPARQL match after failure cleared**
-* [ ] **Use Case B: SPARQL returns `:SVC-FermentationSkid` for `:REQ-002` via PROFINET binding**
-* [ ] **Use Case B: SPARQL excludes service when SIL requirement mismatch (SIL-0 vs SIL-2)**
-* [ ] **Use Case B: SPARQL excludes service when determinism class mismatch (SoftRealTime vs HardRealTime)**
-* [ ] **Use Case C: SPARQL returns `:SVC-HVACTempAnalysis` for `:REQ-003`**
-* [ ] **Use Case C: Cross-plant query finds temperature services across PlantA and PlantB**
-* [ ] **Use Case C: SPARQL excludes service when networkZone mismatch**
-* [ ] Ontology file is valid Turtle (Jena loads without error)
-* [ ] Ontology contains all 8 CSS-SDA classes (UseCase, Requirement, Capability, Skill, Service, CommunicationBinding, DataConnector, DeploymentContext)
-* [ ] Ontology contains NE 107 status individuals (Good, Maintenance, Failure) and sub-codes
-* [ ] Ontology contains DegradedMode class with hasDegradationLevel property
-* [ ] Ontology contains Requirement class with paper's properties (Figure 5)
-* [ ] Ontology contains Capability class with paper's properties (Figure 5)
-* [ ] Ontology contains all three use cases (A: Flowmeter, B: Fermentation, C: HVAC)
-* [ ] ExplorerView shows CSS-SDA class hierarchy in tree sidebar
-* [ ] Tree nodes are expandable and collapsible
-* [ ] Selecting a tree node displays entity details in the right panel
-* [ ] ExplorerView UI test validates tree rendering and node selection
+* [x] **Use Case A (MVP): Ontology supports paper's SPARQL query (Table I) without modification**
+* [x] **Use Case A (MVP): SPARQL returns `:SVC-FlowmeterDiagnostics` for `:REQ-001`**
+* [x] **Use Case A (MVP): SPARQL excludes `:SVC-WrongProtocol` (protocol mismatch)**
+* [x] **Use Case A (MVP): SPARQL excludes `:SVC-WrongCapability` (capability mismatch)**
+* [x] **Use Case A (MVP): SPARQL excludes `:SVC-NE107Failure` (NE 107 status = Failure)**
+* [x] **Use Case A (MVP): Pump recovery restores SPARQL match after failure cleared**
+* [x] **Use Case B: SPARQL returns `:SVC-FermentationSkid` for `:REQ-002` via PROFINET binding**
+* [x] **Use Case B: SPARQL excludes service when SIL requirement mismatch (SIL-0 vs SIL-2)**
+* [x] **Use Case B: SPARQL excludes service when determinism class mismatch (SoftRealTime vs HardRealTime)**
+* [x] **Use Case C: SPARQL returns `:SVC-HVACTempAnalysis` for `:REQ-003`**
+* [x] **Use Case C: Cross-plant query finds temperature services across PlantA and PlantB**
+* [x] **Use Case C: SPARQL excludes service when networkZone mismatch**
+* [x] Ontology file is valid Turtle (Jena loads without error)
+* [x] Ontology contains all 8 CSS-SDA classes (UseCase, Requirement, Capability, Skill, Service, CommunicationBinding, DataConnector, DeploymentContext)
+* [x] Ontology contains NE 107 status individuals (Good, Maintenance, Failure) and sub-codes
+* [x] Ontology contains DegradedMode class with hasDegradationLevel property
+* [x] Ontology contains Requirement class with paper's properties (Figure 5)
+* [x] Ontology contains Capability class with paper's properties (Figure 5)
+* [x] Ontology contains all three use cases (A: Flowmeter, B: Fermentation, C: HVAC)
+* [x] ExplorerView shows CSS-SDA class hierarchy in tree sidebar
+* [x] Tree nodes are expandable and collapsible
+* [x] Selecting a tree node displays entity details in the right panel
+* [x] ExplorerView UI test validates tree rendering and node selection
 
 ---
 

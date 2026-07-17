@@ -58,29 +58,49 @@ class TankNamespace extends ManagedNamespace {
 
         int ns = getNamespaceIndex().intValue();
 
-        UaObjectNode tankFolder = createObject(null, ns, "Tank1", "Tank1");
+        // Tank1 object under ObjectsFolder
+        UaObjectNode tankFolder = createObject(null, ns, "Tank1");
         registerNode(tankFolder, Identifiers.ObjectsFolder);
 
-        createDoubleVariable(tankFolder, ns, "Level", tankState.getLevelCm());
-        createDoubleVariable(tankFolder, ns, "FlowRateIn", tankState.getFlowInLMin());
-        createDoubleVariable(tankFolder, ns, "FlowRateOut", tankState.getFlowOutLMin());
-        createDoubleVariable(tankFolder, ns, "Temperature", tankState.getTemperatureC());
+        createDoubleVariable(tankFolder, ns, "Level", tankState.getLevelCm(),
+            UByte.valueOf(1), 200);
+        createDoubleVariable(tankFolder, ns, "FlowRateIn", tankState.getFlowInLMin(),
+            UByte.valueOf(3), 200);
+        createDoubleVariable(tankFolder, ns, "FlowRateOut", tankState.getFlowOutLMin(),
+            UByte.valueOf(3), 200);
+        createDoubleVariable(tankFolder, ns, "Temperature", tankState.getTemperatureC(),
+            UByte.valueOf(1), 500);
 
-        UaObjectNode pumpFolder = createObject(tankFolder, ns, "Pump", "Pump");
-        registerNode(pumpFolder, tankFolder.getNodeId());
+        // Pump1 object under Tank1
+        UaObjectNode pumpFolder = createObject(tankFolder, ns, "Pump1");
 
-        createDoubleVariable(pumpFolder, ns, "FlowRate", pumpModel.getEffectiveFlowLMin());
-        createDoubleVariable(pumpFolder, ns, "Vibration", pumpModel.getVibration());
-        createDoubleVariable(pumpFolder, ns, "Temperature", pumpModel.getTemperature());
-        createDoubleVariable(pumpFolder, ns, "Status", 0.0);
+        createDoubleVariable(pumpFolder, ns, "FlowRate", pumpModel.getEffectiveFlowLMin(),
+            UByte.valueOf(1), 200);
+        createDoubleVariable(pumpFolder, ns, "Vibration", pumpModel.getVibration(),
+            UByte.valueOf(1), 200);
+        createDoubleVariableWithId(pumpFolder, ns, "PumpTemperature", "Temperature",
+            pumpModel.getTemperature(), UByte.valueOf(1), 500);
 
+        // NE 107 aggregate status — UInt32 per NAMUR NE 107
+        createUInt32Variable(pumpFolder, ns, "Status", 0, 500);
+
+        // Per-variable NE 107 diagnostic variables
+        createUInt32Variable(pumpFolder, ns, "FlowRate_Status", 0, 500);
+        createStringVariable(pumpFolder, ns, "FlowRate_Diag", "", 500);
+        createUInt32Variable(pumpFolder, ns, "Vibration_Status", 0, 500);
+        createStringVariable(pumpFolder, ns, "Vibration_Diag", "", 500);
+        createUInt32Variable(pumpFolder, ns, "Temperature_Status", 0, 500);
+        createStringVariable(pumpFolder, ns, "Temperature_Diag", "", 500);
+
+        // Methods
         createSetInletFlowMethod(tankFolder, ns);
+        createSetDegradationMethod(pumpFolder, ns);
 
         log.info("TankNamespace created: ns={}", ns);
     }
 
     private void createSetInletFlowMethod(UaObjectNode tankFolder, int ns) {
-        NodeId methodNodeId = new NodeId(ns, "Tank1.SetInletFlow");
+        NodeId methodNodeId = new NodeId(ns, "SetInletFlow");
         UaMethodNode methodNode = new UaMethodNode(
             getNodeContext(),
             methodNodeId,
@@ -95,8 +115,15 @@ class TankNamespace extends ManagedNamespace {
 
         methodNode.setInputArguments(new org.eclipse.milo.opcua.stack.core.types.structured.Argument[]{
             new org.eclipse.milo.opcua.stack.core.types.structured.Argument(
-                "inletFlowLMin", Identifiers.Double, -1,
-                new UInteger[]{}, LocalizedText.english("Inlet flow rate in L/min")
+                "value", Identifiers.Double, -1,
+                new UInteger[]{}, LocalizedText.english("New inlet flow rate in L/min")
+            )
+        });
+
+        methodNode.setOutputArguments(new org.eclipse.milo.opcua.stack.core.types.structured.Argument[]{
+            new org.eclipse.milo.opcua.stack.core.types.structured.Argument(
+                "result", Identifiers.String, -1,
+                new UInteger[]{}, LocalizedText.english("Confirmation message")
             )
         });
 
@@ -115,11 +142,12 @@ class TankNamespace extends ManagedNamespace {
                 double inletFlow = ((Number) inputArgs[0].getValue()).doubleValue();
                 tankState.setFlowInLMin(inletFlow);
                 log.info("SetInletFlow invoked: inletFlow={} L/min", inletFlow);
+                String msg = String.format("Inlet flow set to %.1f L/min", inletFlow);
                 return new CallMethodResult(
                     StatusCode.GOOD,
                     new StatusCode[]{StatusCode.GOOD},
                     new DiagnosticInfo[]{},
-                    new Variant[]{}
+                    new Variant[]{new Variant(msg)}
                 );
             }
         });
@@ -127,6 +155,69 @@ class TankNamespace extends ManagedNamespace {
         getNodeManager().addNode(methodNode);
         getNodeManager().addReference(new Reference(
             tankFolder.getNodeId(),
+            Identifiers.HasComponent,
+            methodNodeId.expanded(),
+            true
+        ));
+    }
+
+    private void createSetDegradationMethod(UaObjectNode pumpFolder, int ns) {
+        NodeId methodNodeId = new NodeId(ns, "SetDegradation");
+        UaMethodNode methodNode = new UaMethodNode(
+            getNodeContext(),
+            methodNodeId,
+            new QualifiedName(ns, "SetDegradation"),
+            LocalizedText.english("SetDegradation"),
+            LocalizedText.english("Sets pump health percentage (0-100) for fault injection"),
+            UInteger.valueOf(0),
+            UInteger.valueOf(0),
+            Boolean.TRUE,
+            Boolean.TRUE
+        );
+
+        methodNode.setInputArguments(new org.eclipse.milo.opcua.stack.core.types.structured.Argument[]{
+            new org.eclipse.milo.opcua.stack.core.types.structured.Argument(
+                "healthPercent", Identifiers.Double, -1,
+                new UInteger[]{}, LocalizedText.english("Health percentage (0-100)")
+            )
+        });
+
+        methodNode.setOutputArguments(new org.eclipse.milo.opcua.stack.core.types.structured.Argument[]{
+            new org.eclipse.milo.opcua.stack.core.types.structured.Argument(
+                "result", Identifiers.String, -1,
+                new UInteger[]{}, LocalizedText.english("Confirmation message")
+            )
+        });
+
+        methodNode.setInvocationHandler(new MethodInvocationHandler() {
+            @Override
+            public CallMethodResult invoke(AccessContext accessContext, CallMethodRequest request) {
+                Variant[] inputArgs = request.getInputArguments();
+                if (inputArgs == null || inputArgs.length == 0) {
+                    return new CallMethodResult(
+                        StatusCode.BAD,
+                        new StatusCode[]{StatusCode.BAD},
+                        new DiagnosticInfo[]{},
+                        new Variant[]{}
+                    );
+                }
+                double health = Math.max(0, Math.min(100,
+                    ((Number) inputArgs[0].getValue()).doubleValue()));
+                pumpModel.setHealthPercent(health);
+                log.info("SetDegradation invoked: health={}%", health);
+                String msg = String.format("Pump health set to %.0f%%", health);
+                return new CallMethodResult(
+                    StatusCode.GOOD,
+                    new StatusCode[]{StatusCode.GOOD},
+                    new DiagnosticInfo[]{},
+                    new Variant[]{new Variant(msg)}
+                );
+            }
+        });
+
+        getNodeManager().addNode(methodNode);
+        getNodeManager().addReference(new Reference(
+            pumpFolder.getNodeId(),
             Identifiers.HasComponent,
             methodNodeId.expanded(),
             true
@@ -144,22 +235,39 @@ class TankNamespace extends ManagedNamespace {
 
     void updateVariableValues() {
         int ns = getNamespaceIndex().intValue();
-        setVariableValue(new NodeId(ns, "Tank1.Level"), tankState.getLevelCm());
-        setVariableValue(new NodeId(ns, "Tank1.FlowRateIn"), tankState.getFlowInLMin());
-        setVariableValue(new NodeId(ns, "Tank1.FlowRateOut"), tankState.getFlowOutLMin());
-        setVariableValue(new NodeId(ns, "Tank1.Temperature"), tankState.getTemperatureC());
 
-        setVariableValue(new NodeId(ns, "Pump.FlowRate"), pumpModel.getEffectiveFlowLMin());
-        setVariableValue(new NodeId(ns, "Pump.Vibration"), pumpModel.getVibration());
-        setVariableValue(new NodeId(ns, "Pump.Temperature"), pumpModel.getTemperature());
+        // Tank variables
+        setVariableValue(new NodeId(ns, "Level"), tankState.getLevelCm());
+        setVariableValue(new NodeId(ns, "FlowRateIn"), tankState.getFlowInLMin());
+        setVariableValue(new NodeId(ns, "FlowRateOut"), tankState.getFlowOutLMin());
+        setVariableValue(new NodeId(ns, "Temperature"), tankState.getTemperatureC());
 
-        Ne107DiagnosticSimulator.DiagnosticResult result =
+        // Pump variables — FlowRate is coupled to tank inflow via effective flow
+        setVariableValue(new NodeId(ns, "FlowRate"), pumpModel.getEffectiveFlowLMin());
+        setVariableValue(new NodeId(ns, "Vibration"), pumpModel.getVibration());
+        setVariableValue(new NodeId(ns, "PumpTemperature"), pumpModel.getTemperature());
+
+        // NE 107 aggregate status (UInt32)
+        Ne107DiagnosticSimulator.DiagnosticResult deviceStatus =
             diagnostics.simulatePumpDiagnostics(
                 "DeviceStatus",
                 pumpModel.getHealthPercent(),
                 pumpModel.getVibration(),
                 pumpModel.getTemperature());
-        setVariableValue(new NodeId(ns, "Pump.Status"), (double) result.getStatusCode());
+        setUInt32Value(new NodeId(ns, "Status"), deviceStatus.getStatusCode());
+
+        // Per-variable NE 107 diagnostics
+        String[] diagVars = {"FlowRate", "Vibration", "PumpTemperature"};
+        for (String varName : diagVars) {
+            Ne107DiagnosticSimulator.DiagnosticResult result =
+                diagnostics.simulatePumpDiagnostics(
+                    varName.equals("PumpTemperature") ? "Temperature" : varName,
+                    pumpModel.getHealthPercent(),
+                    pumpModel.getVibration(),
+                    pumpModel.getTemperature());
+            setUInt32Value(new NodeId(ns, varName + "_Status"), result.getStatusCode());
+            setStringValue(new NodeId(ns, varName + "_Diag"), result.diagnosticString());
+        }
     }
 
     @Override
@@ -185,12 +293,26 @@ class TankNamespace extends ManagedNamespace {
         }
     }
 
-    private UaObjectNode createObject(UaObjectNode parent, int ns, String browseName, String name) {
-        NodeId nodeId = new NodeId(ns, name);
+    private void setUInt32Value(NodeId nodeId, int value) {
+        UaVariableNode node = variableNodes.get(nodeId.toString());
+        if (node != null) {
+            node.setValue(new DataValue(new Variant(UInteger.valueOf(value))));
+        }
+    }
+
+    private void setStringValue(NodeId nodeId, String value) {
+        UaVariableNode node = variableNodes.get(nodeId.toString());
+        if (node != null) {
+            node.setValue(new DataValue(new Variant(value != null ? value : "")));
+        }
+    }
+
+    private UaObjectNode createObject(UaObjectNode parent, int ns, String browseName) {
+        NodeId nodeId = new NodeId(ns, browseName);
         UaObjectNode object = new UaObjectNode(
             getNodeContext(),
             nodeId,
-            new QualifiedName(ns, name),
+            new QualifiedName(ns, browseName),
             LocalizedText.english(browseName)
         );
         getNodeManager().addNode(object);
@@ -205,19 +327,83 @@ class TankNamespace extends ManagedNamespace {
         return object;
     }
 
-    private void createDoubleVariable(UaObjectNode parent, int ns, String name, double initialValue) {
-        NodeId nodeId = new NodeId(ns, parent.getNodeId().getIdentifier() + "." + name);
+    private void createDoubleVariable(UaObjectNode parent, int ns, String name,
+                                       double initialValue, UByte accessLevel,
+                                       int samplingIntervalMs) {
+        createDoubleVariableWithId(parent, ns, name, name, initialValue, accessLevel,
+            samplingIntervalMs);
+    }
+
+    private void createDoubleVariableWithId(UaObjectNode parent, int ns, String nodeIdName,
+                                             String browseName, double initialValue,
+                                             UByte accessLevel, int samplingIntervalMs) {
+        NodeId nodeId = new NodeId(ns, nodeIdName);
+        UaVariableNode variable = new UaVariableNode(
+            getNodeContext(),
+            nodeId,
+            new QualifiedName(ns, browseName),
+            LocalizedText.english(browseName)
+        );
+        variable.setDataType(Identifiers.Double);
+        variable.setValue(new DataValue(new Variant(initialValue)));
+        variable.setValueRank(0);
+        variable.setAccessLevel(accessLevel);
+        variable.setUserAccessLevel(accessLevel);
+        variable.setMinimumSamplingInterval((double) samplingIntervalMs);
+
+        getNodeManager().addNode(variable);
+        getNodeManager().addReference(new Reference(
+            parent.getNodeId(),
+            Identifiers.HasComponent,
+            nodeId.expanded(),
+            true
+        ));
+
+        variableNodes.put(nodeId.toString(), variable);
+    }
+
+    private void createUInt32Variable(UaObjectNode parent, int ns, String name,
+                                       int initialValue, int samplingIntervalMs) {
+        NodeId nodeId = new NodeId(ns, name);
         UaVariableNode variable = new UaVariableNode(
             getNodeContext(),
             nodeId,
             new QualifiedName(ns, name),
             LocalizedText.english(name)
         );
-        variable.setDataType(Identifiers.Double);
-        variable.setValue(new DataValue(new Variant(initialValue)));
+        variable.setDataType(Identifiers.UInt32);
+        variable.setValue(new DataValue(new Variant(UInteger.valueOf(initialValue))));
         variable.setValueRank(0);
         variable.setAccessLevel(UByte.valueOf(1));
         variable.setUserAccessLevel(UByte.valueOf(1));
+        variable.setMinimumSamplingInterval((double) samplingIntervalMs);
+
+        getNodeManager().addNode(variable);
+        getNodeManager().addReference(new Reference(
+            parent.getNodeId(),
+            Identifiers.HasComponent,
+            nodeId.expanded(),
+            true
+        ));
+
+        variableNodes.put(nodeId.toString(), variable);
+    }
+
+    private void createStringVariable(UaObjectNode parent, int ns, String name,
+                                       String initialValue, int samplingIntervalMs) {
+        NodeId nodeId = new NodeId(ns, name);
+        UaVariableNode variable = new UaVariableNode(
+            getNodeContext(),
+            nodeId,
+            new QualifiedName(ns, name),
+            LocalizedText.english(name)
+        );
+        variable.setDataType(Identifiers.String);
+        variable.setValue(new DataValue(new Variant(initialValue != null ? initialValue : "")));
+        variable.setValueRank(0);
+        variable.setAccessLevel(UByte.valueOf(1));
+        variable.setUserAccessLevel(UByte.valueOf(1));
+        variable.setMinimumSamplingInterval((double) samplingIntervalMs);
 
         getNodeManager().addNode(variable);
         getNodeManager().addReference(new Reference(
@@ -312,8 +498,9 @@ public class TankOpcUaServer {
 
             scheduler.scheduleAtFixedRate(() -> {
                 if (running) {
-                    tankState.stepSimulation(1.0);
                     pumpModel.stepSimulation(1.0);
+                    tankState.setFlowInLMin(pumpModel.getEffectiveFlowLMin());
+                    tankState.stepSimulation(1.0);
                     tankNamespace.updateVariableValues();
                 }
             }, 0, 1, java.util.concurrent.TimeUnit.SECONDS);

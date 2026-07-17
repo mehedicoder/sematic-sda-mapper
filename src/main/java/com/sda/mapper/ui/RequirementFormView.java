@@ -46,6 +46,7 @@ public class RequirementFormView extends VerticalLayout {
     private final NumberField minRecallField = new NumberField("Min Recall");
     private final NumberField maxLatencyField = new NumberField("Max Latency (ms)");
     private final VerticalLayout resultsPanel = new VerticalLayout();
+    private String lastMatchedRequirementId = null;
 
     public RequirementFormView() {
         setWidthFull();
@@ -117,8 +118,21 @@ public class RequirementFormView extends VerticalLayout {
                 boolean matched = node.get("matched").asBoolean();
 
                 if (matched) {
+                    lastMatchedRequirementId = node.has("requirementId")
+                        ? node.get("requirementId").asText() : null;
+
+                    var lifecycleSpan = new com.vaadin.flow.component.html.Span(
+                        node.has("lifecycleStatus") ? node.get("lifecycleStatus").asText() : "Matched");
+                    lifecycleSpan.getElement().getThemeList().add("badge success");
+
+                    resultsPanel.add(new Paragraph("Lifecycle Status: "),
+                        lifecycleSpan);
                     resultsPanel.add(new Paragraph("Matched service: "
                         + node.get("serviceName").asText()));
+                    if (node.has("bindingLabel") && !node.get("bindingLabel").isNull()) {
+                        resultsPanel.add(new Paragraph("Binding: "
+                            + node.get("bindingLabel").asText()));
+                    }
                     resultsPanel.add(new Paragraph("Capability: "
                         + node.get("capabilityName").asText()));
                     resultsPanel.add(new Paragraph("Recall: "
@@ -127,6 +141,11 @@ public class RequirementFormView extends VerticalLayout {
                         + node.get("latencyMs").asInt() + "ms"));
                     resultsPanel.add(new Paragraph("Explanation: "
                         + node.get("explanation").asText()));
+
+                    var verifyButton = new Button("Verify", e -> verifyRequirement());
+                    verifyButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+                    verifyButton.addThemeVariants(ButtonVariant.LUMO_CONTRAST);
+                    resultsPanel.add(verifyButton);
                 } else {
                     resultsPanel.add(new Paragraph("No matching service found."));
                     resultsPanel.add(new Paragraph(node.get("explanation").asText()));
@@ -137,6 +156,63 @@ public class RequirementFormView extends VerticalLayout {
             }
         } catch (Exception ex) {
             Notification.show("Match error: " + ex.getMessage(), 5000,
+                Notification.Position.MIDDLE)
+                .addThemeVariants(NotificationVariant.LUMO_ERROR);
+        }
+    }
+
+    private void verifyRequirement() {
+        if (lastMatchedRequirementId == null) {
+            Notification.show("No matched requirement to verify", 3000,
+                Notification.Position.MIDDLE)
+                .addThemeVariants(NotificationVariant.LUMO_WARNING);
+            return;
+        }
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("/api/v1/requirements/" + lastMatchedRequirementId + "/verify"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .build();
+
+            HttpResponse<String> response = client.send(request,
+                HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                var node = mapper.readTree(response.body());
+                boolean verified = node.get("verified").asBoolean();
+
+                var statusSpan = new com.vaadin.flow.component.html.Span(
+                    verified ? "Verified" : "Not Verified");
+                statusSpan.getElement().getThemeList().add(
+                    verified ? "badge success" : "badge error");
+
+                resultsPanel.add(new Paragraph("Verification: "), statusSpan);
+                resultsPanel.add(new Paragraph("Summary: "
+                    + node.get("summary").asText()));
+
+                var criteria = node.get("criteria");
+                if (criteria != null && criteria.isArray()) {
+                    for (var criterion : criteria) {
+                        String name = criterion.get("name").asText();
+                        boolean passed = "true".equals(criterion.get("passed").asText());
+                        String detail = criterion.get("detail").asText();
+                        var crSpan = new com.vaadin.flow.component.html.Span(
+                            name + ": " + (passed ? "PASS" : "FAIL"));
+                        crSpan.getElement().getThemeList().add(
+                            passed ? "badge success" : "badge error");
+                        resultsPanel.add(crSpan);
+                        resultsPanel.add(new Paragraph(detail));
+                    }
+                }
+            } else {
+                resultsPanel.add(new Paragraph("Verify failed with status "
+                    + response.statusCode()));
+            }
+        } catch (Exception ex) {
+            Notification.show("Verify error: " + ex.getMessage(), 5000,
                 Notification.Position.MIDDLE)
                 .addThemeVariants(NotificationVariant.LUMO_ERROR);
         }

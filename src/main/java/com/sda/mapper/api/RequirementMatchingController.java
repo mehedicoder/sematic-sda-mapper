@@ -4,7 +4,11 @@ import com.sda.mapper.api.dto.MatchRequirementRequest;
 import com.sda.mapper.api.dto.MatchRequirementResponse;
 import com.sda.mapper.api.dto.ValidationErrorResponse;
 import com.sda.mapper.api.dto.ValidationErrorResponse.FieldError;
+import com.sda.mapper.deployment.DockerComposeManifestService;
+import com.sda.mapper.deployment.KubernetesManifestService;
 import com.sda.mapper.error.OntologyLoadingException;
+import com.sda.mapper.reasoning.RDeployService;
+import com.sda.mapper.reasoning.RVerifyService;
 import com.sda.mapper.reasoning.SemanticReasonerService;
 import com.sda.mapper.reasoning.ServiceMatchResult;
 import com.sda.mapper.reasoning.SparqlExecutionException;
@@ -19,6 +23,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -49,11 +55,23 @@ public class RequirementMatchingController {
 
     private final SemanticReasonerService reasonerService;
     private final OntologyModelLoader ontologyModelLoader;
+    private final DockerComposeManifestService dockerComposeService;
+    private final KubernetesManifestService kubernetesService;
+    private final RDeployService rDeployService;
+    private final RVerifyService rVerifyService;
 
     public RequirementMatchingController(SemanticReasonerService reasonerService,
-                                         OntologyModelLoader ontologyModelLoader) {
+                                         OntologyModelLoader ontologyModelLoader,
+                                         DockerComposeManifestService dockerComposeService,
+                                         KubernetesManifestService kubernetesService,
+                                         RDeployService rDeployService,
+                                         RVerifyService rVerifyService) {
         this.reasonerService = reasonerService;
         this.ontologyModelLoader = ontologyModelLoader;
+        this.dockerComposeService = dockerComposeService;
+        this.kubernetesService = kubernetesService;
+        this.rDeployService = rDeployService;
+        this.rVerifyService = rVerifyService;
     }
 
     /**
@@ -95,12 +113,52 @@ public class RequirementMatchingController {
             Map<String, String> params = new HashMap<>();
             if (request.protocol() != null) params.put("protocol", request.protocol());
             if (request.accessMode() != null) params.put("accessMode", request.accessMode());
+            if (request.functionClass() != null) params.put("functionClass", request.functionClass());
+            if (request.safetyIntegrityLevel() != null) params.put("safetyIntegrityLevel", request.safetyIntegrityLevel());
+            if (request.networkZone() != null) params.put("networkZone", request.networkZone());
+            if (request.determinismClass() != null) params.put("determinismClass", request.determinismClass());
+            if (request.engineeringUnit() != null) params.put("engineeringUnit", request.engineeringUnit());
             if (request.minRecall() != null) params.put("minRecall", String.valueOf(request.minRecall()));
             if (request.maxLatencyMs() != null) params.put("maxLatency", String.valueOf(request.maxLatencyMs()));
             result = reasonerService.matchInline(params);
         }
 
+        if (result.matched()) {
+            String dockerComposeYaml = dockerComposeService.generate(result);
+            String kubernetesYaml = kubernetesService.generate(result);
+            return ResponseEntity.ok(
+                MatchRequirementResponse.withManifests(result, dockerComposeYaml, kubernetesYaml));
+        }
         return ResponseEntity.ok(MatchRequirementResponse.fromServiceMatchResult(result));
+    }
+
+    @GetMapping("/{requirementId}/lifecycle")
+    public ResponseEntity<Map<String, String>> getLifecycleStatus(
+            @PathVariable String requirementId) {
+        String status = rDeployService.getLifecycleStatus(requirementId);
+        return ResponseEntity.ok(Map.of(
+            "requirementId", requirementId,
+            "lifecycleStatus", status,
+            "matched", String.valueOf(rDeployService.isMatched(requirementId))
+        ));
+    }
+
+    @PostMapping("/{requirementId}/verify")
+    public ResponseEntity<Map<String, Object>> verifyRequirement(
+            @PathVariable String requirementId) {
+        RVerifyService.VerifyResult result = rVerifyService.execute(requirementId);
+        return ResponseEntity.ok(Map.of(
+            "requirementId", requirementId,
+            "verified", result.verified(),
+            "summary", result.summary(),
+            "criteria", result.criteria().stream()
+                .map(cr -> Map.of(
+                    "name", cr.name(),
+                    "passed", String.valueOf(cr.passed()),
+                    "detail", cr.detail()
+                ))
+                .toList()
+        ));
     }
 
     /**

@@ -70,6 +70,20 @@ sda:DegradedMode  a rdfs:Class ;
     rdfs:subClassOf css:Skill ;
     rdfs:label    "DegradedMode" .
 
+# ── Paper experiment classes (G2, G3, G8) ──────────────────────────────
+
+sda:RequirementParameter  a rdfs:Class ;
+    rdfs:label              "RequirementParameter" .
+
+sda:RequirementConstraint a rdfs:Class ;
+    rdfs:label              "RequirementConstraint" .
+
+sda:VerificationCriterion a rdfs:Class ;
+    rdfs:label              "VerificationCriterion" .
+
+sda:Concept               a rdfs:Class ;
+    rdfs:label              "Concept" .
+
 # ── Object properties ──────────────────────────────────────────────────
 
 sda:mapsToCapability  a rdf:Property, owl:ObjectProperty ;
@@ -156,6 +170,52 @@ sda:mapsTo           a rdf:Property, owl:ObjectProperty ;
     rdfs:domain        sda:RequiredCapability ;
     rdfs:range         sda:OfferedCapability ;
     rdfs:label         "mapsTo" .
+
+# ── UseCase → Requirement (G1) ──────────────────────────────────────────
+
+sda:hasRequirement   a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        css:UseCase ;
+    rdfs:range         sda:Requirement ;
+    rdfs:label         "hasRequirement" .
+
+# ── R2a semantic concept matching (G8) ──────────────────────────────────
+
+sda:requiresConcept  a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        css:Skill ;
+    rdfs:range         sda:Concept ;
+    rdfs:label         "requiresConcept" .
+
+sda:providesConcept  a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:DataConnector ;
+    rdfs:range         sda:Concept ;
+    rdfs:label         "providesConcept" .
+
+# ── R-Deploy bound properties (G6) ──────────────────────────────────────
+
+sda:boundService     a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:Requirement ;
+    rdfs:range         sda:Service ;
+    rdfs:label         "boundService" .
+
+sda:boundBinding     a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:Requirement ;
+    rdfs:range         sda:CommunicationBinding ;
+    rdfs:label         "boundBinding" .
+
+sda:boundConnector   a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:Requirement ;
+    rdfs:range         sda:DataConnector ;
+    rdfs:label         "boundConnector" .
+
+sda:boundContext     a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:Requirement ;
+    rdfs:range         sda:DeploymentContext ;
+    rdfs:label         "boundContext" .
+
+sda:matchedCandidate a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:Requirement ;
+    rdfs:range         sda:Service ;
+    rdfs:label         "matchedCandidate" .
 
 # ── Data properties ────────────────────────────────────────────────────
 
@@ -259,6 +319,62 @@ sda:isGateway        a rdf:Property, owl:DatatypeProperty ;
     rdfs:range    xsd:boolean ;
     rdfs:label    "isGateway" .
 
+# ── VerificationCriterion data properties (G3) ─────────────────────────
+
+sda:criterionType    a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:VerificationCriterion ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "criterionType" .
+
+sda:criterionMetric  a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:VerificationCriterion ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "criterionMetric" .
+
+sda:criterionThreshold a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:VerificationCriterion ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "criterionThreshold" .
+
+sda:criterionOperator a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:VerificationCriterion ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "criterionOperator" .
+
+# ── RequirementParameter data properties (G2) ──────────────────────────
+
+sda:parameterName    a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:RequirementParameter ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "parameterName" .
+
+sda:parameterValue   a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:RequirementParameter ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "parameterValue" .
+
+sda:parameterUnit    a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:RequirementParameter ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "parameterUnit" .
+
+# ── RequirementConstraint data properties (G2) ─────────────────────────
+
+sda:constraintType   a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:RequirementConstraint ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "constraintType" .
+
+sda:constraintValue  a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:RequirementConstraint ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "constraintValue" .
+
+sda:constraintOperator a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:RequirementConstraint ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "constraintOperator" .
+
 # ── Requirement data properties (paper Figure 5) ────────────────────
 
 sda:title            a rdf:Property, owl:DatatypeProperty ;
@@ -340,6 +456,21 @@ sda:nominalRange_max a rdf:Property, owl:DatatypeProperty ;
 # USE CASE A (MVP): Flowmeter NE 107 — Paper Section 4.4, Table I
 # ══════════════════════════════════════════════════════════════════════
 
+# UseCase individual (G1)
+:UseCase-FlowmeterNE107  a css:UseCase ;
+    rdfs:label            "Flowmeter Asset-Health Monitoring Use Case" ;
+    sda:description       "Monitor flowmeter FT-101 health using NE 107 diagnostics to prevent unplanned downtime" ;
+    sda:hasRequirement    :REQ-001 .
+
+# PA-DIM Concept individuals (G8)
+:PA-DIM-FlowConcept      a sda:Concept ;
+    rdfs:label            "PA-DIM Flow Concept" ;
+    sda:description       "IEC 61987-42 flow measurement concept from PA-DIM" .
+
+:PA-DIM-TemperatureConcept  a sda:Concept ;
+    rdfs:label            "PA-DIM Temperature Concept" ;
+    sda:description       "IEC 61987-22 temperature measurement concept from PA-DIM" .
+
 # Requirement
 :REQ-001  a               sda:Requirement ;
     rdfs:label            "REQ-001 Flowmeter Asset-Health" ;
@@ -351,7 +482,54 @@ sda:nominalRange_max a rdf:Property, owl:DatatypeProperty ;
     sda:requirementType   "AssetDiagnostics" ;
     sda:lifecycleStatus   "Defined" ;
     sda:hasPriority       "High" ;
+    sda:hasParameter      :REQ-001-Param-MonitoringInterval ;
+    sda:hasParameter      :REQ-001-Param-AssetType ;
+    sda:hasConstraint     :REQ-001-Constraint-MaxLatency ;
+    sda:hasConstraint     :REQ-001-Constraint-MinRecall ;
+    sda:verifiedBy        :VC-REQ001-RecallCheck ;
+    sda:verifiedBy        :VC-REQ001-LatencyCheck ;
     sda:mapsToCapability  :OC-ACM-Flowmeter .
+
+# Requirement parameters (G2)
+:REQ-001-Param-MonitoringInterval  a sda:RequirementParameter ;
+    rdfs:label                       "Monitoring Interval" ;
+    sda:parameterName                "monitoringInterval" ;
+    sda:parameterValue               "1000" ;
+    sda:parameterUnit                "ms" .
+
+:REQ-001-Param-AssetType  a sda:RequirementParameter ;
+    rdfs:label              "Asset Type" ;
+    sda:parameterName       "assetType" ;
+    sda:parameterValue      "Flowmeter" ;
+    sda:parameterUnit       "" .
+
+# Requirement constraints (G2)
+:REQ-001-Constraint-MaxLatency  a sda:RequirementConstraint ;
+    rdfs:label                    "Maximum Latency" ;
+    sda:constraintType            "latency" ;
+    sda:constraintValue           "60" ;
+    sda:constraintOperator        "<=" .
+
+:REQ-001-Constraint-MinRecall  a sda:RequirementConstraint ;
+    rdfs:label                    "Minimum Recall" ;
+    sda:constraintType            "recall" ;
+    sda:constraintValue           "0.90" ;
+    sda:constraintOperator        ">=" .
+
+# Verification criteria (G3)
+:VC-REQ001-RecallCheck  a sda:VerificationCriterion ;
+    rdfs:label              "Recall Check" ;
+    sda:criterionType       "performance" ;
+    sda:criterionMetric     "reportedRecall" ;
+    sda:criterionThreshold  "0.90" ;
+    sda:criterionOperator   ">=" .
+
+:VC-REQ001-LatencyCheck  a sda:VerificationCriterion ;
+    rdfs:label              "Latency Check" ;
+    sda:criterionType       "performance" ;
+    sda:criterionMetric     "reportedLatency" ;
+    sda:criterionThreshold  "60" ;
+    sda:criterionOperator   "<=" .
 
 # Offered capability
 :OC-ACM-Flowmeter  a     sda:OfferedCapability ;
@@ -368,6 +546,7 @@ sda:nominalRange_max a rdf:Property, owl:DatatypeProperty ;
     sda:engineeringUnit   "l/min" ;
     sda:nominalRange_min  0.0 ;
     sda:nominalRange_max  100.0 ;
+    sda:requiresConcept   :PA-DIM-FlowConcept ;
     sda:isImplementedBy   :SVC-FlowmeterDiagnostics .
 
 # Service
@@ -392,6 +571,7 @@ sda:nominalRange_max a rdf:Property, owl:DatatypeProperty ;
     rdfs:label            "FT101 flowmeter OPC-UA connector" ;
     sda:informationModel  "OPC-UA" ;
     sda:semanticID        "IEC-61987-42" ;
+    sda:providesConcept   :PA-DIM-FlowConcept ;
     sda:isGateway         false .
 
 # Deployment context

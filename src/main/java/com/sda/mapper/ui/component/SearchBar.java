@@ -38,7 +38,8 @@ public class SearchBar extends HtmlComponent {
                 "Service", "CommunicationBinding", "DataConnector", "DeploymentContext"
         ));
         typeFilter.setValue("All");
-        typeFilter.setWidth("220px");
+        typeFilter.setWidth("150px");
+        typeFilter.setMinWidth("120px");
 
         searchField.addValueChangeListener(e -> fireEvent(new SearchEvent(this, getQuery(), getType())));
         typeFilter.addValueChangeListener(e -> fireEvent(new SearchEvent(this, getQuery(), getType())));

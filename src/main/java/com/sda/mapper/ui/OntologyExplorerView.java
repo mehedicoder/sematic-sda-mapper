@@ -26,8 +26,10 @@ import org.apache.jena.vocabulary.RDFS;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Explorer view for browsing the CSS-SDA ontology model.
@@ -130,6 +132,8 @@ public class OntologyExplorerView extends VerticalLayout {
         var owlClasses = model.listSubjectsWithProperty(RDF.type, OWL.Class).toList();
         classes.addAll(owlClasses);
 
+        Set<String> seenIndUris = new LinkedHashSet<>();
+
         for (var cls : classes) {
             if (!cls.isURIResource()) continue;
             String localName = getLocalName(cls);
@@ -140,6 +144,7 @@ public class OntologyExplorerView extends VerticalLayout {
             var instances = model.listSubjectsWithProperty(RDF.type, cls).toList();
             for (var inst : instances) {
                 if (!inst.isURIResource()) continue;
+                seenIndUris.add(inst.getURI());
                 individuals.add(new OntologyNode(
                     getLocalName(inst),
                     "Individual",
@@ -159,15 +164,18 @@ public class OntologyExplorerView extends VerticalLayout {
         properties.addAll(dataProps);
 
         List<OntologyNode> propNodes = new ArrayList<>();
+        Set<String> seenPropUris = new LinkedHashSet<>();
         for (var prop : properties) {
             if (!prop.isURIResource()) continue;
+            String uri = prop.getURI();
+            if (!seenPropUris.add(uri)) continue;
             String type = "Property";
             if (objProps.contains(prop)) type = "ObjectProperty";
             else if (dataProps.contains(prop)) type = "DatatypeProperty";
             propNodes.add(new OntologyNode(
                 getLocalName(prop),
                 type,
-                prop.getURI(),
+                uri,
                 getLabel(prop),
                 List.of()
             ));
@@ -188,6 +196,7 @@ public class OntologyExplorerView extends VerticalLayout {
                 }
             }
             if (!isClass) {
+                if (seenIndUris.contains(ind.getURI())) continue;
                 String typeLabel = getTypesLabel(ind, model);
                 orphanNodes.add(new OntologyNode(
                     getLocalName(ind),

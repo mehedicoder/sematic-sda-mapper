@@ -33,6 +33,35 @@ class RequirementMatchingControllerTest {
     }
 
     @Test
+    @DisplayName("Should include connector and deploymentContext in Mode A response")
+    void shouldReturnConnectorAndDeploymentContextInModeA() {
+        var request = new MatchRequirementRequest(
+            "REQ-001", null, null, null, null, null, null, null, null, null, null, null
+        );
+        var response = controller.match(request);
+        var body = (MatchRequirementResponse) response.getBody();
+        assertNotNull(body.connector(), "connector should be populated");
+        assertNotNull(body.deploymentContext(), "deploymentContext should be populated");
+    }
+
+    @Test
+    @DisplayName("Should include manifests in match response for matched service")
+    void shouldIncludeManifestsInResponse() {
+        var request = new MatchRequirementRequest(
+            "REQ-001", null, null, null, null, null, null, null, null, null, null, null
+        );
+        var response = controller.match(request);
+        var body = (MatchRequirementResponse) response.getBody();
+        assertTrue(body.matched());
+        assertNotNull(body.dockerComposeManifest(), "Docker Compose manifest should be present");
+        assertNotNull(body.kubernetesManifest(), "Kubernetes manifest should be present");
+        assertTrue(body.dockerComposeManifest().contains("services"),
+            "Docker Compose should contain services key");
+        assertTrue(body.kubernetesManifest().contains("kind"),
+            "Kubernetes manifest should contain kind");
+    }
+
+    @Test
     @DisplayName("Should return 200 with matched service when inline fields are provided")
     void shouldMatchByInlineFields() {
         var request = new MatchRequirementRequest(

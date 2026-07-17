@@ -20,7 +20,8 @@ class SemanticReasonerServiceTest {
         loader.setFilePath("ontology/css-sda-small.ttl");
         loader.loadOntology();
         var queryLoader = new SparqlQueryLoader();
-        reasoner = new SemanticReasonerService(loader, queryLoader);
+        var rDeployService = new RDeployService(loader);
+        reasoner = new SemanticReasonerService(loader, queryLoader, rDeployService);
     }
 
     // ════════════════════════════════════════════════════════════════════

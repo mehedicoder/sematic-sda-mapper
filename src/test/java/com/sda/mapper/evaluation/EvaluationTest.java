@@ -1,10 +1,10 @@
 package com.sda.mapper.evaluation;
 
 import com.sda.mapper.ontology.OntologyModelLoader;
-import com.sda.mapper.opcua.model.OpcUaEndpointConfig;
 import com.sda.mapper.parser.MTPAmlParser;
 import com.sda.mapper.parser.ParseResult;
 import com.sda.mapper.parser.UaServerDatasheetParser;
+import com.sda.mapper.reasoning.RDeployService;
 import com.sda.mapper.reasoning.ServiceMatchResult;
 import com.sda.mapper.reasoning.SemanticReasonerService;
 import com.sda.mapper.reasoning.SparqlQueryLoader;
@@ -22,7 +22,9 @@ import org.springframework.core.io.ClassPathResource;
 
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -30,16 +32,18 @@ import static org.junit.jupiter.api.Assertions.*;
 class EvaluationTest {
 
     private static SemanticReasonerService reasoner;
+    private static OntologyModelLoader loader;
     private static Model model;
 
     @BeforeAll
     static void setUp() {
-        var loader = new OntologyModelLoader();
+        loader = new OntologyModelLoader();
         loader.setFilePath("ontology/css-sda-small.ttl");
         loader.loadOntology();
         model = loader.getModel();
         var queryLoader = new SparqlQueryLoader();
-        reasoner = new SemanticReasonerService(loader, queryLoader);
+        var rDeployService = new RDeployService(loader);
+        reasoner = new SemanticReasonerService(loader, queryLoader, rDeployService);
     }
 
     @Test
@@ -51,6 +55,37 @@ class EvaluationTest {
         assertEquals("OPC-UA", result.protocol());
         assertEquals("read-only", result.accessMode());
         assertTrue(result.recall() >= 0.90);
+    }
+
+    @Test
+    @DisplayName("REQ-001 match should populate connector and deploymentContext")
+    void shouldPopulateConnectorAndDeploymentContext() {
+        ServiceMatchResult result = reasoner.matchByRequirementId("REQ-001");
+        assertTrue(result.matched());
+        assertNotNull(result.connector(), "Connector should not be null");
+        assertNotNull(result.deploymentContext(), "DeploymentContext should not be null");
+        assertTrue(result.connector().contains("FT101"),
+            "Connector label should reference FT101");
+        assertTrue(result.deploymentContext().contains("On-premise"),
+            "DeploymentContext label should reference On-premise");
+    }
+
+    @Test
+    @DisplayName("REQ-002 match should populate connector and deploymentContext")
+    void shouldPopulateConnectorAndDeploymentContextReq002() {
+        ServiceMatchResult result = reasoner.matchByRequirementId("REQ-002");
+        assertTrue(result.matched());
+        assertNotNull(result.connector(), "Connector should not be null");
+        assertNotNull(result.deploymentContext(), "DeploymentContext should not be null");
+    }
+
+    @Test
+    @DisplayName("REQ-003 match should populate connector and deploymentContext")
+    void shouldPopulateConnectorAndDeploymentContextReq003() {
+        ServiceMatchResult result = reasoner.matchByRequirementId("REQ-003");
+        assertTrue(result.matched());
+        assertNotNull(result.connector(), "Connector should not be null");
+        assertNotNull(result.deploymentContext(), "DeploymentContext should not be null");
     }
 
     @Test
@@ -67,6 +102,42 @@ class EvaluationTest {
         ServiceMatchResult result = reasoner.matchByRequirementId("REQ-003");
         assertTrue(result.matched(), "REQ-003 should match a service");
         assertEquals("HVAC Temperature Analysis Service", result.serviceName());
+    }
+
+    @Test
+    @DisplayName("Mode B with SIL filter should match FermentationSkid")
+    void shouldMatchModeBWithSilFilter() {
+        Map<String, String> params = new HashMap<>();
+        params.put("protocol", "PROFINET");
+        params.put("accessMode", "read-write");
+        params.put("safetyIntegrityLevel", "SIL-2");
+        params.put("determinismClass", "HardRealTime");
+        ServiceMatchResult result = reasoner.matchInline(params);
+        assertTrue(result.matched(), "Mode B with PROFINET + SIL-2 should match");
+        assertEquals("Fermentation Skid Service", result.serviceName());
+    }
+
+    @Test
+    @DisplayName("Mode B with networkZone filter should match HVACTempAnalysis")
+    void shouldMatchModeBWithNetworkZoneFilter() {
+        Map<String, String> params = new HashMap<>();
+        params.put("protocol", "OPC-UA");
+        params.put("accessMode", "read-only");
+        params.put("networkZone", "OT-Zone-3");
+        ServiceMatchResult result = reasoner.matchInline(params);
+        assertTrue(result.matched(), "Mode B with OPC-UA + OT-Zone-3 should match");
+        assertEquals("HVAC Temperature Analysis Service", result.serviceName());
+    }
+
+    @Test
+    @DisplayName("Mode B with wrong SIL should not match")
+    void shouldNotMatchModeBWithWrongSil() {
+        Map<String, String> params = new HashMap<>();
+        params.put("protocol", "PROFINET");
+        params.put("accessMode", "read-write");
+        params.put("safetyIntegrityLevel", "SIL-3");
+        ServiceMatchResult result = reasoner.matchInline(params);
+        assertFalse(result.matched(), "Mode B with wrong SIL should not match");
     }
 
     @Test
@@ -93,6 +164,45 @@ class EvaluationTest {
             }
         } catch (Exception e) {
             fail("Cross-plant query failed: " + e.getMessage());
+        }
+    }
+
+    @Test
+    @DisplayName("Parse MTP AML should produce Jena Model with triples")
+    void shouldParseMtpAmlWithModel() {
+        MTPAmlParser parser = new MTPAmlParser();
+        try (InputStream input = getClass().getClassLoader()
+                .getResourceAsStream("examples/mtp-fermentation-skid-complete.xml")) {
+            assertNotNull(input, "Test resource mtp-fermentation-skid-complete.xml must exist");
+            ParseResult result = parser.parse(input);
+            assertNotNull(result);
+            assertEquals("MTP-AML", result.fileType());
+            assertTrue(result.tripleCount() > 0, "Should produce at least one triple");
+            assertNotNull(result.model(), "Model should not be null");
+            assertTrue(result.model().size() > 0, "Model should contain triples");
+            assertTrue(result.model().containsResource(
+                result.model().createResource("http://www.example.org/sda#Service")),
+                "Model should contain Service resources");
+        } catch (Exception e) {
+            fail("Should not throw: " + e.getMessage());
+        }
+    }
+
+    @Test
+    @DisplayName("Parse OPC UA datasheet should produce Jena Model with triples")
+    void shouldParseOpcUaDatasheetWithModel() {
+        UaServerDatasheetParser parser = new UaServerDatasheetParser();
+        try (InputStream input = getClass().getClassLoader()
+                .getResourceAsStream("examples/uaserver-ahu01-complete.json")) {
+            assertNotNull(input, "Test resource uaserver-ahu01-complete.json must exist");
+            ParseResult result = parser.parse(input);
+            assertNotNull(result);
+            assertEquals("OPC-UA-Datasheet", result.fileType());
+            assertTrue(result.tripleCount() > 0, "Should produce at least one triple");
+            assertNotNull(result.model(), "Model should not be null");
+            assertTrue(result.model().size() > 0, "Model should contain triples");
+        } catch (Exception e) {
+            fail("Should not throw: " + e.getMessage());
         }
     }
 

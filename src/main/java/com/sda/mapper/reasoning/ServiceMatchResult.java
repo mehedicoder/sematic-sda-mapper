@@ -10,16 +10,21 @@ package com.sda.mapper.reasoning;
  * @param capabilityName       rdfs:label of the matched OfferedCapability
  * @param protocol             sda:protocol from the CommunicationBinding
  * @param accessMode           sda:accessMode from the CommunicationBinding
+ * @param bindingLabel         rdfs:label of the CommunicationBinding
  * @param connector            rdfs:label of the DataConnector
  * @param deploymentContext    rdfs:label of the DeploymentContext
  * @param recall               sda:reportedRecall value
  * @param latencyMs            sda:reportedLatency value in milliseconds
  * @param explanation          human-readable explanation of the match result
+ * @param lifecycleStatus      current lifecycle status (Defined/Matched/Verified)
+ * @param requirementId        the requirement ID that was matched
  */
 public record ServiceMatchResult(boolean matched, String serviceName, String containerImage,
                                   String capabilityName, String protocol, String accessMode,
-                                  String connector, String deploymentContext,
-                                  double recall, int latencyMs, String explanation) {
+                                  String bindingLabel, String connector,
+                                  String deploymentContext,
+                                  double recall, int latencyMs, String explanation,
+                                  String lifecycleStatus, String requirementId) {
 
     /**
      * Creates a no-match result with the given reason.
@@ -29,6 +34,6 @@ public record ServiceMatchResult(boolean matched, String serviceName, String con
      */
     public static ServiceMatchResult noMatch(String reason) {
         return new ServiceMatchResult(false, null, null, null, null, null,
-            null, null, 0.0, 0, reason);
+            null, null, null, 0.0, 0, reason, "Defined", null);
     }
 }

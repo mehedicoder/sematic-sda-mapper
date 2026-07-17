@@ -1,6 +1,10 @@
 package com.sda.mapper.parser;
 
 import com.sda.mapper.error.ParserException;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -18,14 +22,18 @@ import java.util.List;
  * Parses VDI/VDE/NAMUR 2658 MTP AML XML files into SDA semantic triples.
  * Extracts Skills from {@code <Service>} blocks, CommunicationBindings from
  * {@code <OpcUaServer>} blocks, and DataConnectors from {@code <OpcUaNode>} blocks.
+ * Produces a Jena Model containing instantiated ABox triples.
  */
 @Component
 public class MTPAmlParser implements Parser {
 
     private static final Logger log = LoggerFactory.getLogger(MTPAmlParser.class);
 
+    private static final String INST_NS = "http://www.example.org/instance#";
     private static final String SDA_NS = "http://www.example.org/sda#";
     private static final String CSS_NS = "http://www.example.org/css#";
+    private static final String RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+    private static final String RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label";
 
     @Override
     public ParseResult parse(InputStream input) {
@@ -50,64 +58,120 @@ public class MTPAmlParser implements Parser {
                 throw new ParserException("XML document has no root element");
             }
 
+            Model model = ModelFactory.createDefaultModel();
+            model.setNsPrefix("sda", SDA_NS);
+            model.setNsPrefix("css", CSS_NS);
+            model.setNsPrefix("inst", INST_NS);
+
+            Property rdfType = model.createProperty(RDF_TYPE);
+            Property rdfsLabel = model.createProperty(RDFS_LABEL);
+            Resource skillClass = model.createResource(SDA_NS + "Skill");
+            Resource bindingClass = model.createResource(SDA_NS + "CommunicationBinding");
+            Resource connectorClass = model.createResource(SDA_NS + "DataConnector");
+            Property engineeringUnit = model.createProperty(SDA_NS + "engineeringUnit");
+            Property nominalRangeMin = model.createProperty(SDA_NS + "nominalRange_min");
+            Property nominalRangeMax = model.createProperty(SDA_NS + "nominalRange_max");
+            Property protocol = model.createProperty(SDA_NS + "protocol");
+            Property accessMode = model.createProperty(SDA_NS + "accessMode");
+            Property securityMode = model.createProperty(SDA_NS + "securityMode");
+            Property isImplementedBy = model.createProperty(SDA_NS + "isImplementedBy");
+            Property usesBinding = model.createProperty(SDA_NS + "usesBinding");
+            Property usesConnector = model.createProperty(SDA_NS + "usesConnector");
+            Property informationModel = model.createProperty(SDA_NS + "informationModel");
+
             List<String> details = new ArrayList<>();
             int tripleCount = 0;
 
-            // Parse <Service> blocks into css:Skill instances
+            // Parse <Service> blocks into sda:Skill instances
             NodeList serviceNodes = doc.getElementsByTagName("Service");
+            List<Resource> skillResources = new ArrayList<>();
             for (int i = 0; i < serviceNodes.getLength(); i++) {
                 Element service = (Element) serviceNodes.item(i);
                 String name = service.getAttribute("Name");
                 if (name == null || name.isBlank()) {
-                    name = service.getAttribute("Name");
-                }
-                if (name == null || name.isBlank()) {
                     name = "UnknownService_" + i;
                 }
 
-                String engineeringUnit = "";
-                String nominalRangeMin = "";
-                String nominalRangeMax = "";
+                String engineeringUnitVal = "";
+                String nominalRangeMinVal = "";
+                String nominalRangeMaxVal = "";
 
                 NodeList paramNodes = service.getElementsByTagName("Parameter");
                 for (int j = 0; j < paramNodes.getLength(); j++) {
                     Element param = (Element) paramNodes.item(j);
                     String unit = param.getAttribute("EngineeringUnit");
                     if (unit != null && !unit.isBlank()) {
-                        engineeringUnit = unit;
+                        engineeringUnitVal = unit;
                     }
                     String minVal = param.getAttribute("NominalRangeMin");
                     if (minVal != null && !minVal.isBlank()) {
-                        nominalRangeMin = minVal;
+                        nominalRangeMinVal = minVal;
                     }
                     String maxVal = param.getAttribute("NominalRangeMax");
                     if (maxVal != null && !maxVal.isBlank()) {
-                        nominalRangeMax = maxVal;
+                        nominalRangeMaxVal = maxVal;
                     }
                 }
 
-                String skillUri = CSS_NS + name;
-                details.add("Skill: " + skillUri + " (unit=" + engineeringUnit
-                    + ", range=[" + nominalRangeMin + "," + nominalRangeMax + "])");
-                tripleCount += 3; // rdf:type + engineeringUnit + nominalRange
+                String skillLocalName = "SK-" + name;
+                Resource skillRes = model.createResource(INST_NS + skillLocalName);
+                skillRes.addProperty(rdfType, skillClass);
+                skillRes.addProperty(rdfsLabel, name);
+                if (!engineeringUnitVal.isBlank()) {
+                    skillRes.addProperty(engineeringUnit, engineeringUnitVal);
+                }
+                if (!nominalRangeMinVal.isBlank()) {
+                    skillRes.addProperty(nominalRangeMin, model.createTypedLiteral(
+                        Double.parseDouble(nominalRangeMinVal)));
+                }
+                if (!nominalRangeMaxVal.isBlank()) {
+                    skillRes.addProperty(nominalRangeMax, model.createTypedLiteral(
+                        Double.parseDouble(nominalRangeMaxVal)));
+                }
+                tripleCount += 3;
+                skillResources.add(skillRes);
+
+                details.add("Skill: " + INST_NS + skillLocalName + " (unit=" + engineeringUnitVal
+                    + ", range=[" + nominalRangeMinVal + "," + nominalRangeMaxVal + "])");
             }
 
             // Parse <Communication><OpcUaServer> into sda:CommunicationBinding triples
+            List<Resource> bindingResources = new ArrayList<>();
             NodeList opcUaServerNodes = doc.getElementsByTagName("OpcUaServer");
             for (int i = 0; i < opcUaServerNodes.getLength(); i++) {
                 Element opcUaServer = (Element) opcUaServerNodes.item(i);
                 String endpoint = opcUaServer.getAttribute("Endpoint");
-                String securityMode = opcUaServer.getAttribute("SecurityMode");
-                if (securityMode == null || securityMode.isBlank()) {
-                    securityMode = "None";
+                String secMode = opcUaServer.getAttribute("SecurityMode");
+                if (secMode == null || secMode.isBlank()) {
+                    secMode = "None";
                 }
 
-                String bindingUri = SDA_NS + "CommunicationBinding_" + i;
-                details.add("CommunicationBinding: " + bindingUri
+                String bindingLocalName = "CB-MTP-" + i;
+                Resource bindingRes = model.createResource(INST_NS + bindingLocalName);
+                bindingRes.addProperty(rdfType, bindingClass);
+                bindingRes.addProperty(rdfsLabel, "MTP binding " + i);
+                bindingRes.addProperty(protocol, "OPC-UA");
+                bindingRes.addProperty(accessMode, "read-only");
+                bindingRes.addProperty(securityMode, secMode);
+
+                // Wire skill → binding via isImplementedBy (skill is implemented by service)
+                // and service uses binding. We'll create a per-service for each skill.
+                String serviceLocalName = "SVC-MTP-Skill" + i;
+                Resource serviceRes = model.createResource(INST_NS + serviceLocalName);
+                serviceRes.addProperty(rdfType, model.createResource(SDA_NS + "Service"));
+                serviceRes.addProperty(rdfsLabel, "MTP Service " + i);
+                serviceRes.addProperty(usesBinding, bindingRes);
+                if (i < skillResources.size()) {
+                    skillResources.get(i).addProperty(isImplementedBy, serviceRes);
+                }
+
+                tripleCount += 5; // rdf:type + label + protocol + accessMode + usesBinding + isImplementedBy
+                bindingResources.add(bindingRes);
+
+                details.add("CommunicationBinding: " + INST_NS + bindingLocalName
                     + " (endpoint=" + endpoint
                     + ", protocol=OPC-UA"
-                    + ", securityMode=" + securityMode + ")");
-                tripleCount += 3; // rdf:type + endpoint + protocol
+                    + ", securityMode=" + secMode + ")");
             }
 
             // Parse <DataAssembly><OpcUaNode> into sda:DataConnector triples
@@ -116,10 +180,21 @@ public class MTPAmlParser implements Parser {
                 Element opcUaNode = (Element) opcUaNodeNodes.item(i);
                 String nodeId = opcUaNode.getAttribute("NodeId");
 
-                String connectorUri = SDA_NS + "DataConnector_" + i;
-                details.add("DataConnector: " + connectorUri
+                String connectorLocalName = "DC-MTP-" + i;
+                Resource connectorRes = model.createResource(INST_NS + connectorLocalName);
+                connectorRes.addProperty(rdfType, connectorClass);
+                connectorRes.addProperty(rdfsLabel, "MTP connector " + i);
+                connectorRes.addProperty(informationModel, "OPC-UA");
+
+                // Wire binding → connector via usesConnector
+                if (i < bindingResources.size()) {
+                    bindingResources.get(i).addProperty(usesConnector, connectorRes);
+                }
+
+                tripleCount += 3; // rdf:type + label + informationModel
+
+                details.add("DataConnector: " + INST_NS + connectorLocalName
                     + " (nodeId=" + nodeId + ")");
-                tripleCount += 2; // rdf:type + nodeId
             }
 
             String summary = "Parsed MTP AML: " + tripleCount + " triples from "
@@ -129,7 +204,7 @@ public class MTPAmlParser implements Parser {
 
             log.info("MTP AML parse completed: {}", summary);
 
-            return new ParseResult("MTP-AML", tripleCount, details, summary);
+            return new ParseResult("MTP-AML", tripleCount, details, summary, model);
 
         } catch (ParserException e) {
             throw e;

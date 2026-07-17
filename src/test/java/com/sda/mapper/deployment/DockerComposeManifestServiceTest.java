@@ -17,8 +17,8 @@ class DockerComposeManifestServiceTest {
 
     private static final ServiceMatchResult MATCHED_RESULT = new ServiceMatchResult(
         true, "Flowmeter Diagnostics Service", "ghcr.io/sda/flowmeter-diag:1.0",
-        "FlowRate Diagnostics", "OPC-UA", "read-only", "OPC-UA Gateway", "Plant Network",
-        0.95, 45, "Matched"
+        "FlowRate Diagnostics", "OPC-UA", "read-only", "OPC-UA binding", "OPC-UA Gateway", "Plant Network",
+        0.95, 45, "Matched", "Defined", null
     );
 
     @BeforeEach
@@ -84,8 +84,8 @@ class DockerComposeManifestServiceTest {
     void shouldNotSetNetworkModeForNonPlantContext() {
         ServiceMatchResult cloudResult = new ServiceMatchResult(
             true, "Cloud Analytics", "analytics:latest",
-            "Analytics", "MQTT", "read-write", "MQTT Broker", "Cloud Zone",
-            0.88, 120, "Matched"
+            "Analytics", "MQTT", "read-write", "MQTT binding", "MQTT Broker", "Cloud Zone",
+            0.88, 120, "Matched", "Defined", null
         );
         String yaml = service.generate(cloudResult);
         assertFalse(yaml.contains("network_mode"),

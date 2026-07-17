@@ -3,24 +3,32 @@ package com.sda.mapper.opcua;
 import com.sda.mapper.opcua.model.OpcUaEndpointConfig;
 import com.sda.mapper.opcua.model.OpcUaNodeConfig;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
+import org.eclipse.milo.opcua.stack.core.NamespaceTable;
+import org.eclipse.milo.opcua.stack.core.Identifiers;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.Variant;
+import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
+import org.eclipse.milo.opcua.stack.core.types.enumerated.BrowseDirection;
+import org.eclipse.milo.opcua.stack.core.types.enumerated.TimestampsToReturn;
+import org.eclipse.milo.opcua.stack.core.types.structured.BrowseDescription;
+import org.eclipse.milo.opcua.stack.core.types.structured.BrowseResult;
 import org.eclipse.milo.opcua.stack.core.types.structured.ReadValueId;
+import org.eclipse.milo.opcua.stack.core.types.structured.ReferenceDescription;
 import org.eclipse.milo.opcua.stack.core.types.structured.WriteValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Wrapper around Eclipse Milo OPC UA client for reading and writing variables.
+ * Wrapper around Eclipse Milo OPC UA client for reading, writing, and browsing variables.
  */
 @Component
 public class OpcUaClientWrapper {
@@ -31,21 +39,41 @@ public class OpcUaClientWrapper {
 
     private OpcUaClient client;
     private OpcUaEndpointConfig currentConfig;
+    private volatile boolean connected = false;
 
     /**
-     * Connects to an OPC UA server.
+     * Connects to an OPC UA server. Reuses the existing session if already connected
+     * to the same endpoint, avoiding session exhaustion on the server.
      */
     public CompletableFuture<Void> connect(OpcUaEndpointConfig config) {
+        String endpointUrl = config.getEndpointUrl();
+
+        if (connected && client != null
+            && config.getEndpointUrl().equals(
+                currentConfig != null ? currentConfig.getEndpointUrl() : null)) {
+            log.debug("Reusing existing OPC UA connection to {}", endpointUrl);
+            return CompletableFuture.completedFuture(null);
+        }
+
         this.currentConfig = config;
-        log.info("Connecting to OPC UA server: {}", config.getEndpointUrl());
+        log.info("Connecting to OPC UA server: {}", endpointUrl);
 
         return CompletableFuture.runAsync(() -> {
             try {
-                client = OpcUaClient.create(config.getEndpointUrl());
+                if (client != null) {
+                    try {
+                        client.disconnect().get(1000, TimeUnit.MILLISECONDS);
+                    } catch (Exception ignored) {
+                    }
+                }
+                client = OpcUaClient.create(endpointUrl);
                 client.connect().get(CONNECT_TIMEOUT_MS, TimeUnit.MILLISECONDS);
-                log.info("Connected to OPC UA server: {}", config.getEndpointUrl());
+                connected = true;
+                log.info("Connected to OPC UA server: {}", endpointUrl);
             } catch (Exception e) {
-                log.error("Failed to connect to OPC UA server: {}", config.getEndpointUrl(), e);
+                log.error("Failed to connect to OPC UA server: {}", endpointUrl, e);
+                client = null;
+                connected = false;
                 throw new RuntimeException("Failed to connect to OPC UA server", e);
             }
         });
@@ -60,11 +88,11 @@ public class OpcUaClientWrapper {
         }
 
         NodeId nodeId = new NodeId(nodeConfig.namespaceIndex(), nodeConfig.identifier());
-        ReadValueId readValueId = new ReadValueId(nodeId, null, null, null);
+        ReadValueId readValueId = new ReadValueId(nodeId, UInteger.valueOf(13), null, null);
         
         return CompletableFuture.supplyAsync(() -> {
             try {
-                DataValue dataValue = client.read(0.0, null, List.of(readValueId))
+                DataValue dataValue = client.read(0.0, TimestampsToReturn.Both, List.of(readValueId))
                     .get(READ_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     .getResults()[0];
                 
@@ -104,10 +132,79 @@ public class OpcUaClientWrapper {
     }
 
     /**
+     * Browses the children of a node and returns reference descriptions.
+     *
+     * @param nodeId the node to browse (null for root/ObjectsFolder)
+     * @return list of child reference descriptions
+     */
+    public CompletableFuture<List<ReferenceDescription>> browse(NodeId nodeId) {
+        if (client == null) {
+            throw new IllegalStateException("Client not connected");
+        }
+
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                BrowseDescription browse = new BrowseDescription(
+                    nodeId,
+                    BrowseDirection.Forward,
+                    Identifiers.HierarchicalReferences,
+                    Boolean.TRUE,
+                    UInteger.valueOf(0),
+                    UInteger.valueOf(0x3F)
+                );
+
+                BrowseResult result = client.browse(browse)
+                    .get(READ_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+
+                List<ReferenceDescription> refs = new ArrayList<>();
+                ReferenceDescription[] references = result.getReferences();
+                if (references != null) {
+                    for (ReferenceDescription ref : references) {
+                        refs.add(ref);
+                    }
+                }
+                return refs;
+            } catch (Exception e) {
+                log.error("Failed to browse node {}: {}", nodeId, e.getMessage());
+                return List.of();
+            }
+        });
+    }
+
+    /**
+     * Reads the browse name and value of a node.
+     */
+    public CompletableFuture<NodeSnapshot> readNodeSnapshot(OpcUaNodeConfig nodeConfig) {
+        if (client == null) {
+            throw new IllegalStateException("Client not connected");
+        }
+
+        NodeId nodeId = new NodeId(nodeConfig.namespaceIndex(), nodeConfig.identifier());
+        ReadValueId readValueId = new ReadValueId(nodeId, UInteger.valueOf(13), null, null);
+
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                DataValue dataValue = client.read(0.0, TimestampsToReturn.Both, List.of(readValueId))
+                    .get(READ_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                    .getResults()[0];
+
+                Variant value = dataValue.getValue();
+                Object rawValue = value != null ? value.getValue() : null;
+                String displayValue = rawValue != null ? String.valueOf(rawValue) : "—";
+                return new NodeSnapshot(nodeConfig.toNodeIdString(), displayValue, rawValue);
+            } catch (Exception e) {
+                log.debug("Failed to read node snapshot {}: {}", nodeConfig.toNodeIdString(), e.getMessage());
+                return new NodeSnapshot(nodeConfig.toNodeIdString(), "error", null);
+            }
+        });
+    }
+
+    /**
      * Disconnects from the OPC UA server.
      */
     public CompletableFuture<Void> disconnect() {
         if (client == null) {
+            connected = false;
             return CompletableFuture.completedFuture(null);
         }
 
@@ -119,6 +216,7 @@ public class OpcUaClientWrapper {
                 log.error("Failed to disconnect from OPC UA server", e);
             } finally {
                 client = null;
+                connected = false;
             }
         });
     }
@@ -127,7 +225,7 @@ public class OpcUaClientWrapper {
      * Checks if the client is connected.
      */
     public boolean isConnected() {
-        return client != null;
+        return connected && client != null;
     }
 
     /**
@@ -135,5 +233,18 @@ public class OpcUaClientWrapper {
      */
     public OpcUaEndpointConfig getCurrentConfig() {
         return currentConfig;
+    }
+
+    /**
+     * Returns the namespace table from the connected client.
+     */
+    public NamespaceTable getNamespaceTable() {
+        if (client == null) {
+            return new NamespaceTable();
+        }
+        return client.getNamespaceTable();
+    }
+
+    public record NodeSnapshot(String nodeId, String displayValue, Object rawValue) {
     }
 }

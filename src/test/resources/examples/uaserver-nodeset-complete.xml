@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<UANodeSet xmlns="http://opcfoundation.org/UA/2011/03/UANodeSet.xsd"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <NamespaceUris>
+        <Uri>urn:test:opcuaserver</Uri>
+    </NamespaceUris>
+    <Aliases>
+        <Alias NodeId="i=22">Boolean</Alias>
+        <Alias NodeId="i=11">Double</Alias>
+        <Alias NodeId="i=3">Int32</Alias>
+        <Alias NodeId="i=12">String</Alias>
+        <Alias NodeId="i=29">HasComponent</Alias>
+        <Alias NodeId="i=46">HasProperty</Alias>
+        <Alias NodeId="i=47">HasTypeDefinition</Alias>
+    </Aliases>
+
+    <UAObjectType NodeId="ns=1;i=1001" BrowseName="1:ProcessControlType" DisplayName="ProcessControlType">
+        <Description>A process control type</Description>
+        <References>
+            <Reference ReferenceType="HasSubtype">i=58</Reference>
+        </References>
+    </UAObjectType>
+
+    <UAVariable NodeId="ns=1;s=Temperature" BrowseName="1:Temperature" DisplayName="Temperature"
+                 DataType="i=11">
+        <Description>Current temperature reading</Description>
+        <References>
+            <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
+        </References>
+    </UAVariable>
+
+    <UAVariable NodeId="ns=1;s=Pressure" BrowseName="1:Pressure" DisplayName="Pressure"
+                 DataType="i=11">
+        <Description>Current pressure reading</Description>
+        <References>
+            <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
+        </References>
+    </UAVariable>
+
+    <UAVariable NodeId="ns=1;s=Setpoint" BrowseName="1:Setpoint" DisplayName="Setpoint"
+                 DataType="i=11">
+        <Description>Control setpoint value</Description>
+        <References>
+            <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
+        </References>
+    </UAVariable>
+
+    <UAObject NodeId="ns=1;s=Pump" BrowseName="1:Pump" DisplayName="Pump">
+        <Description>Pump actuator object</Description>
+        <References>
+            <Reference ReferenceType="HasTypeDefinition">ns=1;i=1001</Reference>
+        </References>
+    </UAObject>
+
+    <UAMethod NodeId="ns=1;s=StartPump" BrowseName="1:StartPump" DisplayName="StartPump">
+        <Description>Start the pump</Description>
+        <References>
+            <Reference ReferenceType="HasProperty">ns=1;s=InputArgs</Reference>
+        </References>
+    </UAMethod>
+
+    <UAMethod NodeId="ns=1;s=StopPump" BrowseName="1:StopPump" DisplayName="StopPump">
+        <Description>Stop the pump</Description>
+        <References>
+            <Reference ReferenceType="HasProperty">ns=1;s=InputArgs</Reference>
+        </References>
+    </UAMethod>
+
+    <UADataType NodeId="ns=1;i=2001" BrowseName="1:CustomStatus" DisplayName="CustomStatus">
+        <Description>A custom status enumeration</Description>
+        <References>
+            <Reference ReferenceType="HasSubtype">i=29</Reference>
+        </References>
+    </UADataType>
+</UANodeSet>

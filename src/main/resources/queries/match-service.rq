@@ -4,7 +4,7 @@ PREFIX css:  <http://www.example.org/css#>
 PREFIX sda:  <http://www.example.org/sda#>
 PREFIX :     <http://www.example.org/instance#>
 
-SELECT ?requirement ?capability ?skill ?service ?binding ?protocol ?accessMode ?recall ?latency ?onPlantNetwork
+SELECT ?requirement ?capability ?skill ?service ?binding ?protocol ?accessMode ?recall ?latency ?onPlantNetwork ?connector ?connectorLabel ?deploy ?deployLabel
 WHERE {
     # Bind the requirement to match (placeholder replaced at runtime)
     BIND(:REQ-001 AS ?requirement)
@@ -23,7 +23,10 @@ WHERE {
     ?service      sda:usesBinding     ?binding .
 
     ?binding      sda:protocol        ?protocol ;
-                  sda:accessMode      ?accessMode .
+                  sda:accessMode      ?accessMode ;
+                  sda:usesConnector   ?connector .
+
+    ?connector    rdfs:label          ?connectorLabel .
 
     FILTER (?protocol = "OPC-UA")
     FILTER (?accessMode = "read-only")
@@ -38,9 +41,21 @@ WHERE {
 
     ?service      sda:isDeployedBy    ?deploy .
 
-    ?deploy       sda:onPlantNetwork  ?onPlantNetwork .
+    ?deploy       rdfs:label          ?deployLabel ;
+                  sda:onPlantNetwork  ?onPlantNetwork .
 
     FILTER (?onPlantNetwork = true)
+
+    # R2a: Semantic concept coverage (paper Table I)
+    # All concepts required by the Skill must be provided by some DataConnector
+    FILTER NOT EXISTS {
+        ?skill sda:requiresConcept ?requiredConcept .
+        FILTER NOT EXISTS {
+            ?service sda:usesBinding ?cb .
+            ?cb sda:usesConnector ?dc .
+            ?dc sda:providesConcept ?requiredConcept .
+        }
+    }
 
     # Exclude services with NE 107 Failure status
     FILTER NOT EXISTS {

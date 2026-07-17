@@ -53,4 +53,20 @@ class RequirementFormViewTest {
         assertNotNull(maxLatencyField, "Should have maxLatencyField");
         maxLatencyField.setAccessible(true);
     }
+
+    @Test
+    @DisplayName("Should have lastMatchedRequirementId field for lifecycle tracking")
+    void shouldHaveLastMatchedRequirementIdField() throws Exception {
+        Field field = RequirementFormView.class.getDeclaredField("lastMatchedRequirementId");
+        assertNotNull(field, "Should have lastMatchedRequirementId field");
+        assertEquals(String.class, field.getType(),
+            "lastMatchedRequirementId should be of type String");
+    }
+
+    @Test
+    @DisplayName("Should have verifyRequirement method for R-Verify integration")
+    void shouldHaveVerifyRequirementMethod() throws Exception {
+        var method = RequirementFormView.class.getDeclaredMethod("verifyRequirement");
+        assertNotNull(method, "Should have verifyRequirement method");
+    }
 }

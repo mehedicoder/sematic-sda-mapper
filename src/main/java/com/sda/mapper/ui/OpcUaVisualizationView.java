@@ -3,13 +3,13 @@ package com.sda.mapper.ui;
 import com.sda.mapper.opcua.OpcUaServerRegistry;
 import com.sda.mapper.opcua.OpcUaVisualizationService;
 import com.sda.mapper.opcua.OpcUaVisualizationService.BrowsedNode;
+import com.sda.mapper.opcua.OpcUaVisualizationService.ServerSnapshot;
 import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H3;
-import com.vaadin.flow.component.html.Hr;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -18,7 +18,6 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -28,14 +27,13 @@ public class OpcUaVisualizationView extends VerticalLayout {
 
     private final OpcUaVisualizationService visualizationService;
 
-    private Grid<OpcUaServerRegistry.ServerInfo> serverGrid;
-    private VerticalLayout serverCardsLayout;
+    private VerticalLayout serverListLayout;
     private VerticalLayout detailPanel;
     private Grid<BrowsedNode> nodeGrid;
     private Button backButton;
     private Span detailTitle;
     private Span detailEndpoint;
-    private OpcUaServerRegistry.ServerInfo selectedServer;
+    private ServerSnapshot selectedSnapshot;
     private Timer refreshTimer;
 
     public OpcUaVisualizationView(OpcUaVisualizationService visualizationService) {
@@ -51,33 +49,14 @@ public class OpcUaVisualizationView extends VerticalLayout {
         setSpacing(true);
 
         add(new H2("OPC UA Server Monitor"));
-        add(new Text("Click a server row to browse its nodes and view raw variable data."));
+        add(new Text("Click a server to browse its nodes and view live variable data."));
 
-        buildServerGrid();
+        serverListLayout = new VerticalLayout();
+        serverListLayout.setWidthFull();
+        serverListLayout.setPadding(false);
+        add(serverListLayout);
+
         buildDetailPanel();
-        serverCardsLayout = new VerticalLayout();
-        serverCardsLayout.setWidthFull();
-        serverCardsLayout.setPadding(false);
-        add(serverCardsLayout);
-    }
-
-    private void buildServerGrid() {
-        serverGrid = new Grid<>();
-        serverGrid.addColumn(OpcUaServerRegistry.ServerInfo::name).setHeader("Name");
-        serverGrid.addColumn(OpcUaServerRegistry.ServerInfo::type).setHeader("Type");
-        serverGrid.addColumn(s -> s.host() + ":" + s.port()).setHeader("Host:Port");
-        serverGrid.addColumn(OpcUaServerRegistry.ServerInfo::path).setHeader("Path");
-        serverGrid.addColumn(OpcUaServerRegistry.ServerInfo::connected)
-            .setHeader("Status");
-        serverGrid.setWidthFull();
-        serverGrid.setHeight("250px");
-
-        serverGrid.addSelectionListener(event -> {
-            event.getFirstSelectedItem().ifPresent(this::showServerDetail);
-        });
-
-        add(serverGrid);
-        add(new Hr());
     }
 
     private void buildDetailPanel() {
@@ -120,49 +99,39 @@ public class OpcUaVisualizationView extends VerticalLayout {
         add(detailPanel);
     }
 
-    private void showServerDetail(OpcUaServerRegistry.ServerInfo server) {
-        selectedServer = server;
-        serverGrid.setVisible(false);
-        serverCardsLayout.setVisible(false);
+    private void showServerDetail(ServerSnapshot snapshot) {
+        selectedSnapshot = snapshot;
+        serverListLayout.setVisible(false);
         detailPanel.setVisible(true);
 
-        detailTitle.setText(server.name());
-        detailEndpoint.setText(server.endpointUrl());
+        detailTitle.setText(snapshot.name());
+        detailEndpoint.setText(snapshot.endpointUrl());
 
-        List<BrowsedNode> nodes = visualizationService.browseServerNodes(server.endpointUrl());
+        List<BrowsedNode> nodes = visualizationService.browseServerNodes(snapshot.endpointUrl());
         nodeGrid.setItems(nodes);
     }
 
     private void hideDetail() {
-        selectedServer = null;
+        selectedSnapshot = null;
         detailPanel.setVisible(false);
-        serverGrid.setVisible(true);
-        serverCardsLayout.setVisible(true);
+        serverListLayout.setVisible(true);
     }
 
     private void refreshData() {
-        List<OpcUaVisualizationService.ServerSnapshot> snapshots = visualizationService.getAllServerSnapshots();
+        List<ServerSnapshot> snapshots = visualizationService.getAllServerSnapshots();
 
-        List<OpcUaServerRegistry.ServerInfo> servers = snapshots.stream()
-            .map(s -> new OpcUaServerRegistry.ServerInfo(
-                s.name(), s.host(), s.port(), s.path(), s.endpointUrl(),
-                OpcUaServerRegistry.ServerType.valueOf(s.type()), s.connected()))
-            .toList();
-
-        serverGrid.setItems(servers);
-
-        serverCardsLayout.removeAll();
-        for (OpcUaVisualizationService.ServerSnapshot snapshot : snapshots) {
-            serverCardsLayout.add(createServerCard(snapshot));
+        serverListLayout.removeAll();
+        for (ServerSnapshot snapshot : snapshots) {
+            serverListLayout.add(createServerCard(snapshot));
         }
 
-        if (selectedServer != null) {
-            List<BrowsedNode> nodes = visualizationService.browseServerNodes(selectedServer.endpointUrl());
+        if (selectedSnapshot != null) {
+            List<BrowsedNode> nodes = visualizationService.browseServerNodes(selectedSnapshot.endpointUrl());
             nodeGrid.setItems(nodes);
         }
     }
 
-    private VerticalLayout createServerCard(OpcUaVisualizationService.ServerSnapshot snapshot) {
+    private VerticalLayout createServerCard(ServerSnapshot snapshot) {
         var card = new VerticalLayout();
         card.setPadding(true);
         card.setSpacing(false);
@@ -171,13 +140,16 @@ public class OpcUaVisualizationView extends VerticalLayout {
             .set("border-radius", "12px")
             .set("background", "var(--lumo-base-color)")
             .set("box-shadow", "0 2px 8px rgba(0,0,0,0.08)")
-            .set("margin-bottom", "12px");
+            .set("margin-bottom", "12px")
+            .set("cursor", "pointer");
+
+        card.addClickListener(e -> showServerDetail(snapshot));
 
         var header = new HorizontalLayout();
         header.setAlignItems(FlexComponent.Alignment.CENTER);
         header.setSpacing(true);
 
-        Span statusIcon = new Span(snapshot.connected() ? "+" : "x");
+        Span statusIcon = new Span(snapshot.connected() ? "\u2713" : "\u2717");
         statusIcon.getStyle()
             .set("font-weight", "bold")
             .set("color", snapshot.connected()
@@ -214,20 +186,6 @@ public class OpcUaVisualizationView extends VerticalLayout {
         Span endpoint = new Span(snapshot.endpointUrl());
         endpoint.getStyle().set("font-size", "12px").set("color", "var(--lumo-secondary-text-color)");
         card.add(endpoint);
-
-        if (snapshot.nodeValues().isEmpty()) {
-            card.add(new Text("No data available"));
-        } else {
-            var grid = new Grid<Map.Entry<String, OpcUaVisualizationService.NodeValue>>();
-            grid.addColumn(e -> e.getValue().label()).setHeader("Node");
-            grid.addColumn(e -> e.getValue().displayValue()).setHeader("Value");
-            grid.addColumn(e -> e.getValue().unit()).setHeader("Unit");
-            grid.setItems(snapshot.nodeValues().entrySet());
-            grid.setWidthFull();
-            grid.setHeight("300px");
-            grid.addThemeVariants(com.vaadin.flow.component.grid.GridVariant.LUMO_COMPACT);
-            card.add(grid);
-        }
 
         return card;
     }

@@ -221,14 +221,7 @@ public class OpcUaVisualizationService {
     }
 
     private boolean isVariableNode(ReferenceDescription ref, org.eclipse.milo.opcua.stack.core.NamespaceTable nsTable) {
-        NodeId typeDef = ref.getTypeDefinition()
-            .toNodeId(nsTable)
-            .orElse(null);
-        if (typeDef == null) return false;
-        return Identifiers.BaseDataVariableType.equals(typeDef)
-            || Identifiers.PropertyType.equals(typeDef)
-            || Identifiers.DataItemType.equals(typeDef)
-            || Identifiers.AnalogItemType.equals(typeDef);
+        return ref.getNodeClass() == org.eclipse.milo.opcua.stack.core.types.enumerated.NodeClass.Variable;
     }
 
     /**

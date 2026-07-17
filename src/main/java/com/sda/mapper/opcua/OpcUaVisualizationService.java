@@ -107,6 +107,9 @@ public class OpcUaVisualizationService {
 
         return new ServerSnapshot(
             serverInfo.name(),
+            serverInfo.host(),
+            serverInfo.port(),
+            serverInfo.path(),
             serverInfo.endpointUrl(),
             serverInfo.type().name(),
             connected,
@@ -314,6 +317,9 @@ public class OpcUaVisualizationService {
 
     public record ServerSnapshot(
         String name,
+        String host,
+        int port,
+        String path,
         String endpointUrl,
         String type,
         boolean connected,

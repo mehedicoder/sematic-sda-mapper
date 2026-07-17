@@ -145,7 +145,7 @@ public class OpcUaVisualizationView extends VerticalLayout {
 
         List<OpcUaServerRegistry.ServerInfo> servers = snapshots.stream()
             .map(s -> new OpcUaServerRegistry.ServerInfo(
-                s.name(), "", 0, "", s.endpointUrl(),
+                s.name(), s.host(), s.port(), s.path(), s.endpointUrl(),
                 OpcUaServerRegistry.ServerType.valueOf(s.type()), s.connected()))
             .toList();
 

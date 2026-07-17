@@ -4,6 +4,7 @@ import com.sda.mapper.ontology.OntologyModelLoader;
 import com.sda.mapper.parser.MTPAmlParser;
 import com.sda.mapper.parser.ParseResult;
 import com.sda.mapper.parser.UaServerDatasheetParser;
+import com.sda.mapper.reasoning.RDeployService;
 import com.sda.mapper.reasoning.ServiceMatchResult;
 import com.sda.mapper.reasoning.SemanticReasonerService;
 import com.sda.mapper.reasoning.SparqlQueryLoader;
@@ -41,7 +42,8 @@ class EvaluationTest {
         loader.loadOntology();
         model = loader.getModel();
         var queryLoader = new SparqlQueryLoader();
-        reasoner = new SemanticReasonerService(loader, queryLoader);
+        var rDeployService = new RDeployService(loader);
+        reasoner = new SemanticReasonerService(loader, queryLoader, rDeployService);
     }
 
     @Test

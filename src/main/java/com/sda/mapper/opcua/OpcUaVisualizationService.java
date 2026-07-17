@@ -28,14 +28,20 @@ public class OpcUaVisualizationService {
     private static final Logger log = LoggerFactory.getLogger(OpcUaVisualizationService.class);
 
     private static final List<KnownNode> KNOWN_NODES = List.of(
-        new KnownNode("Tank1.Level", "Level", "cm"),
-        new KnownNode("Tank1.FlowRateIn", "Flow In", "L/min"),
-        new KnownNode("Tank1.FlowRateOut", "Flow Out", "L/min"),
-        new KnownNode("Tank1.Temperature", "Temperature", "°C"),
-        new KnownNode("Pump.FlowRate", "Flow Rate", "L/min"),
-        new KnownNode("Pump.Vibration", "Vibration", "mm/s"),
-        new KnownNode("Pump.Temperature", "Pump Temp", "°C"),
-        new KnownNode("Pump.Status", "Status", "")
+        new KnownNode("Level", "Level", "cm"),
+        new KnownNode("FlowRateIn", "Flow In", "L/min"),
+        new KnownNode("FlowRateOut", "Flow Out", "L/min"),
+        new KnownNode("Temperature", "Temperature", "°C"),
+        new KnownNode("FlowRate", "Flow Rate", "L/min"),
+        new KnownNode("Vibration", "Vibration", "mm/s"),
+        new KnownNode("PumpTemperature", "Pump Temp", "°C"),
+        new KnownNode("Status", "Status", ""),
+        new KnownNode("FlowRate_Status", "Flow Diag Status", ""),
+        new KnownNode("FlowRate_Diag", "Flow Diag", ""),
+        new KnownNode("Vibration_Status", "Vib Diag Status", ""),
+        new KnownNode("Vibration_Diag", "Vib Diag", ""),
+        new KnownNode("PumpTemperature_Status", "Temp Diag Status", ""),
+        new KnownNode("PumpTemperature_Diag", "Temp Diag", "")
     );
 
     private final OpcUaClientFactory clientFactory;
@@ -119,21 +125,31 @@ public class OpcUaVisualizationService {
 
     private Map<String, NodeValue> buildFallbackNodeValues() {
         Map<String, NodeValue> values = new LinkedHashMap<>();
-        Ne107DiagnosticSimulator.DiagnosticResult diagResult =
-            diagnostics.simulatePumpDiagnostics(
-                "DeviceStatus",
-                pumpModel.getHealthPercent(),
-                pumpModel.getVibration(),
-                pumpModel.getTemperature());
 
-        values.put("Tank1.Level", new NodeValue("Level", String.format("%.1f", tankState.getLevelCm()), "cm", tankState.getLevelCm()));
-        values.put("Tank1.FlowRateIn", new NodeValue("Flow In", String.format("%.2f", tankState.getFlowInLMin()), "L/min", tankState.getFlowInLMin()));
-        values.put("Tank1.FlowRateOut", new NodeValue("Flow Out", String.format("%.2f", tankState.getFlowOutLMin()), "L/min", tankState.getFlowOutLMin()));
-        values.put("Tank1.Temperature", new NodeValue("Temperature", String.format("%.1f", tankState.getTemperatureC()), "°C", tankState.getTemperatureC()));
-        values.put("Pump.FlowRate", new NodeValue("Flow Rate", String.format("%.2f", pumpModel.getEffectiveFlowLMin()), "L/min", pumpModel.getEffectiveFlowLMin()));
-        values.put("Pump.Vibration", new NodeValue("Vibration", String.format("%.2f", pumpModel.getVibration()), "mm/s", pumpModel.getVibration()));
-        values.put("Pump.Temperature", new NodeValue("Pump Temp", String.format("%.1f", pumpModel.getTemperature()), "°C", pumpModel.getTemperature()));
-        values.put("Pump.Status", new NodeValue("Status", diagResult.diagnosticString(), "", diagResult.diagnosticString()));
+        values.put("Level", new NodeValue("Level", String.format("%.1f", tankState.getLevelCm()), "cm", tankState.getLevelCm()));
+        values.put("FlowRateIn", new NodeValue("Flow In", String.format("%.2f", tankState.getFlowInLMin()), "L/min", tankState.getFlowInLMin()));
+        values.put("FlowRateOut", new NodeValue("Flow Out", String.format("%.2f", tankState.getFlowOutLMin()), "L/min", tankState.getFlowOutLMin()));
+        values.put("Temperature", new NodeValue("Temperature", String.format("%.1f", tankState.getTemperatureC()), "°C", tankState.getTemperatureC()));
+        values.put("FlowRate", new NodeValue("Flow Rate", String.format("%.2f", pumpModel.getEffectiveFlowLMin()), "L/min", pumpModel.getEffectiveFlowLMin()));
+        values.put("Vibration", new NodeValue("Vibration", String.format("%.2f", pumpModel.getVibration()), "mm/s", pumpModel.getVibration()));
+        values.put("PumpTemperature", new NodeValue("Pump Temp", String.format("%.1f", pumpModel.getTemperature()), "°C", pumpModel.getTemperature()));
+
+        Ne107DiagnosticSimulator.DiagnosticResult deviceDiag =
+            diagnostics.simulatePumpDiagnostics("DeviceStatus",
+                pumpModel.getHealthPercent(), pumpModel.getVibration(), pumpModel.getTemperature());
+        values.put("Status", new NodeValue("Status", String.valueOf(deviceDiag.getStatusCode()), "", deviceDiag.getStatusCode()));
+
+        String[][] diagVars = {{"FlowRate", "Flow Rate"}, {"Vibration", "Vibration"}, {"PumpTemperature", "Temperature"}};
+        for (String[] pair : diagVars) {
+            Ne107DiagnosticSimulator.DiagnosticResult result =
+                diagnostics.simulatePumpDiagnostics(pair[1],
+                    pumpModel.getHealthPercent(), pumpModel.getVibration(), pumpModel.getTemperature());
+            values.put(pair[0] + "_Status", new NodeValue(pair[0] + " Diag Status",
+                String.valueOf(result.getStatusCode()), "", result.getStatusCode()));
+            values.put(pair[0] + "_Diag", new NodeValue(pair[0] + " Diag",
+                result.diagnosticString(), "", result.diagnosticString()));
+        }
+
         return values;
     }
 
@@ -239,13 +255,13 @@ public class OpcUaVisualizationService {
 
     private OpcUaSnapshot readSnapshotFromServer(OpcUaClientWrapper client) {
         return new OpcUaSnapshot(
-            readDouble(client, OpcUaNodeConfig.ofString(2, "Tank1.Level")),
-            readDouble(client, OpcUaNodeConfig.ofString(2, "Tank1.FlowRateIn")),
-            readDouble(client, OpcUaNodeConfig.ofString(2, "Tank1.FlowRateOut")),
-            readDouble(client, OpcUaNodeConfig.ofString(2, "Tank1.Temperature")),
-            readDouble(client, OpcUaNodeConfig.ofString(2, "Pump.FlowRate")),
-            readDouble(client, OpcUaNodeConfig.ofString(2, "Pump.Vibration")),
-            readDouble(client, OpcUaNodeConfig.ofString(2, "Pump.Temperature")),
+            readDouble(client, OpcUaNodeConfig.ofString(2, "Level")),
+            readDouble(client, OpcUaNodeConfig.ofString(2, "FlowRateIn")),
+            readDouble(client, OpcUaNodeConfig.ofString(2, "FlowRateOut")),
+            readDouble(client, OpcUaNodeConfig.ofString(2, "Temperature")),
+            readDouble(client, OpcUaNodeConfig.ofString(2, "FlowRate")),
+            readDouble(client, OpcUaNodeConfig.ofString(2, "Vibration")),
+            readDouble(client, OpcUaNodeConfig.ofString(2, "PumpTemperature")),
             readPumpStatus(client)
         );
     }
@@ -283,7 +299,7 @@ public class OpcUaVisualizationService {
 
     private String readPumpStatus(OpcUaClientWrapper client) {
         try {
-            Object value = client.readVariableValue(OpcUaNodeConfig.ofString(2, "Pump.Status")).join();
+            Object value = client.readVariableValue(OpcUaNodeConfig.ofString(2, "Status")).join();
             if (value instanceof Number n) {
                 int statusCode = n.intValue();
                 return switch (statusCode) {
@@ -320,5 +336,96 @@ public class OpcUaVisualizationService {
 
     public record BrowsedNode(String nodeId, String browseName, String displayName,
                                String displayValue, String dataType, Object rawValue) {
+    }
+
+    public record BrowseTreeNode(
+        String nodeId,
+        String browseName,
+        String displayName,
+        String nodeClass,
+        Object value,
+        String dataType,
+        boolean hasChildren
+    ) {
+    }
+
+    /**
+     * Returns root-level children of a server's address space (children of ObjectsFolder).
+     * Used to populate the initial tree view.
+     */
+    public List<BrowseTreeNode> browseAddressSpace(String endpointUrl) {
+        return browseChildren(endpointUrl, Identifiers.ObjectsFolder);
+    }
+
+    /**
+     * Returns children of a specific node for lazy tree expansion.
+     * Per OPC UA Part 5 §8.2, browses HierarchicalReferences forward.
+     */
+    public List<BrowseTreeNode> browseChildren(String endpointUrl, NodeId parentNodeId) {
+        OpcUaServerRegistry.ServerInfo serverInfo = serverRegistry.getServer(endpointUrl);
+        if (serverInfo == null) {
+            log.debug("No server info found for {}", endpointUrl);
+            return List.of();
+        }
+
+        OpcUaEndpointConfig config = OpcUaEndpointConfig.local(
+            serverInfo.host(), serverInfo.port(), serverInfo.path());
+        OpcUaClientWrapper client = clientFactory.createClient(config);
+
+        try {
+            client.connect(config).get(3000, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            log.debug("Could not connect to {} for browsing: {}", endpointUrl, e.getMessage());
+            return List.of();
+        }
+
+        List<BrowseTreeNode> result = new ArrayList<>();
+        var nsTable = client.getNamespaceTable();
+
+        List<ReferenceDescription> refs;
+        try {
+            refs = client.browse(parentNodeId).get(3000, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            log.debug("Browse failed for node {}: {}", parentNodeId, e.getMessage());
+            return List.of();
+        }
+
+        for (ReferenceDescription ref : refs) {
+            NodeId childNodeId = ref.getNodeId().toNodeId(nsTable).orElse(null);
+            if (childNodeId == null) {
+                continue;
+            }
+
+            String browseName = ref.getBrowseName() != null ? ref.getBrowseName().getName() : "";
+            String displayName = ref.getDisplayName() != null
+                ? ref.getDisplayName().getText() : browseName;
+            String nodeIdStr = String.format("ns=%d;%s",
+                childNodeId.getNamespaceIndex().intValue(), childNodeId.getIdentifier());
+            String nodeClass = ref.getNodeClass() != null ? ref.getNodeClass().name() : "Unknown";
+
+            boolean isVariable = "Variable".equals(nodeClass);
+            Object value = null;
+            String dataType = "";
+
+            if (isVariable) {
+                try {
+                    OpcUaNodeConfig nodeConfig = OpcUaNodeConfig.ofString(
+                        childNodeId.getNamespaceIndex().intValue(),
+                        String.valueOf(childNodeId.getIdentifier()));
+                    Object rawValue = client.readVariableValue(nodeConfig).get(2000, TimeUnit.MILLISECONDS);
+                    value = rawValue;
+                    dataType = rawValue != null ? rawValue.getClass().getSimpleName() : "";
+                } catch (Exception e) {
+                    log.debug("Failed to read {}: {}", nodeIdStr, e.getMessage());
+                }
+            }
+
+            boolean hasChildren = !isVariable;
+            result.add(new BrowseTreeNode(nodeIdStr, browseName, displayName,
+                nodeClass, value, dataType, hasChildren));
+        }
+
+        log.debug("Browsed {} children from {} on {}", result.size(), parentNodeId, endpointUrl);
+        return result;
     }
 }

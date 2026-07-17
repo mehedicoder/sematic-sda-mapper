@@ -50,7 +50,8 @@ class MainLayoutTest {
         assertDoesNotThrow(() -> {
             var loader = new com.sda.mapper.ontology.OntologyModelLoader();
             var queryLoader = new com.sda.mapper.reasoning.SparqlQueryLoader();
-            var reasoner = new com.sda.mapper.reasoning.SemanticReasonerService(loader, queryLoader);
+            var rDeployService = new com.sda.mapper.reasoning.RDeployService(loader);
+            var reasoner = new com.sda.mapper.reasoning.SemanticReasonerService(loader, queryLoader, rDeployService);
             var explanationService = new com.sda.mapper.reasoning.ExplanationService();
             var dockerService = new com.sda.mapper.deployment.DockerComposeManifestService();
             var k8sService = new com.sda.mapper.deployment.KubernetesManifestService();

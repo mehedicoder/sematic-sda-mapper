@@ -39,21 +39,41 @@ public class OpcUaClientWrapper {
 
     private OpcUaClient client;
     private OpcUaEndpointConfig currentConfig;
+    private volatile boolean connected = false;
 
     /**
-     * Connects to an OPC UA server.
+     * Connects to an OPC UA server. Reuses the existing session if already connected
+     * to the same endpoint, avoiding session exhaustion on the server.
      */
     public CompletableFuture<Void> connect(OpcUaEndpointConfig config) {
+        String endpointUrl = config.getEndpointUrl();
+
+        if (connected && client != null
+            && config.getEndpointUrl().equals(
+                currentConfig != null ? currentConfig.getEndpointUrl() : null)) {
+            log.debug("Reusing existing OPC UA connection to {}", endpointUrl);
+            return CompletableFuture.completedFuture(null);
+        }
+
         this.currentConfig = config;
-        log.info("Connecting to OPC UA server: {}", config.getEndpointUrl());
+        log.info("Connecting to OPC UA server: {}", endpointUrl);
 
         return CompletableFuture.runAsync(() -> {
             try {
-                client = OpcUaClient.create(config.getEndpointUrl());
+                if (client != null) {
+                    try {
+                        client.disconnect().get(1000, TimeUnit.MILLISECONDS);
+                    } catch (Exception ignored) {
+                    }
+                }
+                client = OpcUaClient.create(endpointUrl);
                 client.connect().get(CONNECT_TIMEOUT_MS, TimeUnit.MILLISECONDS);
-                log.info("Connected to OPC UA server: {}", config.getEndpointUrl());
+                connected = true;
+                log.info("Connected to OPC UA server: {}", endpointUrl);
             } catch (Exception e) {
-                log.error("Failed to connect to OPC UA server: {}", config.getEndpointUrl(), e);
+                log.error("Failed to connect to OPC UA server: {}", endpointUrl, e);
+                client = null;
+                connected = false;
                 throw new RuntimeException("Failed to connect to OPC UA server", e);
             }
         });
@@ -130,7 +150,7 @@ public class OpcUaClientWrapper {
                     Identifiers.HierarchicalReferences,
                     Boolean.TRUE,
                     UInteger.valueOf(0),
-                    UInteger.valueOf(0)
+                    UInteger.valueOf(0x3F)
                 );
 
                 BrowseResult result = client.browse(browse)
@@ -184,6 +204,7 @@ public class OpcUaClientWrapper {
      */
     public CompletableFuture<Void> disconnect() {
         if (client == null) {
+            connected = false;
             return CompletableFuture.completedFuture(null);
         }
 
@@ -195,6 +216,7 @@ public class OpcUaClientWrapper {
                 log.error("Failed to disconnect from OPC UA server", e);
             } finally {
                 client = null;
+                connected = false;
             }
         });
     }
@@ -203,7 +225,7 @@ public class OpcUaClientWrapper {
      * Checks if the client is connected.
      */
     public boolean isConnected() {
-        return client != null;
+        return connected && client != null;
     }
 
     /**

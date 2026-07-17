@@ -44,11 +44,14 @@ public class SemanticReasonerService {
 
     private final OntologyModelLoader ontologyModelLoader;
     private final SparqlQueryLoader sparqlQueryLoader;
+    private final RDeployService rDeployService;
 
     public SemanticReasonerService(OntologyModelLoader ontologyModelLoader,
-                                   SparqlQueryLoader sparqlQueryLoader) {
+                                   SparqlQueryLoader sparqlQueryLoader,
+                                   RDeployService rDeployService) {
         this.ontologyModelLoader = ontologyModelLoader;
         this.sparqlQueryLoader = sparqlQueryLoader;
+        this.rDeployService = rDeployService;
     }
 
     /**
@@ -82,7 +85,20 @@ public class SemanticReasonerService {
                 }
 
                 QuerySolution sol = rs.next();
-                return extractMatchResult(sol);
+                ServiceMatchResult result = extractMatchResult(sol, requirementId);
+                if (result.matched()) {
+                    rDeployService.execute(requirementId, result.serviceName(),
+                        result.bindingLabel(), result.connector(),
+                        result.deploymentContext());
+                    String lifecycleStatus = rDeployService.getLifecycleStatus(requirementId);
+                    return new ServiceMatchResult(
+                        result.matched(), result.serviceName(), result.containerImage(),
+                        result.capabilityName(), result.protocol(), result.accessMode(),
+                        result.bindingLabel(), result.connector(), result.deploymentContext(),
+                        result.recall(), result.latencyMs(), result.explanation(),
+                        lifecycleStatus, requirementId);
+                }
+                return result;
             }
         } catch (SparqlExecutionException e) {
             throw e;
@@ -135,7 +151,7 @@ public class SemanticReasonerService {
                 }
 
                 QuerySolution sol = rs.next();
-                return extractMatchResult(sol);
+                return extractMatchResult(sol, null);
             }
         } catch (SparqlExecutionException e) {
             throw e;
@@ -213,7 +229,7 @@ public class SemanticReasonerService {
         return sb.toString();
     }
 
-    private ServiceMatchResult extractMatchResult(QuerySolution sol) {
+    private ServiceMatchResult extractMatchResult(QuerySolution sol, String requirementId) {
         String protocol = getOptionalLiteral(sol, "protocol");
         String accessMode = getOptionalLiteral(sol, "accessMode");
         double recall = sol.contains("recall") ? sol.getLiteral("recall").getDouble() : 0.0;
@@ -255,6 +271,19 @@ public class SemanticReasonerService {
         String explanation = "Matched service '%s' with %s protocol, recall=%.2f, latency=%dms"
             .formatted(serviceName, protocol, recall, latency);
 
+        // Extract binding label from ?binding
+        String bindingLabel = null;
+        if (sol.contains("binding") && sol.get("binding").isResource()) {
+            org.apache.jena.rdf.model.Resource bindingRes = sol.getResource("binding");
+            var bindingLabelStmt = bindingRes.getProperty(
+                org.apache.jena.vocabulary.RDFS.label);
+            if (bindingLabelStmt != null) {
+                bindingLabel = bindingLabelStmt.getString();
+            } else {
+                bindingLabel = getLocalName(bindingRes);
+            }
+        }
+
         // Extract connector label from ?connectorLabel
         String connector = getOptionalLiteral(sol, "connectorLabel");
 
@@ -262,8 +291,8 @@ public class SemanticReasonerService {
         String deploymentContext = getOptionalLiteral(sol, "deployLabel");
 
         return new ServiceMatchResult(true, serviceName, containerImage,
-            capabilityName, protocol, accessMode, connector, deploymentContext,
-            recall, latency, explanation);
+            capabilityName, protocol, accessMode, bindingLabel, connector, deploymentContext,
+            recall, latency, explanation, "Defined", requirementId);
     }
 
     private static String getLocalName(org.apache.jena.rdf.model.Resource resource) {

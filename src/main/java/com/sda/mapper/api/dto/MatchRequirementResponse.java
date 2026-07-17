@@ -12,11 +12,14 @@ public record MatchRequirementResponse(
     String capabilityName,
     String protocol,
     String accessMode,
+    String bindingLabel,
     String connector,
     String deploymentContext,
     double recall,
     int latencyMs,
     String explanation,
+    String lifecycleStatus,
+    String requirementId,
     String dockerComposeManifest,
     String kubernetesManifest
 ) {
@@ -34,11 +37,14 @@ public record MatchRequirementResponse(
             result.capabilityName(),
             result.protocol(),
             result.accessMode(),
+            result.bindingLabel(),
             result.connector(),
             result.deploymentContext(),
             result.recall(),
             result.latencyMs(),
             result.explanation(),
+            result.lifecycleStatus(),
+            result.requirementId(),
             null,
             null
         );
@@ -62,11 +68,14 @@ public record MatchRequirementResponse(
             result.capabilityName(),
             result.protocol(),
             result.accessMode(),
+            result.bindingLabel(),
             result.connector(),
             result.deploymentContext(),
             result.recall(),
             result.latencyMs(),
             result.explanation(),
+            result.lifecycleStatus(),
+            result.requirementId(),
             dockerComposeManifest,
             kubernetesManifest
         );

@@ -48,6 +48,16 @@ WHERE {
     # R3: SIL and determinism class must match requirement
     FILTER (?safetyIntegrityLevel = "SIL-2")
     FILTER (?determinismClass = "HardRealTime")
+
+    # R2a: Semantic concept coverage (paper Table I)
+    FILTER NOT EXISTS {
+        ?skill sda:requiresConcept ?requiredConcept .
+        FILTER NOT EXISTS {
+            ?service sda:usesBinding ?cb .
+            ?cb sda:usesConnector ?dc .
+            ?dc sda:providesConcept ?requiredConcept .
+        }
+    }
 }
 ORDER BY DESC(?recall)
 LIMIT 1

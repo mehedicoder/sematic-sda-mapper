@@ -46,6 +46,17 @@ WHERE {
 
     FILTER (?onPlantNetwork = true)
 
+    # R2a: Semantic concept coverage (paper Table I)
+    # All concepts required by the Skill must be provided by some DataConnector
+    FILTER NOT EXISTS {
+        ?skill sda:requiresConcept ?requiredConcept .
+        FILTER NOT EXISTS {
+            ?service sda:usesBinding ?cb .
+            ?cb sda:usesConnector ?dc .
+            ?dc sda:providesConcept ?requiredConcept .
+        }
+    }
+
     # Exclude services with NE 107 Failure status
     FILTER NOT EXISTS {
         ?device  sda:hasNE107Status  :NE107-Failure .

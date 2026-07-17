@@ -13,8 +13,8 @@ class ExplanationServiceTest {
 
     private static final ServiceMatchResult MATCHED_RESULT = new ServiceMatchResult(
         true, "Flowmeter Diagnostics Service", "ghcr.io/sda/flowmeter-diag:1.0",
-        "FlowRate Diagnostics", "OPC-UA", "read-only", "OPC-UA Gateway", "Plant Network",
-        0.95, 45, "Matched"
+        "FlowRate Diagnostics", "OPC-UA", "read-only", "OPC-UA binding", "OPC-UA Gateway", "Plant Network",
+        0.95, 45, "Matched", "Defined", null
     );
 
     private static final ServiceMatchResult NO_MATCH_RESULT =

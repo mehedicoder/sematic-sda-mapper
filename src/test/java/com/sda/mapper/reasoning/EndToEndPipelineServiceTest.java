@@ -86,7 +86,8 @@ class EndToEndPipelineServiceTest {
         loader.setFilePath("ontology/css-sda-small.ttl");
         loader.loadOntology();
         var queryLoader = new SparqlQueryLoader();
-        var reasoner = new SemanticReasonerService(loader, queryLoader);
+        var rDeployService = new RDeployService(loader);
+        var reasoner = new SemanticReasonerService(loader, queryLoader, rDeployService);
 
         ServiceMatchResult result = reasoner.matchByRequirementId("REQ-001");
         assertTrue(result.matched());

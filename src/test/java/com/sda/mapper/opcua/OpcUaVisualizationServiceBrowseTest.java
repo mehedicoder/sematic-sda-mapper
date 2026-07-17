@@ -41,10 +41,10 @@ class OpcUaVisualizationServiceBrowseTest {
     @Test
     @DisplayName("BrowsedNode record should hold all fields")
     void browsedNodeRecordShouldWork() {
-        BrowsedNode node = new BrowsedNode("ns=2;Tank1.Level", "Level", "Tank1.Level", "50.0", "Double", 50.0);
-        assertEquals("ns=2;Tank1.Level", node.nodeId());
+        BrowsedNode node = new BrowsedNode("ns=2;Level", "Level", "Level", "50.0", "Double", 50.0);
+        assertEquals("ns=2;Level", node.nodeId());
         assertEquals("Level", node.browseName());
-        assertEquals("Tank1.Level", node.displayName());
+        assertEquals("Level", node.displayName());
         assertEquals("50.0", node.displayValue());
         assertEquals("Double", node.dataType());
         assertEquals(50.0, node.rawValue());

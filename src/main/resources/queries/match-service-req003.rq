@@ -44,6 +44,16 @@ WHERE {
 
     FILTER (?onPlantNetwork = true)
     FILTER (?networkZone = "OT-Zone-3")
+
+    # R2a: Semantic concept coverage (paper Table I)
+    FILTER NOT EXISTS {
+        ?skill sda:requiresConcept ?requiredConcept .
+        FILTER NOT EXISTS {
+            ?service sda:usesBinding ?cb .
+            ?cb sda:usesConnector ?dc .
+            ?dc sda:providesConcept ?requiredConcept .
+        }
+    }
 }
 ORDER BY DESC(?recall)
 LIMIT 1

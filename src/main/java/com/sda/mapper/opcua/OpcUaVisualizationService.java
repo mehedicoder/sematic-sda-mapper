@@ -7,29 +7,31 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
 @Service
 public class OpcUaVisualizationService {
 
     private static final Logger log = LoggerFactory.getLogger(OpcUaVisualizationService.class);
 
-    private static final OpcUaNodeConfig NODE_TANK_LEVEL =
-        OpcUaNodeConfig.ofString(2, "s=Tank1.Level");
-    private static final OpcUaNodeConfig NODE_TANK_FLOW_IN =
-        OpcUaNodeConfig.ofString(2, "s=Tank1.FlowRateIn");
-    private static final OpcUaNodeConfig NODE_TANK_FLOW_OUT =
-        OpcUaNodeConfig.ofString(2, "s=Tank1.FlowRateOut");
-    private static final OpcUaNodeConfig NODE_TANK_TEMP =
-        OpcUaNodeConfig.ofString(2, "s=Tank1.Temperature");
-    private static final OpcUaNodeConfig NODE_PUMP_FLOW =
-        OpcUaNodeConfig.ofString(2, "s=Pump.FlowRate");
-    private static final OpcUaNodeConfig NODE_PUMP_VIBRATION =
-        OpcUaNodeConfig.ofString(2, "s=Pump.Vibration");
-    private static final OpcUaNodeConfig NODE_PUMP_TEMP =
-        OpcUaNodeConfig.ofString(2, "s=Pump.Temperature");
-    private static final OpcUaNodeConfig NODE_PUMP_STATUS =
-        OpcUaNodeConfig.ofString(2, "s=Pump.Status");
+    private static final List<KnownNode> KNOWN_NODES = List.of(
+        new KnownNode("Tank1.Level", "Level", "cm"),
+        new KnownNode("Tank1.FlowRateIn", "Flow In", "L/min"),
+        new KnownNode("Tank1.FlowRateOut", "Flow Out", "L/min"),
+        new KnownNode("Tank1.Temperature", "Temperature", "°C"),
+        new KnownNode("Pump.FlowRate", "Flow Rate", "L/min"),
+        new KnownNode("Pump.Vibration", "Vibration", "mm/s"),
+        new KnownNode("Pump.Temperature", "Pump Temp", "°C"),
+        new KnownNode("Pump.Status", "Status", "")
+    );
 
     private final OpcUaClientFactory clientFactory;
+    private final OpcUaServerRegistry serverRegistry;
     private final TankProcessState tankState;
     private final PumpDegradationModel pumpModel;
     private final Ne107DiagnosticSimulator diagnostics;
@@ -38,15 +40,103 @@ public class OpcUaVisualizationService {
     private int opcUaPort;
 
     public OpcUaVisualizationService(OpcUaClientFactory clientFactory,
+                                      OpcUaServerRegistry serverRegistry,
                                       TankProcessState tankState,
                                       PumpDegradationModel pumpModel,
                                       Ne107DiagnosticSimulator diagnostics) {
         this.clientFactory = clientFactory;
+        this.serverRegistry = serverRegistry;
         this.tankState = tankState;
         this.pumpModel = pumpModel;
         this.diagnostics = diagnostics;
     }
 
+    /**
+     * Returns a snapshot of all servers with their current status and node values.
+     */
+    public List<ServerSnapshot> getAllServerSnapshots() {
+        List<ServerSnapshot> snapshots = new ArrayList<>();
+        for (OpcUaServerRegistry.ServerInfo server : serverRegistry.getAllServers()) {
+            snapshots.add(getServerSnapshot(server));
+        }
+        return snapshots;
+    }
+
+    /**
+     * Returns a snapshot for a single server by endpoint URL.
+     */
+    public ServerSnapshot getServerSnapshot(OpcUaServerRegistry.ServerInfo serverInfo) {
+        OpcUaEndpointConfig config = OpcUaEndpointConfig.local(
+            serverInfo.host(), serverInfo.port(), serverInfo.path());
+        OpcUaClientWrapper client = clientFactory.createClient(config);
+
+        boolean connected = false;
+        Map<String, NodeValue> nodeValues = new LinkedHashMap<>();
+
+        try {
+            client.connect(config).get(3000, TimeUnit.MILLISECONDS);
+            connected = client.isConnected();
+        } catch (Exception e) {
+            log.debug("Could not connect to {}: {}", serverInfo.endpointUrl(), e.getMessage());
+        }
+
+        if (connected) {
+            for (KnownNode knownNode : KNOWN_NODES) {
+                OpcUaNodeConfig nodeConfig = OpcUaNodeConfig.ofString(2, knownNode.nodeId());
+                try {
+                    Object value = client.readVariableValue(nodeConfig).get(2000, TimeUnit.MILLISECONDS);
+                    String display = formatValue(value, knownNode);
+                    nodeValues.put(knownNode.nodeId(), new NodeValue(knownNode.label(), display, knownNode.unit(), value));
+                } catch (Exception e) {
+                    nodeValues.put(knownNode.nodeId(), new NodeValue(knownNode.label(), "—", knownNode.unit(), null));
+                }
+            }
+        } else {
+            if ("Built-in Tank Server".equals(serverInfo.name()) || serverInfo.port() == 4840) {
+                nodeValues.putAll(buildFallbackNodeValues());
+            }
+        }
+
+        return new ServerSnapshot(
+            serverInfo.name(),
+            serverInfo.endpointUrl(),
+            serverInfo.type().name(),
+            connected,
+            nodeValues
+        );
+    }
+
+    private Map<String, NodeValue> buildFallbackNodeValues() {
+        Map<String, NodeValue> values = new LinkedHashMap<>();
+        Ne107DiagnosticSimulator.DiagnosticResult diagResult =
+            diagnostics.simulatePumpDiagnostics(
+                "DeviceStatus",
+                pumpModel.getHealthPercent(),
+                pumpModel.getVibration(),
+                pumpModel.getTemperature());
+
+        values.put("Tank1.Level", new NodeValue("Level", String.format("%.1f", tankState.getLevelCm()), "cm", tankState.getLevelCm()));
+        values.put("Tank1.FlowRateIn", new NodeValue("Flow In", String.format("%.2f", tankState.getFlowInLMin()), "L/min", tankState.getFlowInLMin()));
+        values.put("Tank1.FlowRateOut", new NodeValue("Flow Out", String.format("%.2f", tankState.getFlowOutLMin()), "L/min", tankState.getFlowOutLMin()));
+        values.put("Tank1.Temperature", new NodeValue("Temperature", String.format("%.1f", tankState.getTemperatureC()), "°C", tankState.getTemperatureC()));
+        values.put("Pump.FlowRate", new NodeValue("Flow Rate", String.format("%.2f", pumpModel.getEffectiveFlowLMin()), "L/min", pumpModel.getEffectiveFlowLMin()));
+        values.put("Pump.Vibration", new NodeValue("Vibration", String.format("%.2f", pumpModel.getVibration()), "mm/s", pumpModel.getVibration()));
+        values.put("Pump.Temperature", new NodeValue("Pump Temp", String.format("%.1f", pumpModel.getTemperature()), "°C", pumpModel.getTemperature()));
+        values.put("Pump.Status", new NodeValue("Status", diagResult.diagnosticString(), "", diagResult.diagnosticString()));
+        return values;
+    }
+
+    private String formatValue(Object value, KnownNode node) {
+        if (value == null) return "—";
+        if (value instanceof Number n) {
+            return String.format("%.2f", n.doubleValue());
+        }
+        return String.valueOf(value);
+    }
+
+    /**
+     * Legacy method: returns the old OpcUaSnapshot for backward compatibility.
+     */
     public OpcUaSnapshot getCurrentSnapshot() {
         OpcUaEndpointConfig config = OpcUaEndpointConfig.local("localhost", opcUaPort, "/");
         OpcUaClientWrapper client = clientFactory.createClient(config);
@@ -55,7 +145,6 @@ public class OpcUaVisualizationService {
             try {
                 client.connect(config).join();
             } catch (Exception e) {
-                log.debug("Could not connect to OPC UA server: {}", e.getMessage());
                 return buildSnapshotFromModel();
             }
         }
@@ -65,13 +154,13 @@ public class OpcUaVisualizationService {
 
     private OpcUaSnapshot readSnapshotFromServer(OpcUaClientWrapper client) {
         return new OpcUaSnapshot(
-            readDouble(client, NODE_TANK_LEVEL),
-            readDouble(client, NODE_TANK_FLOW_IN),
-            readDouble(client, NODE_TANK_FLOW_OUT),
-            readDouble(client, NODE_TANK_TEMP),
-            readDouble(client, NODE_PUMP_FLOW),
-            readDouble(client, NODE_PUMP_VIBRATION),
-            readDouble(client, NODE_PUMP_TEMP),
+            readDouble(client, OpcUaNodeConfig.ofString(2, "Tank1.Level")),
+            readDouble(client, OpcUaNodeConfig.ofString(2, "Tank1.FlowRateIn")),
+            readDouble(client, OpcUaNodeConfig.ofString(2, "Tank1.FlowRateOut")),
+            readDouble(client, OpcUaNodeConfig.ofString(2, "Tank1.Temperature")),
+            readDouble(client, OpcUaNodeConfig.ofString(2, "Pump.FlowRate")),
+            readDouble(client, OpcUaNodeConfig.ofString(2, "Pump.Vibration")),
+            readDouble(client, OpcUaNodeConfig.ofString(2, "Pump.Temperature")),
             readPumpStatus(client)
         );
     }
@@ -109,7 +198,7 @@ public class OpcUaVisualizationService {
 
     private String readPumpStatus(OpcUaClientWrapper client) {
         try {
-            Object value = client.readVariableValue(NODE_PUMP_STATUS).join();
+            Object value = client.readVariableValue(OpcUaNodeConfig.ofString(2, "Pump.Status")).join();
             if (value instanceof Number n) {
                 int statusCode = n.intValue();
                 return switch (statusCode) {
@@ -122,8 +211,22 @@ public class OpcUaVisualizationService {
             }
             return "Unknown";
         } catch (Exception e) {
-            log.debug("Failed to read pump status: {}", e.getMessage());
             return "Unknown";
         }
+    }
+
+    private record KnownNode(String nodeId, String label, String unit) {
+    }
+
+    public record ServerSnapshot(
+        String name,
+        String endpointUrl,
+        String type,
+        boolean connected,
+        Map<String, NodeValue> nodeValues
+    ) {
+    }
+
+    public record NodeValue(String label, String displayValue, String unit, Object rawValue) {
     }
 }

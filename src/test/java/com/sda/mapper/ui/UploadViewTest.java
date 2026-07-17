@@ -4,6 +4,7 @@ import com.sda.mapper.parser.UploadService;
 import com.sda.mapper.parser.ParserFactory;
 import com.sda.mapper.parser.MTPAmlParser;
 import com.sda.mapper.parser.UaServerDatasheetParser;
+import com.sda.mapper.parser.OpcUaNodeSetParser;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
@@ -16,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class UploadViewTest {
 
     private UploadService createUploadService() {
-        return new UploadService(new ParserFactory(new MTPAmlParser(), new UaServerDatasheetParser()));
+        return new UploadService(new ParserFactory(new MTPAmlParser(), new UaServerDatasheetParser(), new OpcUaNodeSetParser()));
     }
 
     @Test

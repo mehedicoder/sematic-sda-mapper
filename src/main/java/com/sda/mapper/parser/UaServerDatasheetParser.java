@@ -3,6 +3,10 @@ package com.sda.mapper.parser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sda.mapper.error.ParserException;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -15,13 +19,17 @@ import java.util.List;
  * Parses IDTA 02009-1-0 OPC UA Server Datasheet JSON files into SDA semantic triples.
  * Extracts CommunicationBindings from EndpointDescriptions, DataConnectors from
  * Configuration/NodeSets, and device metadata from Identification.
+ * Produces a Jena Model containing instantiated ABox triples.
  */
 @Component
 public class UaServerDatasheetParser implements Parser {
 
     private static final Logger log = LoggerFactory.getLogger(UaServerDatasheetParser.class);
 
+    private static final String INST_NS = "http://www.example.org/instance#";
     private static final String SDA_NS = "http://www.example.org/sda#";
+    private static final String RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+    private static final String RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label";
 
     @Override
     public ParseResult parse(InputStream input) {
@@ -43,31 +51,58 @@ public class UaServerDatasheetParser implements Parser {
                 throw new ParserException("JSON document is empty");
             }
 
+            Model model = ModelFactory.createDefaultModel();
+            model.setNsPrefix("sda", SDA_NS);
+            model.setNsPrefix("inst", INST_NS);
+
+            Property rdfType = model.createProperty(RDF_TYPE);
+            Property rdfsLabel = model.createProperty(RDFS_LABEL);
+            Resource bindingClass = model.createResource(SDA_NS + "CommunicationBinding");
+            Resource connectorClass = model.createResource(SDA_NS + "DataConnector");
+            Property protocol = model.createProperty(SDA_NS + "protocol");
+            Property accessMode = model.createProperty(SDA_NS + "accessMode");
+            Property securityMode = model.createProperty(SDA_NS + "securityMode");
+            Property informationModel = model.createProperty(SDA_NS + "informationModel");
+            Property semanticID = model.createProperty(SDA_NS + "semanticID");
+            Property isGateway = model.createProperty(SDA_NS + "isGateway");
+            Property usesConnector = model.createProperty(SDA_NS + "usesConnector");
+            Property image = model.createProperty(SDA_NS + "image");
+
             List<String> details = new ArrayList<>();
             int tripleCount = 0;
 
             // Parse EndpointDescriptions into sda:CommunicationBinding
             int endpointCount = 0;
+            List<Resource> bindingResources = new ArrayList<>();
             JsonNode endpoints = root.path("EndpointDescriptions");
             if (endpoints.isArray()) {
                 for (JsonNode endpoint : endpoints) {
                     String uri = endpoint.path("uri").asText("");
-                    String securityMode = endpoint.path("securityMode").asText("None");
-                    String securityPolicy = endpoint.path("securityPolicy").asText("");
+                    String secMode = endpoint.path("securityMode").asText("None");
                     String transportProfile = endpoint.path("transportProfile").asText("");
 
-                    String bindingUri = SDA_NS + "CommunicationBinding_" + endpointCount;
-                    details.add("CommunicationBinding: " + bindingUri
+                    String bindingLocalName = "CB-UA-" + endpointCount;
+                    Resource bindingRes = model.createResource(INST_NS + bindingLocalName);
+                    bindingRes.addProperty(rdfType, bindingClass);
+                    bindingRes.addProperty(rdfsLabel, "OPC-UA binding " + endpointCount);
+                    bindingRes.addProperty(protocol, "OPC-UA");
+                    bindingRes.addProperty(accessMode, "read-only");
+                    bindingRes.addProperty(securityMode, secMode);
+
+                    tripleCount += 5; // rdf:type + label + protocol + accessMode + securityMode
+                    bindingResources.add(bindingRes);
+
+                    details.add("CommunicationBinding: " + INST_NS + bindingLocalName
                         + " (uri=" + uri
-                        + ", securityMode=" + securityMode
+                        + ", securityMode=" + secMode
                         + ", protocol=OPC-UA)");
-                    tripleCount += 4; // rdf:type + uri + securityMode + transportProfile
                     endpointCount++;
                 }
             }
 
             // Parse Configuration/NodeSets into sda:DataConnector
             int nodeSetCount = 0;
+            List<Resource> connectorResources = new ArrayList<>();
             JsonNode configuration = root.path("Configuration");
             if (configuration.isObject()) {
                 JsonNode nodeSets = configuration.path("NodeSets");
@@ -75,13 +110,27 @@ public class UaServerDatasheetParser implements Parser {
                     for (JsonNode nodeSet : nodeSets) {
                         String nodeSetId = nodeSet.path("id").asText("unknown");
 
-                        String connectorUri = SDA_NS + "DataConnector_" + nodeSetCount;
-                        details.add("DataConnector: " + connectorUri
+                        String connectorLocalName = "DC-UA-" + nodeSetCount;
+                        Resource connectorRes = model.createResource(INST_NS + connectorLocalName);
+                        connectorRes.addProperty(rdfType, connectorClass);
+                        connectorRes.addProperty(rdfsLabel, "OPC-UA connector " + nodeSetCount);
+                        connectorRes.addProperty(informationModel, "OPC-UA");
+                        connectorRes.addProperty(isGateway, model.createTypedLiteral(false));
+
+                        tripleCount += 4; // rdf:type + label + informationModel + isGateway
+                        connectorResources.add(connectorRes);
+
+                        details.add("DataConnector: " + INST_NS + connectorLocalName
                             + " (nodeSet=" + nodeSetId + ")");
-                        tripleCount += 2; // rdf:type + nodeSetId
                         nodeSetCount++;
                     }
                 }
+            }
+
+            // Wire binding → connector via usesConnector
+            for (int i = 0; i < Math.min(bindingResources.size(), connectorResources.size()); i++) {
+                bindingResources.get(i).addProperty(usesConnector, connectorResources.get(i));
+                tripleCount++;
             }
 
             // Parse Identification into device metadata
@@ -89,11 +138,21 @@ public class UaServerDatasheetParser implements Parser {
             if (identification.isObject()) {
                 String productUri = identification.path("productUri").asText("");
                 String softwareVersion = identification.path("softwareVersion").asText("");
+                String serialNumber = identification.path("serialNumber").asText("");
 
                 if (!productUri.isBlank()) {
+                    // Create a service resource representing the OPC UA server device
+                    String deviceLocalName = "SVC-UA-Device";
+                    Resource deviceRes = model.createResource(INST_NS + deviceLocalName);
+                    deviceRes.addProperty(rdfType, model.createResource(SDA_NS + "Service"));
+                    deviceRes.addProperty(rdfsLabel, productUri);
+                    if (!serialNumber.isBlank()) {
+                        deviceRes.addProperty(image, "opcua/" + serialNumber);
+                    }
+                    tripleCount += 2; // rdf:type + label
+
                     details.add("Identification: productUri=" + productUri
                         + ", softwareVersion=" + softwareVersion);
-                    tripleCount += 2; // productUri + softwareVersion
                 }
             }
 
@@ -103,7 +162,7 @@ public class UaServerDatasheetParser implements Parser {
 
             log.info("OPC UA Datasheet parse completed: {}", summary);
 
-            return new ParseResult("OPC-UA-Datasheet", tripleCount, details, summary);
+            return new ParseResult("OPC-UA-Datasheet", tripleCount, details, summary, model);
 
         } catch (ParserException e) {
             throw e;

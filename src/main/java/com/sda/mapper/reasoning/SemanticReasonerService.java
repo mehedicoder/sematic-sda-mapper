@@ -97,7 +97,9 @@ public class SemanticReasonerService {
      * Builds a dynamic SPARQL query from the provided parameters map.
      *
      * @param parameters key-value pairs for filtering: "protocol", "accessMode",
-     *                   "minRecall", "maxLatency", "onPlantNetwork", "networkZone"
+     *                   "minRecall", "maxLatency", "onPlantNetwork", "networkZone",
+     *                   "safetyIntegrityLevel", "determinismClass", "functionClass",
+     *                   "engineeringUnit"
      * @return a {@link ServiceMatchResult} with matched service details
      */
     public ServiceMatchResult matchInline(Map<String, String> parameters) {
@@ -112,9 +114,13 @@ public class SemanticReasonerService {
         int maxLatency = Integer.parseInt(
             parameters.getOrDefault("maxLatency", "60"));
         String onPlantNetwork = parameters.getOrDefault("onPlantNetwork", "true");
+        String safetyIntegrityLevel = parameters.getOrDefault("safetyIntegrityLevel", null);
+        String determinismClass = parameters.getOrDefault("determinismClass", null);
+        String networkZone = parameters.getOrDefault("networkZone", null);
 
         String queryStr = buildInlineQuery(protocol, accessMode, minRecall,
-            maxLatency, onPlantNetwork);
+            maxLatency, onPlantNetwork, safetyIntegrityLevel, determinismClass,
+            networkZone);
 
         try {
             Model model = ontologyModelLoader.getModel();
@@ -141,8 +147,12 @@ public class SemanticReasonerService {
 
     private String buildInlineQuery(String protocol, String accessMode,
                                      double minRecall, int maxLatency,
-                                     String onPlantNetwork) {
-        return """
+                                     String onPlantNetwork,
+                                     String safetyIntegrityLevel,
+                                     String determinismClass,
+                                     String networkZone) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("""
             PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             PREFIX css:  <http://www.example.org/css#>
@@ -151,6 +161,7 @@ public class SemanticReasonerService {
 
             SELECT ?capability ?skill ?service ?binding ?protocol ?accessMode
                    ?recall ?latency ?image ?label ?capLabel
+                   ?connector ?connectorLabel ?deploy ?deployLabel
             WHERE {
                 ?service      a                  sda:Service ;
                              rdfs:label          ?label ;
@@ -159,7 +170,10 @@ public class SemanticReasonerService {
 
                 ?service      sda:usesBinding    ?binding .
                 ?binding      sda:protocol        ?protocol ;
-                              sda:accessMode      ?accessMode .
+                              sda:accessMode      ?accessMode ;
+                              sda:usesConnector   ?connector .
+
+                ?connector    rdfs:label          ?connectorLabel .
 
                 OPTIONAL { ?service sda:image ?image }
                 OPTIONAL {
@@ -174,12 +188,29 @@ public class SemanticReasonerService {
                 FILTER (?latency <= %d)
 
                 ?service      sda:isDeployedBy   ?deploy .
-                ?deploy       sda:onPlantNetwork  ?onPlantNetwork .
+                ?deploy       rdfs:label          ?deployLabel ;
+                              sda:onPlantNetwork  ?onPlantNetwork .
                 FILTER (?onPlantNetwork = %s)
-            }
-            ORDER BY DESC(?recall)
-            LIMIT 1
-            """.formatted(protocol, accessMode, minRecall, maxLatency, onPlantNetwork);
+            """.formatted(protocol, accessMode, minRecall, maxLatency, onPlantNetwork));
+
+        if (safetyIntegrityLevel != null) {
+            sb.append("                ?deploy sda:safetyIntegrityLevel ?sil .\n");
+            sb.append("                FILTER (?sil = \"%s\")\n".formatted(safetyIntegrityLevel));
+        }
+        if (determinismClass != null) {
+            sb.append("                ?deploy sda:determinismClass ?dc .\n");
+            sb.append("                FILTER (?dc = \"%s\")\n".formatted(determinismClass));
+        }
+        if (networkZone != null) {
+            sb.append("                ?deploy sda:networkZone ?nz .\n");
+            sb.append("                FILTER (?nz = \"%s\")\n".formatted(networkZone));
+        }
+
+        sb.append("            }\n");
+        sb.append("            ORDER BY DESC(?recall)\n");
+        sb.append("            LIMIT 1");
+
+        return sb.toString();
     }
 
     private ServiceMatchResult extractMatchResult(QuerySolution sol) {
@@ -224,8 +255,14 @@ public class SemanticReasonerService {
         String explanation = "Matched service '%s' with %s protocol, recall=%.2f, latency=%dms"
             .formatted(serviceName, protocol, recall, latency);
 
+        // Extract connector label from ?connectorLabel
+        String connector = getOptionalLiteral(sol, "connectorLabel");
+
+        // Extract deployment context label from ?deployLabel
+        String deploymentContext = getOptionalLiteral(sol, "deployLabel");
+
         return new ServiceMatchResult(true, serviceName, containerImage,
-            capabilityName, protocol, accessMode, null, null,
+            capabilityName, protocol, accessMode, connector, deploymentContext,
             recall, latency, explanation);
     }
 

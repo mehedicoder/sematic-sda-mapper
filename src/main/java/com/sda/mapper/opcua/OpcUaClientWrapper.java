@@ -3,24 +3,31 @@ package com.sda.mapper.opcua;
 import com.sda.mapper.opcua.model.OpcUaEndpointConfig;
 import com.sda.mapper.opcua.model.OpcUaNodeConfig;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
+import org.eclipse.milo.opcua.stack.core.Identifiers;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.Variant;
+import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UByte;
 import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
+import org.eclipse.milo.opcua.stack.core.types.enumerated.BrowseDirection;
+import org.eclipse.milo.opcua.stack.core.types.enumerated.TimestampsToReturn;
+import org.eclipse.milo.opcua.stack.core.types.structured.BrowseDescription;
+import org.eclipse.milo.opcua.stack.core.types.structured.BrowseResult;
 import org.eclipse.milo.opcua.stack.core.types.structured.ReadValueId;
+import org.eclipse.milo.opcua.stack.core.types.structured.ReferenceDescription;
 import org.eclipse.milo.opcua.stack.core.types.structured.WriteValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Wrapper around Eclipse Milo OPC UA client for reading and writing variables.
+ * Wrapper around Eclipse Milo OPC UA client for reading, writing, and browsing variables.
  */
 @Component
 public class OpcUaClientWrapper {
@@ -64,7 +71,7 @@ public class OpcUaClientWrapper {
         
         return CompletableFuture.supplyAsync(() -> {
             try {
-                DataValue dataValue = client.read(0.0, null, List.of(readValueId))
+                DataValue dataValue = client.read(0.0, TimestampsToReturn.Both, List.of(readValueId))
                     .get(READ_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     .getResults()[0];
                 
@@ -104,6 +111,74 @@ public class OpcUaClientWrapper {
     }
 
     /**
+     * Browses the children of a node and returns reference descriptions.
+     *
+     * @param nodeId the node to browse (null for root/ObjectsFolder)
+     * @return list of child reference descriptions
+     */
+    public CompletableFuture<List<ReferenceDescription>> browse(NodeId nodeId) {
+        if (client == null) {
+            throw new IllegalStateException("Client not connected");
+        }
+
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                BrowseDescription browse = new BrowseDescription(
+                    nodeId,
+                    BrowseDirection.Forward,
+                    Identifiers.HierarchicalReferences,
+                    Boolean.TRUE,
+                    UInteger.valueOf(0),
+                    UInteger.valueOf(0)
+                );
+
+                BrowseResult result = client.browse(browse)
+                    .get(READ_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+
+                List<ReferenceDescription> refs = new ArrayList<>();
+                ReferenceDescription[] references = result.getReferences();
+                if (references != null) {
+                    for (ReferenceDescription ref : references) {
+                        refs.add(ref);
+                    }
+                }
+                return refs;
+            } catch (Exception e) {
+                log.error("Failed to browse node {}: {}", nodeId, e.getMessage());
+                return List.of();
+            }
+        });
+    }
+
+    /**
+     * Reads the browse name and value of a node.
+     */
+    public CompletableFuture<NodeSnapshot> readNodeSnapshot(OpcUaNodeConfig nodeConfig) {
+        if (client == null) {
+            throw new IllegalStateException("Client not connected");
+        }
+
+        NodeId nodeId = new NodeId(nodeConfig.namespaceIndex(), nodeConfig.identifier());
+        ReadValueId readValueId = new ReadValueId(nodeId, null, null, null);
+
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                DataValue dataValue = client.read(0.0, TimestampsToReturn.Both, List.of(readValueId))
+                    .get(READ_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                    .getResults()[0];
+
+                Variant value = dataValue.getValue();
+                Object rawValue = value != null ? value.getValue() : null;
+                String displayValue = rawValue != null ? String.valueOf(rawValue) : "—";
+                return new NodeSnapshot(nodeConfig.toNodeIdString(), displayValue, rawValue);
+            } catch (Exception e) {
+                log.debug("Failed to read node snapshot {}: {}", nodeConfig.toNodeIdString(), e.getMessage());
+                return new NodeSnapshot(nodeConfig.toNodeIdString(), "error", null);
+            }
+        });
+    }
+
+    /**
      * Disconnects from the OPC UA server.
      */
     public CompletableFuture<Void> disconnect() {
@@ -135,5 +210,8 @@ public class OpcUaClientWrapper {
      */
     public OpcUaEndpointConfig getCurrentConfig() {
         return currentConfig;
+    }
+
+    public record NodeSnapshot(String nodeId, String displayValue, Object rawValue) {
     }
 }

@@ -2,11 +2,9 @@ package com.sda.mapper.ui;
 
 import com.sda.mapper.ui.component.NotificationCenter;
 import com.sda.mapper.ui.component.NotificationPanel;
-import com.sda.mapper.ui.component.SearchBar;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.html.Image;
-import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
@@ -35,50 +33,28 @@ public class MainLayout extends AppLayout {
 
         var banner = new Image("/images/banner.svg", "Otto von Guericke Universität Magdeburg – SDA Platform");
         banner.setHeight("64px");
+        banner.setWidth("1200px");
         banner.getStyle()
             .set("cursor", "pointer")
-            .set("flex-grow", "1");
+            .set("object-fit", "contain");
         banner.addClickListener(e -> UI.getCurrent().navigate(SystemStatusView.class));
-
-        var themeToggle = ThemeConfig.createThemeToggleButton();
-
-        var userIcon = new Icon(VaadinIcon.USER);
-        var userLabel = new Span("admin");
-        userLabel.addClassNames(LumoUtility.TextColor.SECONDARY, LumoUtility.FontSize.SMALL);
-        var userProfile = new HorizontalLayout(userIcon, userLabel);
-        userProfile.setAlignItems(FlexComponent.Alignment.CENTER);
-        userProfile.setSpacing(false);
-
-        var searchBar = new SearchBar();
-        searchBar.setWidth("350px");
-        searchBar.addSearchListener(event ->
-            UI.getCurrent().navigate(SearchView.class));
 
         var notificationCenter = new NotificationCenter();
         var notificationPanel = new NotificationPanel(notificationCenter);
 
-        var rightControls = new HorizontalLayout(notificationPanel, themeToggle, userProfile);
+        var rightControls = new HorizontalLayout(notificationPanel);
         rightControls.setAlignItems(FlexComponent.Alignment.CENTER);
         rightControls.setSpacing(false);
 
-        var toolbar = new HorizontalLayout(toggle, banner, searchBar, rightControls);
+        var toolbar = new HorizontalLayout(toggle, banner, rightControls);
         toolbar.setWidthFull();
         toolbar.setHeight("64px");
         toolbar.setAlignItems(FlexComponent.Alignment.CENTER);
         toolbar.setSpacing(true);
-        toolbar.setFlexGrow(1, banner);
         addToNavbar(toolbar);
     }
 
     private void createDrawerNavigation() {
-        var logo = new Image("/images/industrie40_logo.png", "Plattform Industrie 4.0");
-        logo.setHeight("28px");
-        logo.addClassName("drawer-logo");
-        logo.getStyle()
-            .set("object-fit", "contain")
-            .set("object-position", "left center");
-        addToDrawer(logo);
-
         addToDrawer(createDrawerLink(VaadinIcon.BELL, "System Status", SystemStatusView.class));
         addToDrawer(createDrawerLink(VaadinIcon.CONNECT, "Service Instances", ServiceInstancesView.class));
         addToDrawer(createDrawerLink(VaadinIcon.CONNECT, "Upload", UploadView.class));

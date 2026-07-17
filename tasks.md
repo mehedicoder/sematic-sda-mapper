@@ -440,6 +440,66 @@ Track completed work with validation evidence. Only the human engineer marks tas
 
 ---
 
+## Bug Fixes & Improvements: OPC UA Multi-Server, OPC UA NodeSet Parser, End-to-End Pipeline
+
+**Status:** [x] Completed
+**Completed:** 2026-07-17
+**Tests:** 251 passing (0 failures) — cumulative
+
+### Completion Evidence
+
+- `mvn clean test` — BUILD SUCCESS, 251 tests, 0 failures
+- All 3 requirements (REQ-001/002/003) match correctly via end-to-end pipeline
+- OPC UA NodeSet XML parser parses real NodeSet format into SDA triples
+- OPC UA multi-server registry enumerates built-in, external, and custom servers
+- OpcUaVisualizationView displays server grid and per-server data cards
+- ParserFactory routes XML files to correct parser via content sniffing
+
+### What was built
+
+| Component | Files |
+|---|---|
+| OpcUaServerRegistry | `src/main/java/com/sda/mapper/opcua/OpcUaServerRegistry.java` |
+| OpcUaNodeSetParser | `src/main/java/com/sda/mapper/parser/OpcUaNodeSetParser.java` |
+| EndToEndPipelineService | `src/main/java/com/sda/mapper/reasoning/EndToEndPipelineService.java` |
+| OpcUaClientWrapper (browse) | `src/main/java/com/sda/mapper/opcua/OpcUaClientWrapper.java` |
+| OpcUaVisualizationService (multi-server) | `src/main/java/com/sda/mapper/opcua/OpcUaVisualizationService.java` |
+| OpcUaVisualizationView (server grid) | `src/main/java/com/sda/mapper/ui/OpcUaVisualizationView.java` |
+| SettingsView (theme + profile) | `src/main/java/com/sda/mapper/ui/SettingsView.java` |
+| MainLayout (search removed, logo removed) | `src/main/java/com/sda/mapper/ui/MainLayout.java` |
+| OntologyExplorerView (dedup) | `src/main/java/com/sda/mapper/ui/OntologyExplorerView.java` |
+| ParserFactory (content sniffing) | `src/main/java/com/sda/mapper/parser/ParserFactory.java` |
+| ParseResult (model field) | `src/main/java/com/sda/mapper/parser/ParseResult.java` |
+| MTPAmlParser (RDF triples) | `src/main/java/com/sda/mapper/parser/MTPAmlParser.java` |
+| UaServerDatasheetParser (RDF triples) | `src/main/java/com/sda/mapper/parser/UaServerDatasheetParser.java` |
+| UploadService (BufferedInputStream) | `src/main/java/com/sda/mapper/parser/UploadService.java` |
+| SemanticReasonerService (dynamic filters) | `src/main/java/com/sda/mapper/reasoning/SemanticReasonerService.java` |
+| RequirementMatchingController (manifests) | `src/main/java/com/sda/mapper/api/RequirementMatchingController.java` |
+| MatchRequirementResponse (manifest fields) | `src/main/java/com/sda/mapper/api/dto/MatchRequirementResponse.java` |
+| options.json (requirementType, functionClass) | `src/main/resources/config/options.json` |
+| SPARQL queries (SELECT ?connector) | `src/main/resources/queries/match-service*.rq` |
+
+### Test classes (4 new, 22 @Test methods)
+
+| Test Class | Tests |
+|---|---|
+| `OpcUaServerRegistryTest` | 6 |
+| `OpcUaNodeSetParserTest` | 9 |
+| `EndToEndPipelineServiceTest` | 7 |
+| `RequirementMatchingControllerTest` (extended) | +5 |
+| `EvaluationTest` (extended) | +8 |
+| `ParserFactoryTest` (extended) | +3 |
+| `UploadViewTest` (extended) | +1 |
+
+### Key decisions
+
+- Content sniffing (4KB peek via `BufferedInputStream.mark/reset`) used instead of file extension to distinguish OPC UA NodeSet XML from MTP AML XML
+- `OpcUaServerRegistry` uses probe pattern (2s timeout) to check server connectivity and supports listener pattern for UI updates
+- `OpcUaClientWrapper.browse()` uses Milo 0.6.14 API: `BrowseDescription` constructor with `(NodeId, BrowseDirection, NodeId, Boolean, UInteger, UInteger)` and `BrowseResult.getReferences()` returning `ReferenceDescription[]`
+- `.gitignore` updated to exclude `src/main/frontend/generated/`, `*.ipr`, `*.iws`
+
+---
+
 ## Summary
 
 | Phase | Status | Tests | Date |
@@ -456,6 +516,7 @@ Track completed work with validation evidence. Only the human engineer marks tas
 | Phase 10: Explanation + NotificationCenter | [x] Completed | 220 | 2026-07-16 |
 | Phase 11: Evaluation + Monitoring | [x] Completed | 220 | 2026-07-16 |
 | Phase 11b: OPC UA Visualization | [x] Completed | 220 | 2026-07-16 |
+| Bug Fixes: Multi-Server, NodeSet, Pipeline | [x] Completed | 251 | 2026-07-17 |
 | Phase 12: Documentation | [ ] Not started | — | — |
 | Phase 13: EKA UI Polish | [ ] Not started | — | — |
 | Phase 14: Margo Sandbox | [ ] Not started | — | — |

@@ -5,11 +5,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.io.BufferedInputStream;
 import java.io.InputStream;
 
 /**
  * Service that orchestrates file upload parsing via {@link ParserFactory}.
- * Logs parser invocation for metrics and observability.
+ * Wraps the input stream in a {@link BufferedInputStream} to guarantee mark/reset
+ * support for content sniffing.
  */
 @Service
 public class UploadService {
@@ -23,7 +25,8 @@ public class UploadService {
     }
 
     /**
-     * Parses an uploaded file using the appropriate parser selected by filename extension.
+     * Parses an uploaded file using the appropriate parser selected by filename extension
+     * and content sniffing.
      *
      * @param filename the original filename
      * @param input    the file content stream
@@ -34,8 +37,9 @@ public class UploadService {
         log.info("Parsing upload: filename={}", filename);
         long start = System.currentTimeMillis();
 
-        Parser parser = parserFactory.getParser(filename);
-        ParseResult result = parser.parse(input);
+        InputStream buffered = new BufferedInputStream(input);
+        Parser parser = parserFactory.getParser(filename, buffered);
+        ParseResult result = parser.parse(buffered);
 
         long elapsed = System.currentTimeMillis() - start;
         log.info("Parse completed in {}ms: {} triples, type={}",

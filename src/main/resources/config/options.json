@@ -1,4 +1,10 @@
 {
+  "requirementType": [
+    {"value": "AssetDiagnostics", "label": "Asset Diagnostics"},
+    {"value": "ProcessControl", "label": "Process Control"},
+    {"value": "EnergyMonitoring", "label": "Energy Monitoring"},
+    {"value": "PredictiveMaintenance", "label": "Predictive Maintenance"}
+  ],
   "protocol": [
     {"value": "OPC-UA", "label": "OPC UA"},
     {"value": "PROFINET", "label": "PROFINET"},
@@ -42,6 +48,15 @@
     {"value": "HardRealTime", "label": "Hard Real-Time"},
     {"value": "SoftRealTime", "label": "Soft Real-Time"},
     {"value": "BestEffort", "label": "Best Effort"}
+  ],
+  "functionClass": [
+    {"value": "FlowMeasurement", "label": "Flow Measurement"},
+    {"value": "TemperatureControl", "label": "Temperature Control"},
+    {"value": "PressureMonitoring", "label": "Pressure Monitoring"},
+    {"value": "VibrationAnalysis", "label": "Vibration Analysis"},
+    {"value": "EnergyMetering", "label": "Energy Metering"},
+    {"value": "ValveControl", "label": "Valve Control"},
+    {"value": "MotorControl", "label": "Motor Control"}
   ],
   "informationModel": [
     {"value": "OPC-UA", "label": "OPC UA"},

@@ -4,6 +4,8 @@ import com.sda.mapper.api.dto.MatchRequirementRequest;
 import com.sda.mapper.api.dto.MatchRequirementResponse;
 import com.sda.mapper.api.dto.ValidationErrorResponse;
 import com.sda.mapper.api.dto.ValidationErrorResponse.FieldError;
+import com.sda.mapper.deployment.DockerComposeManifestService;
+import com.sda.mapper.deployment.KubernetesManifestService;
 import com.sda.mapper.error.OntologyLoadingException;
 import com.sda.mapper.reasoning.SemanticReasonerService;
 import com.sda.mapper.reasoning.ServiceMatchResult;
@@ -49,11 +51,17 @@ public class RequirementMatchingController {
 
     private final SemanticReasonerService reasonerService;
     private final OntologyModelLoader ontologyModelLoader;
+    private final DockerComposeManifestService dockerComposeService;
+    private final KubernetesManifestService kubernetesService;
 
     public RequirementMatchingController(SemanticReasonerService reasonerService,
-                                         OntologyModelLoader ontologyModelLoader) {
+                                         OntologyModelLoader ontologyModelLoader,
+                                         DockerComposeManifestService dockerComposeService,
+                                         KubernetesManifestService kubernetesService) {
         this.reasonerService = reasonerService;
         this.ontologyModelLoader = ontologyModelLoader;
+        this.dockerComposeService = dockerComposeService;
+        this.kubernetesService = kubernetesService;
     }
 
     /**
@@ -95,11 +103,22 @@ public class RequirementMatchingController {
             Map<String, String> params = new HashMap<>();
             if (request.protocol() != null) params.put("protocol", request.protocol());
             if (request.accessMode() != null) params.put("accessMode", request.accessMode());
+            if (request.functionClass() != null) params.put("functionClass", request.functionClass());
+            if (request.safetyIntegrityLevel() != null) params.put("safetyIntegrityLevel", request.safetyIntegrityLevel());
+            if (request.networkZone() != null) params.put("networkZone", request.networkZone());
+            if (request.determinismClass() != null) params.put("determinismClass", request.determinismClass());
+            if (request.engineeringUnit() != null) params.put("engineeringUnit", request.engineeringUnit());
             if (request.minRecall() != null) params.put("minRecall", String.valueOf(request.minRecall()));
             if (request.maxLatencyMs() != null) params.put("maxLatency", String.valueOf(request.maxLatencyMs()));
             result = reasonerService.matchInline(params);
         }
 
+        if (result.matched()) {
+            String dockerComposeYaml = dockerComposeService.generate(result);
+            String kubernetesYaml = kubernetesService.generate(result);
+            return ResponseEntity.ok(
+                MatchRequirementResponse.withManifests(result, dockerComposeYaml, kubernetesYaml));
+        }
         return ResponseEntity.ok(MatchRequirementResponse.fromServiceMatchResult(result));
     }
 

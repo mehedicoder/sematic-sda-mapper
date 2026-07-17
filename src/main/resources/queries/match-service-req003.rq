@@ -4,7 +4,7 @@ PREFIX css:  <http://www.example.org/css#>
 PREFIX sda:  <http://www.example.org/sda#>
 PREFIX :     <http://www.example.org/instance#>
 
-SELECT ?requirement ?capability ?skill ?service ?binding ?protocol ?accessMode ?recall ?latency ?networkZone
+SELECT ?requirement ?capability ?skill ?service ?binding ?protocol ?accessMode ?recall ?latency ?networkZone ?connector ?connectorLabel ?deploy ?deployLabel
 WHERE {
     # Bind the requirement to match (placeholder replaced at runtime)
     BIND(:REQ-003 AS ?requirement)
@@ -21,7 +21,10 @@ WHERE {
     ?service      sda:usesBinding     ?binding .
 
     ?binding      sda:protocol        ?protocol ;
-                  sda:accessMode      ?accessMode .
+                  sda:accessMode      ?accessMode ;
+                  sda:usesConnector   ?connector .
+
+    ?connector    rdfs:label          ?connectorLabel .
 
     FILTER (?protocol = "OPC-UA")
     FILTER (?accessMode = "read-only")
@@ -35,7 +38,8 @@ WHERE {
 
     ?service      sda:isDeployedBy    ?deploy .
 
-    ?deploy       sda:onPlantNetwork  ?onPlantNetwork ;
+    ?deploy       rdfs:label          ?deployLabel ;
+                  sda:onPlantNetwork  ?onPlantNetwork ;
                   sda:networkZone     ?networkZone .
 
     FILTER (?onPlantNetwork = true)

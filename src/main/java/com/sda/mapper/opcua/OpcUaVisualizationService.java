@@ -151,6 +151,7 @@ public class OpcUaVisualizationService {
     public List<BrowsedNode> browseServerNodes(String endpointUrl) {
         OpcUaServerRegistry.ServerInfo serverInfo = serverRegistry.getServer(endpointUrl);
         if (serverInfo == null) {
+            log.debug("No server info found for {}", endpointUrl);
             return List.of();
         }
 
@@ -171,6 +172,7 @@ public class OpcUaVisualizationService {
         } catch (Exception e) {
             log.debug("Browse failed for {}: {}", endpointUrl, e.getMessage());
         }
+        log.debug("Browsed {} nodes from {}", result.size(), endpointUrl);
         return result;
     }
 
@@ -182,46 +184,39 @@ public class OpcUaVisualizationService {
         try {
             refs = client.browse(nodeId).get(3000, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
+            log.debug("Browse failed for node {}: {}", nodeId, e.getMessage());
             return;
         }
 
         var nsTable = client.getNamespaceTable();
         for (ReferenceDescription ref : refs) {
             NodeId childNodeId = ref.getNodeId().toNodeId(nsTable).orElse(null);
-            if (childNodeId == null) continue;
+            if (childNodeId == null) {
+                log.debug("Could not resolve ExpandedNodeId for ref: {}", ref.getBrowseName());
+                continue;
+            }
 
-            boolean isVariable = isVariableNode(ref, nsTable);
-            if (isVariable) {
-                String browseName = ref.getBrowseName() != null ? ref.getBrowseName().getName() : "";
-                String displayName = ref.getDisplayName() != null
-                    ? ref.getDisplayName().getText() : browseName;
-                String nodeIdStr = String.format("ns=%d;%s", childNodeId.getNamespaceIndex().intValue(),
-                    childNodeId.getIdentifier());
+            String browseName = ref.getBrowseName() != null ? ref.getBrowseName().getName() : "";
+            String displayName = ref.getDisplayName() != null
+                ? ref.getDisplayName().getText() : browseName;
+            String nodeIdStr = String.format("ns=%d;%s", childNodeId.getNamespaceIndex().intValue(),
+                childNodeId.getIdentifier());
 
-                Object rawValue = null;
-                String displayValue = "—";
-                String dataType = "";
-                try {
-                    OpcUaNodeConfig nodeConfig = OpcUaNodeConfig.ofString(
-                        childNodeId.getNamespaceIndex().intValue(),
-                        String.valueOf(childNodeId.getIdentifier()));
-                    rawValue = client.readVariableValue(nodeConfig).get(2000, TimeUnit.MILLISECONDS);
-                    displayValue = rawValue != null ? String.valueOf(rawValue) : "—";
-                    dataType = rawValue != null ? rawValue.getClass().getSimpleName() : "";
-                } catch (Exception e) {
-                    displayValue = "error";
-                }
-
+            // Try to read value — if it succeeds, this is a variable node
+            try {
+                OpcUaNodeConfig nodeConfig = OpcUaNodeConfig.ofString(
+                    childNodeId.getNamespaceIndex().intValue(),
+                    String.valueOf(childNodeId.getIdentifier()));
+                Object rawValue = client.readVariableValue(nodeConfig).get(2000, TimeUnit.MILLISECONDS);
+                String displayValue = rawValue != null ? String.valueOf(rawValue) : "—";
+                String dataType = rawValue != null ? rawValue.getClass().getSimpleName() : "";
                 result.add(new BrowsedNode(nodeIdStr, browseName, displayName,
                     displayValue, dataType, rawValue));
-            } else {
+            } catch (Exception e) {
+                // Read failed — this is likely an object/method folder, recurse into it
                 browseRecursive(client, childNodeId, result, depth + 1, maxDepth);
             }
         }
-    }
-
-    private boolean isVariableNode(ReferenceDescription ref, org.eclipse.milo.opcua.stack.core.NamespaceTable nsTable) {
-        return ref.getNodeClass() == org.eclipse.milo.opcua.stack.core.types.enumerated.NodeClass.Variable;
     }
 
     /**

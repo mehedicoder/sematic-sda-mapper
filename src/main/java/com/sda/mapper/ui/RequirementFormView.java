@@ -1,11 +1,19 @@
 package com.sda.mapper.ui;
 
-import com.sda.mapper.api.Option;
+import com.sda.mapper.api.OptionsConfigService;
+import com.sda.mapper.api.dto.MatchRequirementRequest;
+import com.sda.mapper.api.dto.MatchRequirementResponse;
+import com.sda.mapper.deployment.DockerComposeManifestService;
+import com.sda.mapper.deployment.KubernetesManifestService;
+import com.sda.mapper.ontology.OntologyModelLoader;
+import com.sda.mapper.reasoning.RDeployService;
+import com.sda.mapper.reasoning.RVerifyService;
+import com.sda.mapper.reasoning.SemanticReasonerService;
+import com.sda.mapper.reasoning.ServiceMatchResult;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.formlayout.FormLayout;
-import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Paragraph;
@@ -17,12 +25,14 @@ import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.Resource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Requirement form view for creating and matching requirements.
@@ -31,6 +41,19 @@ import java.util.List;
 @Route(value = "requirements", layout = MainLayout.class)
 @PageTitle("Requirement Form")
 public class RequirementFormView extends VerticalLayout {
+
+    private static final Logger log = LoggerFactory.getLogger(RequirementFormView.class);
+    private static final String INST_NS = "http://www.example.org/instance#";
+    private static final String SDA_NS = "http://www.example.org/sda#";
+    private static final String RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+
+    private final OptionsConfigService optionsConfigService;
+    private final SemanticReasonerService reasonerService;
+    private final OntologyModelLoader ontologyModelLoader;
+    private final DockerComposeManifestService dockerComposeService;
+    private final KubernetesManifestService kubernetesService;
+    private final RDeployService rDeployService;
+    private final RVerifyService rVerifyService;
 
     private final TextField titleField = new TextField("Title");
     private final TextArea descriptionField = new TextArea("Description");
@@ -48,7 +71,21 @@ public class RequirementFormView extends VerticalLayout {
     private final VerticalLayout resultsPanel = new VerticalLayout();
     private String lastMatchedRequirementId = null;
 
-    public RequirementFormView() {
+    public RequirementFormView(OptionsConfigService optionsConfigService,
+                               SemanticReasonerService reasonerService,
+                               OntologyModelLoader ontologyModelLoader,
+                               DockerComposeManifestService dockerComposeService,
+                               KubernetesManifestService kubernetesService,
+                               RDeployService rDeployService,
+                               RVerifyService rVerifyService) {
+        this.optionsConfigService = optionsConfigService;
+        this.reasonerService = reasonerService;
+        this.ontologyModelLoader = ontologyModelLoader;
+        this.dockerComposeService = dockerComposeService;
+        this.kubernetesService = kubernetesService;
+        this.rDeployService = rDeployService;
+        this.rVerifyService = rVerifyService;
+
         setWidthFull();
         setPadding(true);
         setSpacing(true);
@@ -85,76 +122,58 @@ public class RequirementFormView extends VerticalLayout {
 
     private void matchRequirement() {
         try {
-            String json = """
-                {
-                  "protocol": "%s",
-                  "accessMode": "%s",
-                  "minRecall": %s,
-                  "maxLatencyMs": %s
-                }
-                """.formatted(
-                protocolCombo.getValue() != null ? protocolCombo.getValue() : "OPC-UA",
-                accessModeCombo.getValue() != null ? accessModeCombo.getValue() : "read-only",
-                minRecallField.getValue() != null ? minRecallField.getValue() : 0.90,
-                maxLatencyField.getValue() != null ? maxLatencyField.getValue().intValue() : 60
-            );
+            Map<String, String> params = new HashMap<>();
+            params.put("protocol", protocolCombo.getValue() != null ? protocolCombo.getValue() : "OPC-UA");
+            params.put("accessMode", accessModeCombo.getValue() != null ? accessModeCombo.getValue() : "read-only");
+            if (minRecallField.getValue() != null) {
+                params.put("minRecall", String.valueOf(minRecallField.getValue()));
+            }
+            if (maxLatencyField.getValue() != null) {
+                params.put("maxLatency", String.valueOf(maxLatencyField.getValue().intValue()));
+            }
 
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("/api/v1/requirements/match"))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(json))
-                .build();
-
-            HttpResponse<String> response = client.send(request,
-                HttpResponse.BodyHandlers.ofString());
+            ServiceMatchResult result = reasonerService.matchInline(params);
 
             resultsPanel.removeAll();
             resultsPanel.setVisible(true);
 
-            if (response.statusCode() == 200) {
-                var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                var node = mapper.readTree(response.body());
-                boolean matched = node.get("matched").asBoolean();
+            if (result.matched()) {
+                lastMatchedRequirementId = result.requirementId();
 
-                if (matched) {
-                    lastMatchedRequirementId = node.has("requirementId")
-                        ? node.get("requirementId").asText() : null;
+                String dockerComposeYaml = dockerComposeService.generate(result);
+                String kubernetesYaml = kubernetesService.generate(result);
 
-                    var lifecycleSpan = new com.vaadin.flow.component.html.Span(
-                        node.has("lifecycleStatus") ? node.get("lifecycleStatus").asText() : "Matched");
-                    lifecycleSpan.getElement().getThemeList().add("badge success");
+                var lifecycleSpan = new com.vaadin.flow.component.html.Span(
+                    result.lifecycleStatus() != null ? result.lifecycleStatus() : "Matched");
+                lifecycleSpan.getElement().getThemeList().add("badge success");
 
-                    resultsPanel.add(new Paragraph("Lifecycle Status: "),
-                        lifecycleSpan);
-                    resultsPanel.add(new Paragraph("Matched service: "
-                        + node.get("serviceName").asText()));
-                    if (node.has("bindingLabel") && !node.get("bindingLabel").isNull()) {
-                        resultsPanel.add(new Paragraph("Binding: "
-                            + node.get("bindingLabel").asText()));
-                    }
-                    resultsPanel.add(new Paragraph("Capability: "
-                        + node.get("capabilityName").asText()));
-                    resultsPanel.add(new Paragraph("Recall: "
-                        + node.get("recall").asDouble()));
-                    resultsPanel.add(new Paragraph("Latency: "
-                        + node.get("latencyMs").asInt() + "ms"));
-                    resultsPanel.add(new Paragraph("Explanation: "
-                        + node.get("explanation").asText()));
-
-                    var verifyButton = new Button("Verify", e -> verifyRequirement());
-                    verifyButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-                    verifyButton.addThemeVariants(ButtonVariant.LUMO_CONTRAST);
-                    resultsPanel.add(verifyButton);
-                } else {
-                    resultsPanel.add(new Paragraph("No matching service found."));
-                    resultsPanel.add(new Paragraph(node.get("explanation").asText()));
+                resultsPanel.add(new Paragraph("Lifecycle Status: "),
+                    lifecycleSpan);
+                resultsPanel.add(new Paragraph("Matched service: "
+                    + result.serviceName()));
+                if (result.bindingLabel() != null) {
+                    resultsPanel.add(new Paragraph("Binding: "
+                        + result.bindingLabel()));
                 }
+                resultsPanel.add(new Paragraph("Capability: "
+                    + result.capabilityName()));
+                resultsPanel.add(new Paragraph("Recall: "
+                    + result.recall()));
+                resultsPanel.add(new Paragraph("Latency: "
+                    + result.latencyMs() + "ms"));
+                resultsPanel.add(new Paragraph("Explanation: "
+                    + result.explanation()));
+
+                var verifyButton = new Button("Verify", e -> verifyRequirement());
+                verifyButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+                verifyButton.addThemeVariants(ButtonVariant.LUMO_CONTRAST);
+                resultsPanel.add(verifyButton);
             } else {
-                resultsPanel.add(new Paragraph("Match request failed with status "
-                    + response.statusCode()));
+                resultsPanel.add(new Paragraph("No matching service found."));
+                resultsPanel.add(new Paragraph(result.explanation()));
             }
         } catch (Exception ex) {
+            log.error("Match error", ex);
             Notification.show("Match error: " + ex.getMessage(), 5000,
                 Notification.Position.MIDDLE)
                 .addThemeVariants(NotificationVariant.LUMO_ERROR);
@@ -169,49 +188,27 @@ public class RequirementFormView extends VerticalLayout {
             return;
         }
         try {
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("/api/v1/requirements/" + lastMatchedRequirementId + "/verify"))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.noBody())
-                .build();
+            RVerifyService.VerifyResult result = rVerifyService.execute(lastMatchedRequirementId);
 
-            HttpResponse<String> response = client.send(request,
-                HttpResponse.BodyHandlers.ofString());
+            var statusSpan = new com.vaadin.flow.component.html.Span(
+                result.verified() ? "Verified" : "Not Verified");
+            statusSpan.getElement().getThemeList().add(
+                result.verified() ? "badge success" : "badge error");
 
-            if (response.statusCode() == 200) {
-                var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                var node = mapper.readTree(response.body());
-                boolean verified = node.get("verified").asBoolean();
+            resultsPanel.add(new Paragraph("Verification: "), statusSpan);
+            resultsPanel.add(new Paragraph("Summary: "
+                + result.summary()));
 
-                var statusSpan = new com.vaadin.flow.component.html.Span(
-                    verified ? "Verified" : "Not Verified");
-                statusSpan.getElement().getThemeList().add(
-                    verified ? "badge success" : "badge error");
-
-                resultsPanel.add(new Paragraph("Verification: "), statusSpan);
-                resultsPanel.add(new Paragraph("Summary: "
-                    + node.get("summary").asText()));
-
-                var criteria = node.get("criteria");
-                if (criteria != null && criteria.isArray()) {
-                    for (var criterion : criteria) {
-                        String name = criterion.get("name").asText();
-                        boolean passed = "true".equals(criterion.get("passed").asText());
-                        String detail = criterion.get("detail").asText();
-                        var crSpan = new com.vaadin.flow.component.html.Span(
-                            name + ": " + (passed ? "PASS" : "FAIL"));
-                        crSpan.getElement().getThemeList().add(
-                            passed ? "badge success" : "badge error");
-                        resultsPanel.add(crSpan);
-                        resultsPanel.add(new Paragraph(detail));
-                    }
-                }
-            } else {
-                resultsPanel.add(new Paragraph("Verify failed with status "
-                    + response.statusCode()));
+            for (var criterion : result.criteria()) {
+                var crSpan = new com.vaadin.flow.component.html.Span(
+                    criterion.name() + ": " + (criterion.passed() ? "PASS" : "FAIL"));
+                crSpan.getElement().getThemeList().add(
+                    criterion.passed() ? "badge success" : "badge error");
+                resultsPanel.add(crSpan);
+                resultsPanel.add(new Paragraph(criterion.detail()));
             }
         } catch (Exception ex) {
+            log.error("Verify error", ex);
             Notification.show("Verify error: " + ex.getMessage(), 5000,
                 Notification.Position.MIDDLE)
                 .addThemeVariants(NotificationVariant.LUMO_ERROR);
@@ -220,66 +217,50 @@ public class RequirementFormView extends VerticalLayout {
 
     private void saveRequirement() {
         try {
-            String json = """
-                {
-                  "title": "%s",
-                  "description": "%s",
-                  "functionClass": "%s",
-                  "protocol": "%s",
-                  "accessMode": "%s",
-                  "engineeringUnit": "%s",
-                  "networkZone": "%s",
-                  "determinismClass": "%s",
-                  "safetyIntegrityLevel": "%s",
-                  "nominalRangeMin": %s,
-                  "nominalRangeMax": %s,
-                  "minRecall": %s,
-                  "maxLatencyMs": %s
-                }
-                """.formatted(
-                escapeJson(titleField.getValue()),
-                escapeJson(descriptionField.getValue()),
-                escapeJson(functionClassField.getValue()),
-                escapeJson(protocolCombo.getValue()),
-                escapeJson(accessModeCombo.getValue()),
-                escapeJson(engineeringUnitField.getValue()),
-                escapeJson(networkZoneCombo.getValue()),
-                escapeJson(determinismCombo.getValue()),
-                escapeJson(safetyIntegrityCombo.getValue()),
-                nominalRangeMinField.getValue() != null ? nominalRangeMinField.getValue() : "null",
-                nominalRangeMaxField.getValue() != null ? nominalRangeMaxField.getValue() : "null",
-                minRecallField.getValue() != null ? minRecallField.getValue() : "null",
-                maxLatencyField.getValue() != null ? maxLatencyField.getValue().intValue() : "null"
-            );
+            String requirementId = "REQ-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+            Model model = ontologyModelLoader.getModel();
+            String resourceUri = INST_NS + requirementId;
 
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("/api/v1/requirements"))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(json))
-                .build();
+            Resource requirement = model.createResource(resourceUri);
+            requirement.addProperty(
+                model.createProperty(RDF_TYPE),
+                model.createResource(SDA_NS + "Requirement"));
 
-            HttpResponse<String> response = client.send(request,
-                HttpResponse.BodyHandlers.ofString());
-
-            if (response.statusCode() == 201) {
-                Notification.show("Requirement saved successfully", 3000,
-                    Notification.Position.MIDDLE)
-                    .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-            } else {
-                Notification.show("Save failed: " + response.body(), 5000,
-                    Notification.Position.MIDDLE)
-                    .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            addPropertyIfPresent(model, requirement, "title", titleField.getValue());
+            addPropertyIfPresent(model, requirement, "description", descriptionField.getValue());
+            addPropertyIfPresent(model, requirement, "functionClass", functionClassField.getValue());
+            addPropertyIfPresent(model, requirement, "protocol", protocolCombo.getValue());
+            addPropertyIfPresent(model, requirement, "accessMode", accessModeCombo.getValue());
+            addPropertyIfPresent(model, requirement, "engineeringUnit", engineeringUnitField.getValue());
+            addPropertyIfPresent(model, requirement, "networkZone", networkZoneCombo.getValue());
+            addPropertyIfPresent(model, requirement, "determinismClass", determinismCombo.getValue());
+            addPropertyIfPresent(model, requirement, "safetyIntegrityLevel", safetyIntegrityCombo.getValue());
+            if (nominalRangeMinField.getValue() != null) {
+                addPropertyIfPresent(model, requirement, "nominalRangeMin",
+                    String.valueOf(nominalRangeMinField.getValue()));
             }
+            if (nominalRangeMaxField.getValue() != null) {
+                addPropertyIfPresent(model, requirement, "nominalRangeMax",
+                    String.valueOf(nominalRangeMaxField.getValue()));
+            }
+
+            log.info("Persisted requirement {} to ontology model", requirementId);
+            Notification.show("Requirement saved: " + requirementId, 3000,
+                Notification.Position.MIDDLE)
+                .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
         } catch (Exception ex) {
+            log.error("Save error", ex);
             Notification.show("Save error: " + ex.getMessage(), 5000,
                 Notification.Position.MIDDLE)
                 .addThemeVariants(NotificationVariant.LUMO_ERROR);
         }
     }
 
-    private static String escapeJson(String value) {
-        return value != null ? value.replace("\"", "\\\"") : "";
+    private void addPropertyIfPresent(Model model, Resource resource,
+                                       String propertyName, String value) {
+        if (value != null && !value.isBlank()) {
+            resource.addProperty(model.createProperty(SDA_NS + propertyName), value);
+        }
     }
 
     private void loadComboOptions() {
@@ -292,22 +273,10 @@ public class RequirementFormView extends VerticalLayout {
 
     private void loadOptionsIntoCombo(ComboBox<String> combo, String fieldName) {
         try {
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("/api/v1/options/" + fieldName))
-                .GET()
-                .build();
-            HttpResponse<String> response = client.send(request,
-                HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() == 200) {
-                var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                List<Option> options = mapper.readValue(response.body(),
-                    mapper.getTypeFactory().constructCollectionType(List.class, Option.class));
-                combo.setItems(options.stream().map(Option::value).toList());
-            }
+            var options = optionsConfigService.getOptions(fieldName);
+            combo.setItems(options.stream().map(o -> o.value()).toList());
         } catch (Exception ignored) {
             // Options may not be available in all environments
         }
     }
 }
-

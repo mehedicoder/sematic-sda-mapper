@@ -34,8 +34,23 @@ class MainLayoutTest {
             var loader = new com.sda.mapper.ontology.OntologyModelLoader();
             new OntologyExplorerView(loader);
         });
-        assertDoesNotThrow(() -> new RequirementFormView());
-        assertDoesNotThrow(() -> new RegistrationWizardView());
+        assertDoesNotThrow(() -> {
+            var loader = new com.sda.mapper.ontology.OntologyModelLoader();
+            var queryLoader = new com.sda.mapper.reasoning.SparqlQueryLoader();
+            var rDeployService = new com.sda.mapper.reasoning.RDeployService(loader);
+            var rVerifyService = new com.sda.mapper.reasoning.RVerifyService(loader);
+            var reasoner = new com.sda.mapper.reasoning.SemanticReasonerService(loader, queryLoader, rDeployService);
+            var dockerService = new com.sda.mapper.deployment.DockerComposeManifestService();
+            var k8sService = new com.sda.mapper.deployment.KubernetesManifestService();
+            var optionsService = new com.sda.mapper.api.OptionsConfigService(new tools.jackson.databind.ObjectMapper());
+            new RequirementFormView(optionsService, reasoner, loader, dockerService, k8sService, rDeployService, rVerifyService);
+        });
+        assertDoesNotThrow(() -> {
+            var loader = new com.sda.mapper.ontology.OntologyModelLoader();
+            var rDeployService = new com.sda.mapper.reasoning.RDeployService(loader);
+            var optionsService = new com.sda.mapper.api.OptionsConfigService(new tools.jackson.databind.ObjectMapper());
+            new RegistrationWizardView(optionsService, loader, rDeployService);
+        });
         assertDoesNotThrow(() -> {
             var loader = new com.sda.mapper.ontology.OntologyModelLoader();
             loader.setFilePath("ontology/css-sda-small.ttl");

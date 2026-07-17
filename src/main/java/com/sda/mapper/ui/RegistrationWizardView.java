@@ -1,9 +1,10 @@
 package com.sda.mapper.ui;
 
-import com.sda.mapper.api.Option;
+import com.sda.mapper.api.OptionsConfigService;
+import com.sda.mapper.ontology.OntologyModelLoader;
+import com.sda.mapper.reasoning.RDeployService;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.H2;
@@ -21,13 +22,14 @@ import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.Resource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Multi-step registration wizard for creating new CSS-SDA requirements.
@@ -37,6 +39,15 @@ import java.util.List;
 @Route(value = "register", layout = MainLayout.class)
 @PageTitle("Registration Wizard")
 public class RegistrationWizardView extends VerticalLayout {
+
+    private static final Logger log = LoggerFactory.getLogger(RegistrationWizardView.class);
+    private static final String INST_NS = "http://www.example.org/instance#";
+    private static final String SDA_NS = "http://www.example.org/sda#";
+    private static final String RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+
+    private final OptionsConfigService optionsConfigService;
+    private final OntologyModelLoader ontologyModelLoader;
+    private final RDeployService rDeployService;
 
     private int currentStep = 0;
     private final List<VerticalLayout> steps = new ArrayList<>();
@@ -75,7 +86,13 @@ public class RegistrationWizardView extends VerticalLayout {
     // Step 6 – Review (summary labels rendered dynamically)
     private final VerticalLayout reviewLayout = new VerticalLayout();
 
-    public RegistrationWizardView() {
+    public RegistrationWizardView(OptionsConfigService optionsConfigService,
+                                  OntologyModelLoader ontologyModelLoader,
+                                  RDeployService rDeployService) {
+        this.optionsConfigService = optionsConfigService;
+        this.ontologyModelLoader = ontologyModelLoader;
+        this.rDeployService = rDeployService;
+
         setWidthFull();
         setPadding(true);
         setSpacing(true);
@@ -231,91 +248,59 @@ public class RegistrationWizardView extends VerticalLayout {
 
     private void registerRequirement() {
         try {
-            String json = buildJson();
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("/api/v1/requirements"))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(json))
-                .build();
+            String requirementId = "REQ-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+            Model model = ontologyModelLoader.getModel();
+            String resourceUri = INST_NS + requirementId;
 
-            HttpResponse<String> response = client.send(request,
-                HttpResponse.BodyHandlers.ofString());
+            Resource requirement = model.createResource(resourceUri);
+            requirement.addProperty(
+                model.createProperty(RDF_TYPE),
+                model.createResource(SDA_NS + "Requirement"));
 
-            if (response.statusCode() == 201) {
-                Notification.show("Requirement registered successfully", 3000,
-                    Notification.Position.MIDDLE)
-                    .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-            } else {
-                Notification.show("Registration failed: " + response.body(), 5000,
-                    Notification.Position.MIDDLE)
-                    .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            addPropertyIfPresent(model, requirement, "title", titleField.getValue());
+            addPropertyIfPresent(model, requirement, "description", descriptionField.getValue());
+            addPropertyIfPresent(model, requirement, "requirementType", requirementTypeCombo.getValue());
+            addPropertyIfPresent(model, requirement, "protocol", protocolCombo.getValue());
+            addPropertyIfPresent(model, requirement, "accessMode", accessModeCombo.getValue());
+            addPropertyIfPresent(model, requirement, "networkZone", networkZoneCombo.getValue());
+            addPropertyIfPresent(model, requirement, "functionClass", functionClassCombo.getValue());
+            addPropertyIfPresent(model, requirement, "engineeringUnit", engineeringUnitCombo.getValue());
+            addPropertyIfPresent(model, requirement, "determinismClass", determinismCombo.getValue());
+            addPropertyIfPresent(model, requirement, "safetyIntegrityLevel", safetyIntegrityCombo.getValue());
+            if (nominalRangeMinField.getValue() != null) {
+                addPropertyIfPresent(model, requirement, "nominalRangeMin",
+                    String.valueOf(nominalRangeMinField.getValue()));
             }
+            if (nominalRangeMaxField.getValue() != null) {
+                addPropertyIfPresent(model, requirement, "nominalRangeMax",
+                    String.valueOf(nominalRangeMaxField.getValue()));
+            }
+
+            log.info("Persisted requirement {} to ontology model", requirementId);
+            Notification.show("Requirement registered: " + requirementId, 3000,
+                Notification.Position.MIDDLE)
+                .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
         } catch (Exception ex) {
+            log.error("Registration error", ex);
             Notification.show("Registration error: " + ex.getMessage(), 5000,
                 Notification.Position.MIDDLE)
                 .addThemeVariants(NotificationVariant.LUMO_ERROR);
         }
     }
 
-    private String buildJson() {
-        return """
-            {
-              "title": "%s",
-              "description": "%s",
-              "requirementType": "%s",
-              "protocol": "%s",
-              "accessMode": "%s",
-              "networkZone": "%s",
-              "functionClass": "%s",
-              "engineeringUnit": "%s",
-              "determinismClass": "%s",
-              "safetyIntegrityLevel": "%s",
-              "nominalRangeMin": %s,
-              "nominalRangeMax": %s,
-              "minRecall": %s,
-              "maxLatencyMs": %s
-            }
-            """.formatted(
-            escapeJson(titleField.getValue()),
-            escapeJson(descriptionField.getValue()),
-            escapeJson(requirementTypeCombo.getValue()),
-            escapeJson(protocolCombo.getValue()),
-            escapeJson(accessModeCombo.getValue()),
-            escapeJson(networkZoneCombo.getValue()),
-            escapeJson(functionClassCombo.getValue()),
-            escapeJson(engineeringUnitCombo.getValue()),
-            escapeJson(determinismCombo.getValue()),
-            escapeJson(safetyIntegrityCombo.getValue()),
-            nominalRangeMinField.getValue() != null ? nominalRangeMinField.getValue() : "null",
-            nominalRangeMaxField.getValue() != null ? nominalRangeMaxField.getValue() : "null",
-            minRecallField.getValue() != null ? minRecallField.getValue() : "null",
-            maxLatencyField.getValue() != null ? maxLatencyField.getValue().intValue() : "null"
-        );
-    }
-
-    private static String escapeJson(String value) {
-        return value != null ? value.replace("\"", "\\\"") : "";
+    private void addPropertyIfPresent(Model model, Resource resource,
+                                       String propertyName, String value) {
+        if (value != null && !value.isBlank()) {
+            resource.addProperty(model.createProperty(SDA_NS + propertyName), value);
+        }
     }
 
     private void loadOptionsIntoCombo(ComboBox<String> combo, String fieldName) {
         try {
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("/api/v1/options/" + fieldName))
-                .GET()
-                .build();
-            HttpResponse<String> response = client.send(request,
-                HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() == 200) {
-                var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                List<Option> options = mapper.readValue(response.body(),
-                    mapper.getTypeFactory().constructCollectionType(List.class, Option.class));
-                combo.setItems(options.stream().map(Option::value).toList());
-            }
+            var options = optionsConfigService.getOptions(fieldName);
+            combo.setItems(options.stream().map(o -> o.value()).toList());
         } catch (Exception ignored) {
             // Options may not be available in all environments
         }
     }
 }
-

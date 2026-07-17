@@ -74,49 +74,54 @@ The application starts at **http://localhost:8080**. The OPC UA simulation serve
 
 ---
 
-## 5. Requirement Form — Mode A (By ID)
+## 5. Requirement Form — Mode B (Inline Fields)
 
 **Route:** `/requirements`
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 5.1 | Click "Requirement Form" in navigation | Form appears with dropdown fields and text inputs |
-| 5.2 | Type "REQ-001" in the Requirement ID field | Field accepts input |
-| 5.3 | Click "Match" button | Results panel shows matched service: name, protocol, recall, latency |
-| 5.4 | Verify explanation text | Explanation mentions capability match, OPC-UA protocol, recall >= 0.90 |
-| 5.5 | Clear the Requirement ID field | Field is empty |
-| 5.6 | Type "REQ-002" and click "Match" | Shows SVC-FermentationSkid matched with PROFINET protocol |
-| 5.7 | Type "REQ-003" and click "Match" | Shows SVC-HVACTempAnalysis matched with BACnet protocol |
+| 5.1 | Click "Requirement Form" in navigation | Form appears with all fields and populated dropdowns |
+| 5.2 | Verify dropdowns are populated | Protocol, Access Mode, Network Zone, Determinism Class, Safety Integrity Level dropdowns contain options |
+| 5.3 | Select "OPC-UA" from Protocol dropdown | Dropdown shows OPC-UA selected |
+| 5.4 | Select "read-only" from Access Mode dropdown | Dropdown shows read-only selected |
+| 5.5 | Set Minimum Recall to 0.90 | Numeric field accepts value |
+| 5.6 | Set Maximum Latency to 60 | Numeric field accepts value |
+| 5.7 | Click "Match" button | Results panel shows matched service: Flowmeter Diagnostics Service, OPC-UA, recall=0.94, latency=45ms |
+| 5.8 | Verify explanation text | Explanation mentions capability match, OPC-UA protocol, recall >= 0.90 |
+| 5.9 | Verify deployment context fields | Results may show Safety Integrity Level, Determinism Class, Network Zone if available |
+| 5.10 | Change Protocol to "HTTP" and click "Match" | No match returned (no service uses HTTP) |
 
 ---
 
-## 6. Requirement Form — Mode B (Inline Fields)
+## 6. Requirement Form — Save Requirement
 
 **Route:** `/requirements`
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 6.1 | Leave Requirement ID empty | No ID entered |
-| 6.2 | Select "OPC-UA" from Protocol dropdown | Dropdown populated from options.json |
-| 6.3 | Select "read-only" from Access Mode dropdown | Dropdown shows read-only selected |
-| 6.4 | Set Minimum Recall to 0.90 | Numeric field accepts value |
-| 6.5 | Set Maximum Latency to 60 | Numeric field accepts value |
-| 6.6 | Click "Match" button | Results show a matched service with OPC-UA protocol |
-| 6.7 | Change Protocol to "HTTP" and click "Match" | No match returned (no service uses HTTP) |
+| 6.1 | Fill in Title and Description | Fields accept input |
+| 6.2 | Select "FlowRate" from Function Class (if available) | Dropdown selection |
+| 6.3 | Select "OPC-UA" from Protocol | Dropdown selection |
+| 6.4 | Select "read-only" from Access Mode | Dropdown selection |
+| 6.5 | Set Nominal Range Min to 0.0 | Numeric field accepts value |
+| 6.6 | Set Nominal Range Max to 100.0 | Numeric field accepts value |
+| 6.7 | Select deployment context fields (optional) | Network Zone, Determinism Class, Safety Integrity Level dropdowns available |
+| 6.8 | Click "Save Requirement" button | Success message with auto-generated requirement ID (e.g., "Requirement saved: REQ-A1B2C3D4") |
+| 6.9 | The saved requirement appears in the ontology | Can be queried via Ontology Explorer |
 
 ---
 
-## 7. Requirement Form — Save Requirement
+## 7. Requirement Form — Lifecycle Verification
 
 **Route:** `/requirements`
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 7.1 | Select "FlowRate" from Function Class | Dropdown selection |
-| 7.2 | Select "OPC-UA" from Protocol | Dropdown selection |
-| 7.3 | Select "read-only" from Access Mode | Dropdown selection |
-| 7.4 | Click "Save Requirement" button | Success message with auto-generated requirement ID |
-| 7.5 | The saved requirement appears in the ontology | Can be matched by ID |
+| 7.1 | Match a requirement (Steps 5.3-5.7) | Results panel shows matched service |
+| 7.2 | Click the "Verify" button in results panel | Verification results appear below the match results |
+| 7.3 | Verify pass/fail status | Each criterion shows PASS or FAIL badge |
+| 7.4 | Verify summary text | Summary indicates whether all criteria are satisfied |
+| 7.5 | If criteria fail, check detail messages | Detail shows actual vs. threshold values |
 
 ---
 
@@ -127,14 +132,15 @@ The application starts at **http://localhost:8080**. The OPC UA simulation serve
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 8.1 | Click "Registration Wizard" in navigation | Step 1 (General Info) appears with form fields |
-| 8.2 | Fill in service name, description | Fields accept input |
-| 8.3 | Click "Next" | Step 2 (Communication) appears with protocol dropdown |
-| 8.4 | Select protocol and access mode | Dropdowns populated from API |
-| 8.5 | Click "Next" through Steps 3-6 | Each step shows relevant form fields |
-| 8.6 | Step 7 (Review) shows all entered data | Summary of all fields displayed |
-| 8.7 | Click "Register" on Step 8 | POST to /api/v1/requirements, success message |
-| 8.8 | Click "Previous" on any step | Returns to previous step with data preserved |
-| 8.9 | Click "Cancel" | Returns to Step 1, form cleared |
+| 8.2 | Verify dropdowns are populated | Requirement Type dropdown loaded from configuration |
+| 8.3 | Fill in Title and Description | Fields accept input |
+| 8.4 | Click "Next" | Step 2 (Communication) appears with populated protocol and access mode dropdowns |
+| 8.5 | Select protocol and access mode | Dropdowns show selections |
+| 8.6 | Click "Next" through Steps 3-6 | Each step shows relevant form fields with populated dropdowns |
+| 8.7 | Step 7 (Review) shows all entered data | Summary of all fields displayed |
+| 8.8 | Click "Register" on Step 8 | Requirement persisted to ontology model, success message with requirement ID |
+| 8.9 | Click "Previous" on any step | Returns to previous step with data preserved |
+| 8.10 | Click "Cancel" | Returns to System Status view |
 
 ---
 
@@ -161,10 +167,12 @@ The application starts at **http://localhost:8080**. The OPC UA simulation serve
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 10.1 | Click "Upload" in navigation | Upload panel with drag-and-drop area appears |
-| 10.2 | Drag an XML file onto the upload area | File is accepted, progress bar shows |
-| 10.3 | After upload completes | Results grid shows triple count, file type, summary |
-| 10.4 | Upload a JSON file (OPC UA Datasheet) | Parsed successfully, triples counted |
-| 10.5 | Upload an invalid file | Error message displayed with clear description |
+| 10.2 | Drag an MTP AML XML file onto the upload area | File is accepted, parsed with MTPAmlParser, triples counted |
+| 10.3 | After upload completes | Results grid shows triple count, file type (MTP AML), summary |
+| 10.4 | Upload an OPC UA NodeSet XML file | Parsed with OpcUaNodeSetParser, triples counted |
+| 10.5 | Upload an OPC UA JSON datasheet file | Detected as AAS format via content sniffing, parsed with AasParser |
+| 10.6 | Upload an AAS JSON file | Parsed with AasParser, Skills/Communication/DataConnector extracted |
+| 10.7 | Upload an invalid file | Error message displayed with clear description |
 
 ---
 
@@ -177,8 +185,8 @@ The application starts at **http://localhost:8080**. The OPC UA simulation serve
 | 11.1 | Click "Deployment" in navigation | Environment cards appear (Development, Testing, Production) |
 | 11.2 | Click "Development" card | Card is selected with highlight |
 | 11.3 | Click "Generate Manifests" button | Docker Compose YAML and Kubernetes YAML appear in text areas |
-| 11.4 | Verify Docker Compose YAML | Contains service name, image, restart policy, environment variables |
-| 11.5 | Verify Kubernetes YAML | Contains apiVersion, kind: Deployment, nodeSelector with SIL labels |
+| 11.4 | Verify Docker Compose YAML | Contains service name, image, restart policy, environment variables including SAFETY_INTEGRITY_LEVEL, DETERMINISM_CLASS, NETWORK_ZONE |
+| 11.5 | Verify Kubernetes YAML | Contains apiVersion, kind: Deployment, nodeSelector with labels `sda.ontology/sil`, `sda.ontology/determinism`, `sda.ontology/networkZone` |
 | 11.6 | Read the explanation panel | Human-readable explanation of why the service was selected |
 
 ---
@@ -192,7 +200,7 @@ The application starts at **http://localhost:8080**. The OPC UA simulation serve
 | 12.1 | Click "Monitoring" in navigation | System metrics cards appear |
 | 12.2 | Verify CPU usage | Progress bar shows current CPU usage percentage |
 | 12.3 | Verify Memory usage | Progress bar shows used/total memory |
-| 12.4 | Verify Ontology Statistics | Shows triple count (538+) and class count (17) |
+| 12.4 | Verify Ontology Statistics | Shows triple count (686+) and class count (21) |
 | 12.5 | Verify Uptime | Shows application uptime in human-readable format |
 | 12.6 | Refresh the page | Metrics update with current values |
 
@@ -219,30 +227,7 @@ The application starts at **http://localhost:8080**. The OPC UA simulation serve
 
 ## 14. REST API Testing
 
-### 14.1 Match by Requirement ID (Mode A)
-
-```bash
-curl -X POST http://localhost:8080/api/v1/requirements/match \
-  -H "Content-Type: application/json" \
-  -d '{"requirementId": "REQ-001"}'
-```
-
-**Expected Response:**
-```json
-{
-  "matched": true,
-  "serviceName": "Flowmeter Diagnostics Service",
-  "containerImage": "registry.local/flowmeter-diagnostics:1.0",
-  "capabilityName": "Asset Condition Monitoring for Flowmeter",
-  "protocol": "OPC-UA",
-  "accessMode": "read-only",
-  "recall": 0.94,
-  "latencyMs": 45,
-  "explanation": "..."
-}
-```
-
-### 14.2 Match by Inline Fields (Mode B)
+### 14.1 Match by Inline Fields (Mode B)
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/requirements/match \
@@ -255,7 +240,37 @@ curl -X POST http://localhost:8080/api/v1/requirements/match \
   }'
 ```
 
-**Expected:** Returns a matching service or no-match response.
+**Expected Response:**
+```json
+{
+  "matched": true,
+  "serviceName": "Flowmeter Diagnostics Service",
+  "containerImage": "registry.local/flowmeter-diagnostics:1.0",
+  "capabilityName": "Asset Condition Monitoring for Flowmeter",
+  "protocol": "OPC-UA",
+  "accessMode": "read-only",
+  "bindingLabel": "OPC-UA binding for flowmeter",
+  "recall": 0.94,
+  "latencyMs": 45,
+  "explanation": "...",
+  "lifecycleStatus": "Matched",
+  "safetyIntegrityLevel": "SIL-0",
+  "determinismClass": "SoftRealTime",
+  "networkZone": "Plant",
+  "dockerComposeManifest": "...",
+  "kubernetesManifest": "..."
+}
+```
+
+### 14.2 Match by Requirement ID (Mode A)
+
+```bash
+curl -X POST http://localhost:8080/api/v1/requirements/match \
+  -H "Content-Type: application/json" \
+  -d '{"requirementId": "REQ-001"}'
+```
+
+**Expected Response:** SVC-FlowmeterDiagnostics matched, OPC-UA protocol, recall=0.94, latency=45ms, lifecycleStatus="Matched".
 
 ### 14.3 Persist a New Requirement
 
@@ -280,7 +295,41 @@ curl -X POST http://localhost:8080/api/v1/requirements \
 }
 ```
 
-### 14.4 Get Dropdown Options
+### 14.4 Verify a Matched Requirement
+
+```bash
+curl -X POST http://localhost:8080/api/v1/requirements/REQ-001/verify
+```
+
+**Expected Response:**
+```json
+{
+  "requirementId": "REQ-001",
+  "verified": true,
+  "summary": "All criteria satisfied",
+  "criteria": [
+    {"name": "Recall threshold", "passed": "true", "detail": "recall: actual=0.94 >= 0.90 → PASS"},
+    {"name": "Latency threshold", "passed": "true", "detail": "latency: actual=45.00 <= 60.00 → PASS"}
+  ]
+}
+```
+
+### 14.5 Get Lifecycle Status
+
+```bash
+curl http://localhost:8080/api/v1/requirements/REQ-001/lifecycle
+```
+
+**Expected Response:**
+```json
+{
+  "requirementId": "REQ-001",
+  "lifecycleStatus": "Matched",
+  "matched": "true"
+}
+```
+
+### 14.6 Get Dropdown Options
 
 ```bash
 curl http://localhost:8080/api/v1/options/protocol
@@ -288,7 +337,7 @@ curl http://localhost:8080/api/v1/options/protocol
 
 **Expected:** `[{"value":"OPC-UA","label":"OPC-UA"},{"value":"PROFINET","label":"PROFINET"},...]`
 
-### 14.5 Get All Option Field Names
+### 14.7 Get All Option Field Names
 
 ```bash
 curl http://localhost:8080/api/v1/options
@@ -296,7 +345,7 @@ curl http://localhost:8080/api/v1/options
 
 **Expected:** `["protocol","accessMode","engineeringUnit","safetyIntegrityLevel","networkZone","determinismClass","informationModel"]`
 
-### 14.6 Validation Error — Neither Mode
+### 14.8 Validation Error — Neither Mode
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/requirements/match \
@@ -306,7 +355,7 @@ curl -X POST http://localhost:8080/api/v1/requirements/match \
 
 **Expected:** 400 Bad Request with validation error.
 
-### 14.7 Validation Error — Both Modes
+### 14.9 Validation Error — Both Modes
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/requirements/match \
@@ -392,7 +441,7 @@ The SPARQL query `cross-plant-temperature.rq` finds all temperature-related serv
 
 | Scenario | Input | Expected |
 |----------|-------|----------|
-| Wrong protocol | Protocol=HTTP in Mode B | No match returned |
+| Wrong protocol | Protocol=HTTP in Mode B | No match returned with explanation |
 | Nonexistent requirement | requirementId="REQ-999" | No match returned |
 | Invalid XML upload | Upload a .txt file | Parser error message |
 | Empty search | Search with no input | Empty results |
@@ -403,19 +452,20 @@ The SPARQL query `cross-plant-temperature.rq` finds all temperature-related serv
 
 ## 19. Automated Test Suite
 
-Run all 253 automated tests:
+Run all 296 automated tests:
 
 ```bash
 mvn clean test
 ```
 
-**Expected:** BUILD SUCCESS with 253 tests, 0 failures, 0 errors.
+**Expected:** BUILD SUCCESS with 296 tests, 0 failures, 0 errors.
 
 Test categories:
 - Unit tests: Ontology loading, SPARQL matching, parser parsing, manifest generation
 - Integration tests: REST API endpoints, option loading, system status
 - UI tests: View rendering, component instantiation, route annotations
 - Evaluation tests: All 3 use cases, cross-plant queries, file parsing
+- Deployment tests: Docker Compose and Kubernetes manifest generation with deployment context
 
 ---
 
@@ -428,4 +478,5 @@ Test categories:
 | Login fails | Use `user`/`password` credentials |
 | Blank dashboard | Ontology may not have loaded; check `/actuator/health` |
 | Search returns nothing | Try different search terms; check ontology has entities |
-| Upload fails | Ensure file is valid XML (MTP AML) or JSON (OPC UA Datasheet) |
+| Upload fails | Ensure file is valid XML (MTP AML / OPC UA NodeSet) or JSON (AAS / OPC UA Datasheet) |
+| Dropdowns empty | Options are loaded from `config/options.json` at startup; verify file exists on classpath |

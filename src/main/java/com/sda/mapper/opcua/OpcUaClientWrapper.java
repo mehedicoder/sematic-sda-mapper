@@ -3,6 +3,7 @@ package com.sda.mapper.opcua;
 import com.sda.mapper.opcua.model.OpcUaEndpointConfig;
 import com.sda.mapper.opcua.model.OpcUaNodeConfig;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
+import org.eclipse.milo.opcua.stack.core.NamespaceTable;
 import org.eclipse.milo.opcua.stack.core.Identifiers;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
@@ -67,7 +68,7 @@ public class OpcUaClientWrapper {
         }
 
         NodeId nodeId = new NodeId(nodeConfig.namespaceIndex(), nodeConfig.identifier());
-        ReadValueId readValueId = new ReadValueId(nodeId, null, null, null);
+        ReadValueId readValueId = new ReadValueId(nodeId, UInteger.valueOf(13), null, null);
         
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -159,7 +160,7 @@ public class OpcUaClientWrapper {
         }
 
         NodeId nodeId = new NodeId(nodeConfig.namespaceIndex(), nodeConfig.identifier());
-        ReadValueId readValueId = new ReadValueId(nodeId, null, null, null);
+        ReadValueId readValueId = new ReadValueId(nodeId, UInteger.valueOf(13), null, null);
 
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -210,6 +211,16 @@ public class OpcUaClientWrapper {
      */
     public OpcUaEndpointConfig getCurrentConfig() {
         return currentConfig;
+    }
+
+    /**
+     * Returns the namespace table from the connected client.
+     */
+    public NamespaceTable getNamespaceTable() {
+        if (client == null) {
+            return new NamespaceTable();
+        }
+        return client.getNamespaceTable();
     }
 
     public record NodeSnapshot(String nodeId, String displayValue, Object rawValue) {

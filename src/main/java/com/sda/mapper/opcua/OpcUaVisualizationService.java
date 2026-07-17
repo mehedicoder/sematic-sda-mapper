@@ -7,6 +7,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import org.eclipse.milo.opcua.stack.core.Identifiers;
+import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
+import org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger;
+import org.eclipse.milo.opcua.stack.core.types.enumerated.BrowseDirection;
+import org.eclipse.milo.opcua.stack.core.types.structured.BrowseDescription;
+import org.eclipse.milo.opcua.stack.core.types.structured.BrowseResult;
+import org.eclipse.milo.opcua.stack.core.types.structured.ReferenceDescription;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -135,6 +143,92 @@ public class OpcUaVisualizationService {
     }
 
     /**
+     * Browses all variable nodes on a server and reads their current values.
+     */
+    public List<BrowsedNode> browseServerNodes(String endpointUrl) {
+        OpcUaServerRegistry.ServerInfo serverInfo = serverRegistry.getServer(endpointUrl);
+        if (serverInfo == null) {
+            return List.of();
+        }
+
+        OpcUaEndpointConfig config = OpcUaEndpointConfig.local(
+            serverInfo.host(), serverInfo.port(), serverInfo.path());
+        OpcUaClientWrapper client = clientFactory.createClient(config);
+
+        try {
+            client.connect(config).get(3000, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            log.debug("Could not connect to {} for browsing: {}", endpointUrl, e.getMessage());
+            return List.of();
+        }
+
+        List<BrowsedNode> result = new ArrayList<>();
+        try {
+            browseRecursive(client, Identifiers.ObjectsFolder, result, 0, 3);
+        } catch (Exception e) {
+            log.debug("Browse failed for {}: {}", endpointUrl, e.getMessage());
+        }
+        return result;
+    }
+
+    private void browseRecursive(OpcUaClientWrapper client, NodeId nodeId,
+                                  List<BrowsedNode> result, int depth, int maxDepth) {
+        if (depth >= maxDepth) return;
+
+        List<ReferenceDescription> refs;
+        try {
+            refs = client.browse(nodeId).get(3000, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            return;
+        }
+
+        var nsTable = client.getNamespaceTable();
+        for (ReferenceDescription ref : refs) {
+            NodeId childNodeId = ref.getNodeId().toNodeId(nsTable).orElse(null);
+            if (childNodeId == null) continue;
+
+            boolean isVariable = isVariableNode(ref, nsTable);
+            if (isVariable) {
+                String browseName = ref.getBrowseName() != null ? ref.getBrowseName().getName() : "";
+                String displayName = ref.getDisplayName() != null
+                    ? ref.getDisplayName().getText() : browseName;
+                String nodeIdStr = String.format("ns=%d;%s", childNodeId.getNamespaceIndex().intValue(),
+                    childNodeId.getIdentifier());
+
+                Object rawValue = null;
+                String displayValue = "—";
+                String dataType = "";
+                try {
+                    OpcUaNodeConfig nodeConfig = OpcUaNodeConfig.ofString(
+                        childNodeId.getNamespaceIndex().intValue(),
+                        String.valueOf(childNodeId.getIdentifier()));
+                    rawValue = client.readVariableValue(nodeConfig).get(2000, TimeUnit.MILLISECONDS);
+                    displayValue = rawValue != null ? String.valueOf(rawValue) : "—";
+                    dataType = rawValue != null ? rawValue.getClass().getSimpleName() : "";
+                } catch (Exception e) {
+                    displayValue = "error";
+                }
+
+                result.add(new BrowsedNode(nodeIdStr, browseName, displayName,
+                    displayValue, dataType, rawValue));
+            } else {
+                browseRecursive(client, childNodeId, result, depth + 1, maxDepth);
+            }
+        }
+    }
+
+    private boolean isVariableNode(ReferenceDescription ref, org.eclipse.milo.opcua.stack.core.NamespaceTable nsTable) {
+        NodeId typeDef = ref.getTypeDefinition()
+            .toNodeId(nsTable)
+            .orElse(null);
+        if (typeDef == null) return false;
+        return Identifiers.BaseDataVariableType.equals(typeDef)
+            || Identifiers.PropertyType.equals(typeDef)
+            || Identifiers.DataItemType.equals(typeDef)
+            || Identifiers.AnalogItemType.equals(typeDef);
+    }
+
+    /**
      * Legacy method: returns the old OpcUaSnapshot for backward compatibility.
      */
     public OpcUaSnapshot getCurrentSnapshot() {
@@ -228,5 +322,9 @@ public class OpcUaVisualizationService {
     }
 
     public record NodeValue(String label, String displayValue, String unit, Object rawValue) {
+    }
+
+    public record BrowsedNode(String nodeId, String browseName, String displayName,
+                               String displayValue, String dataType, Object rawValue) {
     }
 }

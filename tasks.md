@@ -444,7 +444,7 @@ Track completed work with validation evidence. Only the human engineer marks tas
 
 **Status:** [x] Completed
 **Completed:** 2026-07-17
-**Tests:** 251 passing (0 failures) — cumulative
+**Tests:** 253 passing (0 failures) — cumulative
 
 ### Completion Evidence
 
@@ -500,6 +500,37 @@ Track completed work with validation evidence. Only the human engineer marks tas
 
 ---
 
+## Bug Fixes: OPC UA Read Attribute, Browse Detection, Server Grid
+
+**Status:** [x] Completed
+**Completed:** 2026-07-17
+**Tests:** 253 passing (0 failures) — cumulative
+
+### Completion Evidence
+
+- `mvn clean test` — BUILD SUCCESS, 253 tests, 0 failures
+- OPC UA reads return actual values instead of `Variant{value=null}`
+- Server grid height increased to 250px for better multi-server visibility
+- Node browsing uses client NamespaceTable for proper type definition resolution
+- Polling only refreshes selected server's browsed nodes (reduced log spam)
+
+### What was built
+
+| Component | Files |
+|---|---|
+| OpcUaClientWrapper (attribute fix) | `src/main/java/com/sda/mapper/opcua/OpcUaClientWrapper.java` |
+| OpcUaVisualizationService (browse fix) | `src/main/java/com/sda/mapper/opcua/OpcUaVisualizationService.java` |
+| OpcUaVisualizationView (grid + polling) | `src/main/java/com/sda/mapper/ui/OpcUaVisualizationView.java` |
+| OpcUaVisualizationServiceBrowseTest | `src/test/java/com/sda/mapper/opcua/OpcUaVisualizationServiceBrowseTest.java` |
+
+### Key decisions
+
+- `ReadValueId(nodeId, UInteger.valueOf(13), null, null)` — explicit Value attribute ID (13) required by OPC UA; `null` attributeId causes "attribute unknown" error on server
+- `isVariableNode()` uses client's NamespaceTable (not empty table) for ExpandedNodeId resolution
+- Polling refreshes browsed nodes only when a server is selected in detail view
+
+---
+
 ## Summary
 
 | Phase | Status | Tests | Date |
@@ -517,6 +548,7 @@ Track completed work with validation evidence. Only the human engineer marks tas
 | Phase 11: Evaluation + Monitoring | [x] Completed | 220 | 2026-07-16 |
 | Phase 11b: OPC UA Visualization | [x] Completed | 220 | 2026-07-16 |
 | Bug Fixes: Multi-Server, NodeSet, Pipeline | [x] Completed | 251 | 2026-07-17 |
+| Bug Fixes: Read Attribute, Browse, Grid | [x] Completed | 253 | 2026-07-17 |
 | Phase 12: Documentation | [ ] Not started | — | — |
 | Phase 13: EKA UI Polish | [ ] Not started | — | — |
 | Phase 14: Margo Sandbox | [ ] Not started | — | — |

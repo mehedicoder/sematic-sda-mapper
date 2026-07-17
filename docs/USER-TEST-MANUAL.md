@@ -204,13 +204,16 @@ The application starts at **http://localhost:8080**. The OPC UA simulation serve
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 13.1 | Click "OPC UA Monitor" in navigation | Live dashboard appears with Tank and Pump sections |
-| 13.2 | Verify Tank Level gauge | Shows current tank level (0-100 cm) |
-| 13.3 | Verify Flow Rate In/Out | Shows current flow rates |
-| 13.4 | Verify Temperature display | Shows temperature with color coding (green/yellow/red) |
-| 13.5 | Verify Pump section | Shows vibration, health status, NE 107 device status badge |
-| 13.6 | Wait 2 seconds | Data refreshes automatically (values may change) |
-| 13.7 | Verify connection status badge | Green badge indicates connected to OPC UA server |
+| 13.1 | Click "OPC UA Monitor" in navigation | Server grid appears showing all known OPC UA servers (250px tall) |
+| 13.2 | Verify server grid columns | Name, Type, Host:Port, Path, Status columns visible |
+| 13.3 | Verify built-in server row | "Built-in Tank Server" shows Connected status |
+| 13.4 | Verify server cards below grid | Each server has a card with connection status and node values grid |
+| 13.5 | Click on "Built-in Tank Server" row | Detail panel opens with server name, endpoint, and browsed nodes grid |
+| 13.6 | Verify browsed nodes grid | Shows Node ID, Browse Name, Display Name, Value, Type columns |
+| 13.7 | Verify node values | Tank1.Level, Tank1.FlowRateIn/Out, Temperature, Pump nodes with live values |
+| 13.8 | Wait 5 seconds | Node values refresh automatically in detail view |
+| 13.9 | Click "Back to Servers" button | Returns to server grid view |
+| 13.10 | Click on external server row | If server is unreachable, "Could not connect" message in log; grid shows browsed nodes or empty |
 
 ---
 
@@ -400,13 +403,13 @@ The SPARQL query `cross-plant-temperature.rq` finds all temperature-related serv
 
 ## 19. Automated Test Suite
 
-Run all 220 automated tests:
+Run all 253 automated tests:
 
 ```bash
 mvn clean test
 ```
 
-**Expected:** BUILD SUCCESS with 220 tests, 0 failures, 0 errors.
+**Expected:** BUILD SUCCESS with 253 tests, 0 failures, 0 errors.
 
 Test categories:
 - Unit tests: Ontology loading, SPARQL matching, parser parsing, manifest generation

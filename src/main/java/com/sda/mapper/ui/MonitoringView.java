@@ -28,22 +28,9 @@ public class MonitoringView extends VerticalLayout {
     private Span matchRequestsSpan;
     private Span uptimeSpan;
 
-    public MonitoringView() {
-        this.metricsService = null;
-        buildFallbackLayout();
-    }
-
     public MonitoringView(MetricsService metricsService) {
         this.metricsService = metricsService;
         buildLayout();
-    }
-
-    private void buildFallbackLayout() {
-        setSizeFull();
-        setPadding(true);
-        setSpacing(true);
-        add(new H2("Monitoring"));
-        add(new Span("Metrics service not available."));
     }
 
     private void buildLayout() {

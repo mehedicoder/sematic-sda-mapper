@@ -73,7 +73,12 @@ class MainLayoutTest {
             var manifestService = new com.sda.mapper.deployment.ManifestService(dockerService, k8sService);
             new com.sda.mapper.ui.DeploymentView(manifestService, reasoner, explanationService);
         });
-        assertDoesNotThrow(() -> new MonitoringView());
+        assertDoesNotThrow(() -> {
+            var loader = new com.sda.mapper.ontology.OntologyModelLoader();
+            var meterRegistry = new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
+            var metricsService = new com.sda.mapper.monitoring.MetricsService(loader, meterRegistry);
+            new MonitoringView(metricsService);
+        });
         assertDoesNotThrow(() -> new SettingsView());
     }
 

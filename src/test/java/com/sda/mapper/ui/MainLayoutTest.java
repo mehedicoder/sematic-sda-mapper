@@ -28,7 +28,12 @@ class MainLayoutTest {
     @Test
     @DisplayName("All view classes should be instantiable")
     void testAllViewClassesExist() {
-        assertDoesNotThrow(() -> new SystemStatusView());
+        assertDoesNotThrow(() -> {
+            var loader = new com.sda.mapper.ontology.OntologyModelLoader();
+            var meterRegistry = new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
+            var metricsService = new com.sda.mapper.monitoring.MetricsService(loader, meterRegistry);
+            new SystemStatusView(loader, metricsService);
+        });
         assertDoesNotThrow(() -> {
             var loader = new com.sda.mapper.ontology.OntologyModelLoader();
             new ServiceInstancesView(loader);

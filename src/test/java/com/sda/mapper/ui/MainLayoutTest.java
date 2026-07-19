@@ -29,7 +29,10 @@ class MainLayoutTest {
     @DisplayName("All view classes should be instantiable")
     void testAllViewClassesExist() {
         assertDoesNotThrow(() -> new SystemStatusView());
-        assertDoesNotThrow(() -> new ServiceInstancesView());
+        assertDoesNotThrow(() -> {
+            var loader = new com.sda.mapper.ontology.OntologyModelLoader();
+            new ServiceInstancesView(loader);
+        });
         assertDoesNotThrow(() -> {
             var loader = new com.sda.mapper.ontology.OntologyModelLoader();
             new OntologyExplorerView(loader);

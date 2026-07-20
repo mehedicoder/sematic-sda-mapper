@@ -67,7 +67,7 @@ class PipelineViewTest {
     void shouldHaveCorrectPageTitle() {
         PageTitle pageTitle = PipelineView.class.getAnnotation(PageTitle.class);
         assertNotNull(pageTitle, "PipelineView must have @PageTitle annotation");
-        assertEquals("Pipeline", pageTitle.value());
+        assertEquals("Semantic Reasoner", pageTitle.value());
     }
 
     @Test

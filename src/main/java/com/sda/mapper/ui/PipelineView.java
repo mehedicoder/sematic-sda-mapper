@@ -49,7 +49,7 @@ import java.util.Set;
  * results including generated Docker Compose and Kubernetes manifests.
  */
 @Route(value = "pipeline", layout = MainLayout.class)
-@PageTitle("Pipeline")
+@PageTitle("Semantic Reasoner")
 public class PipelineView extends VerticalLayout {
 
     private static final Logger log = LoggerFactory.getLogger(PipelineView.class);
@@ -88,7 +88,7 @@ public class PipelineView extends VerticalLayout {
         setPadding(true);
         setSpacing(true);
 
-        add(new H2("End-to-End Pipeline"));
+        add(new H2("Semantic Reasoner"));
         add(new Paragraph("Upload an input file (MTP AML .xml/.aml, OPC UA Server Datasheet .json, or AAS .xml) "
             + "to execute the full semantic mapping pipeline: Parse → Lift → Infer → Match → Manifest."));
 

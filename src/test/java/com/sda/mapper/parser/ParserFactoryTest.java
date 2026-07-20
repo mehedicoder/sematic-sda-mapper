@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class ParserFactoryTest {
 
     private final ParserFactory factory = new ParserFactory(
-        new MTPAmlParser(), new UaServerDatasheetParser(), new OpcUaNodeSetParser());
+        new MTPAmlParser(), new UaServerDatasheetParser(), new OpcUaNodeSetParser(), new AasParser());
 
     @Test
     @DisplayName("Should return MTPAmlParser for .xml extension via extension-only lookup")
@@ -68,5 +68,34 @@ class ParserFactoryTest {
         InputStream input = new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8));
         Parser parser = factory.getParser("test-file.xml", input);
         assertInstanceOf(MTPAmlParser.class, parser);
+    }
+
+    @Test
+    @DisplayName("Should return AasParser for JSON containing assetAdministrationShells key")
+    void shouldReturnAasParserForAasJson() {
+        String json = "{\n"
+            + "  \"assetAdministrationShells\": [\n"
+            + "    {\n"
+            + "      \"idShort\": \"TestAAS\",\n"
+            + "      \"id\": { \"idType\": \"IRI\", \"identifier\": \"https://example.org/aas/test\" }\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
+        InputStream input = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
+        Parser parser = factory.getParser("test-file.json", input);
+        assertInstanceOf(AasParser.class, parser);
+    }
+
+    @Test
+    @DisplayName("Should return UaServerDatasheetParser for JSON without assetAdministrationShells")
+    void shouldReturnDatasheetParserForNonAasJson() {
+        String json = "{\n"
+            + "  \"EndpointDescriptions\": [\n"
+            + "    { \"uri\": \"opc.tcp://localhost:4840\" }\n"
+            + "  ]\n"
+            + "}";
+        InputStream input = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
+        Parser parser = factory.getParser("test-file.json", input);
+        assertInstanceOf(UaServerDatasheetParser.class, parser);
     }
 }

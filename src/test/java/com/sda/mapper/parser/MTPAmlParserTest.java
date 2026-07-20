@@ -23,8 +23,8 @@ class MTPAmlParserTest {
     @Test
     @DisplayName("Should parse valid MTP AML and return ParseResult with correct triple count")
     void shouldParseValidMtpAml() {
-        try (InputStream input = resource("mtp-fermentation-skid.xml")) {
-            assertNotNull(input, "Test resource mtp-fermentation-skid.xml must exist");
+        try (InputStream input = resource("req002-mtp-fermentation-skid.xml")) {
+            assertNotNull(input, "Test resource req002-mtp-fermentation-skid.xml must exist");
 
             ParseResult result = parser.parse(input);
 
@@ -41,7 +41,7 @@ class MTPAmlParserTest {
     @Test
     @DisplayName("Should parse Skill instances with engineering unit")
     void shouldParseSkillWithEngineeringUnit() {
-        try (InputStream input = resource("mtp-fermentation-skid.xml")) {
+        try (InputStream input = resource("req002-mtp-fermentation-skid.xml")) {
             assertNotNull(input);
 
             ParseResult result = parser.parse(input);
@@ -97,7 +97,7 @@ class MTPAmlParserTest {
     @Test
     @DisplayName("Should produce CommunicationBinding triples with protocol OPC-UA")
     void shouldProduceCommunicationBindingWithProtocol() {
-        try (InputStream input = resource("mtp-fermentation-skid.xml")) {
+        try (InputStream input = resource("req002-mtp-fermentation-skid.xml")) {
             assertNotNull(input);
 
             ParseResult result = parser.parse(input);

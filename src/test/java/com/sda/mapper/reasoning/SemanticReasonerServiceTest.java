@@ -1,6 +1,8 @@
 package com.sda.mapper.reasoning;
 
 import com.sda.mapper.ontology.OntologyModelLoader;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.Resource;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -13,15 +15,16 @@ import static org.junit.jupiter.api.Assertions.*;
 class SemanticReasonerServiceTest {
 
     private static SemanticReasonerService reasoner;
+    private static OntologyModelLoader sharedLoader;
 
     @BeforeAll
     static void setUp() {
-        var loader = new OntologyModelLoader();
-        loader.setFilePath("ontology/css-sda-small.ttl");
-        loader.loadOntology();
+        sharedLoader = new OntologyModelLoader();
+        sharedLoader.setFilePath("ontology/css-sda-small.ttl");
+        sharedLoader.loadOntology();
         var queryLoader = new SparqlQueryLoader();
-        var rDeployService = new RDeployService(loader);
-        reasoner = new SemanticReasonerService(loader, queryLoader, rDeployService);
+        var rDeployService = new RDeployService(sharedLoader);
+        reasoner = new SemanticReasonerService(sharedLoader, queryLoader, rDeployService);
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -129,5 +132,69 @@ class SemanticReasonerServiceTest {
     void shouldReturnNoMatchForNullParameters() {
         ServiceMatchResult result = reasoner.matchInline(null);
         assertFalse(result.matched(), "Null parameters should not match");
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // Mode B fallback: matchByRequirementId for dynamic requirements
+    // ════════════════════════════════════════════════════════════════════
+
+    @Test
+    @DisplayName("Should match dynamic requirement with OPC-UA read-only params via Mode B fallback")
+    void shouldMatchDynamicRequirementWithOpcUaParams() {
+        Model model = sharedLoader.getModel();
+        String reqId = "REQ-TEST-DYN-01";
+        String uri = "http://www.example.org/instance#" + reqId;
+
+        Resource req = model.createResource(uri);
+        req.addProperty(
+            model.createProperty("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+            model.createResource("http://www.example.org/sda#Requirement"));
+        req.addProperty(model.createProperty("http://www.example.org/sda#requirementID"), reqId);
+        req.addProperty(model.createProperty("http://www.example.org/sda#protocol"), "OPC-UA");
+        req.addProperty(model.createProperty("http://www.example.org/sda#accessMode"), "read-only");
+
+        ServiceMatchResult result = reasoner.matchByRequirementId(reqId);
+        assertTrue(result.matched(),
+            "Dynamic requirement with OPC-UA read-only should match via Mode B fallback");
+        assertEquals("OPC-UA", result.protocol());
+        assertEquals(reqId, result.requirementId());
+    }
+
+    @Test
+    @DisplayName("Should not match dynamic requirement with MQTT protocol")
+    void shouldNotMatchDynamicRequirementWithMqtt() {
+        Model model = sharedLoader.getModel();
+        String reqId = "REQ-TEST-DYN-02";
+        String uri = "http://www.example.org/instance#" + reqId;
+
+        Resource req = model.createResource(uri);
+        req.addProperty(
+            model.createProperty("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+            model.createResource("http://www.example.org/sda#Requirement"));
+        req.addProperty(model.createProperty("http://www.example.org/sda#requirementID"), reqId);
+        req.addProperty(model.createProperty("http://www.example.org/sda#protocol"), "MQTT");
+        req.addProperty(model.createProperty("http://www.example.org/sda#accessMode"), "read-only");
+
+        ServiceMatchResult result = reasoner.matchByRequirementId(reqId);
+        assertFalse(result.matched(),
+            "Dynamic requirement with MQTT should not match any service");
+    }
+
+    @Test
+    @DisplayName("Should return no match for dynamic requirement with no parameters")
+    void shouldNotMatchDynamicRequirementWithNoParams() {
+        Model model = sharedLoader.getModel();
+        String reqId = "REQ-TEST-DYN-03";
+        String uri = "http://www.example.org/instance#" + reqId;
+
+        Resource req = model.createResource(uri);
+        req.addProperty(
+            model.createProperty("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+            model.createResource("http://www.example.org/sda#Requirement"));
+        req.addProperty(model.createProperty("http://www.example.org/sda#requirementID"), reqId);
+
+        ServiceMatchResult result = reasoner.matchByRequirementId(reqId);
+        assertFalse(result.matched(),
+            "Dynamic requirement with no parameters should not match");
     }
 }

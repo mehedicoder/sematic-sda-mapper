@@ -115,11 +115,8 @@ public class SystemStatusView extends VerticalLayout {
         linksRow.setSpacing(true);
         linksRow.setPadding(false);
 
-        linksRow.add(createQuickLink(VaadinIcon.CONNECT, "Service Instances", ServiceInstancesView.class));
-        linksRow.add(createQuickLink(VaadinIcon.CLIPBOARD_TEXT, "Requirement Form", RequirementFormView.class));
-        linksRow.add(createQuickLink(VaadinIcon.BOOK, "Ontology Explorer", OntologyExplorerView.class));
-        linksRow.add(createQuickLink(VaadinIcon.SEARCH, "Search", SearchView.class));
-        linksRow.add(createQuickLink(VaadinIcon.ROCKET, "Deployment", DeploymentView.class));
+        linksRow.add(createQuickLink(VaadinIcon.BOOK, "Service Catalog", com.sda.mapper.ui.catalog.ServiceCatalogView.class));
+        linksRow.add(createQuickLink(VaadinIcon.CONNECT, "OPC UA Discovery", com.sda.mapper.ui.catalog.DiscoveryCatalogView.class));
         linksRow.add(createQuickLink(VaadinIcon.EYE, "Monitoring", MonitoringView.class));
 
         add(linksRow);

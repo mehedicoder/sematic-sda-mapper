@@ -8,6 +8,7 @@ package com.sda.mapper.reasoning;
  * @param serviceName          rdfs:label of the matched Service
  * @param containerImage       sda:image container image reference
  * @param capabilityName       rdfs:label of the matched OfferedCapability
+ * @param skillName            rdfs:label of the matched Skill
  * @param protocol             sda:protocol from the CommunicationBinding
  * @param accessMode           sda:accessMode from the CommunicationBinding
  * @param bindingLabel         rdfs:label of the CommunicationBinding
@@ -18,13 +19,19 @@ package com.sda.mapper.reasoning;
  * @param explanation          human-readable explanation of the match result
  * @param lifecycleStatus      current lifecycle status (Defined/Matched/Verified)
  * @param requirementId        the requirement ID that was matched
+ * @param safetyIntegrityLevel sda:safetyIntegrityLevel from the DeploymentContext (e.g. "SIL-2")
+ * @param determinismClass     sda:determinismClass from the DeploymentContext (e.g. "HardRealTime")
+ * @param networkZone          sda:networkZone from the DeploymentContext (e.g. "OT-Zone-3")
  */
 public record ServiceMatchResult(boolean matched, String serviceName, String containerImage,
-                                  String capabilityName, String protocol, String accessMode,
+                                  String capabilityName, String skillName,
+                                  String protocol, String accessMode,
                                   String bindingLabel, String connector,
                                   String deploymentContext,
                                   double recall, int latencyMs, String explanation,
-                                  String lifecycleStatus, String requirementId) {
+                                  String lifecycleStatus, String requirementId,
+                                  String safetyIntegrityLevel, String determinismClass,
+                                  String networkZone) {
 
     /**
      * Creates a no-match result with the given reason.
@@ -33,7 +40,7 @@ public record ServiceMatchResult(boolean matched, String serviceName, String con
      * @return a {@code ServiceMatchResult} with {@code matched=false}
      */
     public static ServiceMatchResult noMatch(String reason) {
-        return new ServiceMatchResult(false, null, null, null, null, null,
-            null, null, null, 0.0, 0, reason, "Defined", null);
+        return new ServiceMatchResult(false, null, null, null, null, null, null,
+            null, null, null, 0.0, 0, reason, "Defined", null, null, null, null);
     }
 }

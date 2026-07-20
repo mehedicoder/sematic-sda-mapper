@@ -4,7 +4,7 @@ PREFIX css:  <http://www.example.org/css#>
 PREFIX sda:  <http://www.example.org/sda#>
 PREFIX :     <http://www.example.org/instance#>
 
-SELECT ?requirement ?capability ?skill ?service ?binding ?protocol ?accessMode ?recall ?latency ?onPlantNetwork ?connector ?connectorLabel ?deploy ?deployLabel
+SELECT ?requirement ?capability ?skill ?service ?binding ?protocol ?accessMode ?recall ?latency ?onPlantNetwork ?connector ?connectorLabel ?deploy ?deployLabel ?safetyIntegrityLevel ?determinismClass ?networkZone
 WHERE {
     # Bind the requirement to match (placeholder replaced at runtime)
     BIND(:REQ-001 AS ?requirement)
@@ -45,6 +45,10 @@ WHERE {
                   sda:onPlantNetwork  ?onPlantNetwork .
 
     FILTER (?onPlantNetwork = true)
+
+    OPTIONAL { ?deploy sda:safetyIntegrityLevel ?safetyIntegrityLevel }
+    OPTIONAL { ?deploy sda:determinismClass     ?determinismClass }
+    OPTIONAL { ?deploy sda:networkZone          ?networkZone }
 
     # R2a: Semantic concept coverage (paper Table I)
     # All concepts required by the Skill must be provided by some DataConnector

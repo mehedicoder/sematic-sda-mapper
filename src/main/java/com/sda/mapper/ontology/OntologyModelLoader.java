@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 
 /**
  * Loads the CSS-SDA ontology (RDF/Turtle) into an Apache Jena Model at application startup.
@@ -23,38 +24,47 @@ public class OntologyModelLoader {
 
     private static final Logger log = LoggerFactory.getLogger(OntologyModelLoader.class);
 
-    private String filePath = "ontology/css-sda-small.ttl";
+    private List<String> filePaths = List.of("ontology/css-sda-small.ttl");
     private Model model;
     private boolean loaded = false;
 
     @PostConstruct
     public void loadOntology() {
-        log.info("Loading ontology from classpath: {}", filePath);
-        try {
-            ClassPathResource resource = new ClassPathResource(filePath);
-            if (!resource.exists()) {
+        model = ModelFactory.createDefaultModel();
+        int totalTriples = 0;
+
+        for (String filePath : filePaths) {
+            log.info("Loading ontology from classpath: {}", filePath);
+            try {
+                ClassPathResource resource = new ClassPathResource(filePath);
+                if (!resource.exists()) {
+                    throw new OntologyLoadingException(
+                        "Ontology file not found on classpath: " + filePath);
+                }
+                Model fileModel = ModelFactory.createDefaultModel();
+                try (InputStream in = resource.getInputStream()) {
+                    fileModel.read(in, null, "TTL");
+                }
+                model.add(fileModel);
+                totalTriples += fileModel.size();
+                log.info("Loaded {}: {} triples", filePath, fileModel.size());
+            } catch (OntologyLoadingException e) {
+                throw e;
+            } catch (IOException e) {
                 throw new OntologyLoadingException(
-                    "Ontology file not found on classpath: " + filePath);
+                    "Failed to read ontology file: " + filePath, e);
+            } catch (Exception e) {
+                throw new OntologyLoadingException(
+                    "Failed to parse ontology file (invalid Turtle?): " + filePath, e);
             }
-            model = ModelFactory.createDefaultModel();
-            try (InputStream in = resource.getInputStream()) {
-                model.read(in, null, "TTL");
-            }
-            loaded = true;
-            long classCount = model.listSubjectsWithProperty(
-                org.apache.jena.vocabulary.RDF.type,
-                org.apache.jena.vocabulary.RDFS.Class).toList().size();
-            log.info("Ontology loaded successfully: {} triples, {} classes",
-                model.size(), classCount);
-        } catch (OntologyLoadingException e) {
-            throw e;
-        } catch (IOException e) {
-            throw new OntologyLoadingException(
-                "Failed to read ontology file: " + filePath, e);
-        } catch (Exception e) {
-            throw new OntologyLoadingException(
-                "Failed to parse ontology file (invalid Turtle?): " + filePath, e);
         }
+
+        loaded = true;
+        long classCount = model.listSubjectsWithProperty(
+            org.apache.jena.vocabulary.RDF.type,
+            org.apache.jena.vocabulary.RDFS.Class).toList().size();
+        log.info("Ontology loaded successfully: {} total triples, {} classes from {} files",
+            model.size(), classCount, filePaths.size());
     }
 
     /**
@@ -77,11 +87,27 @@ public class OntologyModelLoader {
         return loaded;
     }
 
-    public String getFilePath() {
-        return filePath;
+    public List<String> getFilePaths() {
+        return filePaths;
     }
 
+    public void setFilePaths(List<String> filePaths) {
+        this.filePaths = filePaths;
+    }
+
+    /**
+     * @deprecated Use {@link #getFilePaths()} instead.
+     */
+    @Deprecated
+    public String getFilePath() {
+        return filePaths.isEmpty() ? null : filePaths.get(0);
+    }
+
+    /**
+     * @deprecated Use {@link #setFilePaths(List)} instead.
+     */
+    @Deprecated
     public void setFilePath(String filePath) {
-        this.filePath = filePath;
+        this.filePaths = List.of(filePath);
     }
 }

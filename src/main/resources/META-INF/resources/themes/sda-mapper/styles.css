@@ -79,3 +79,28 @@
         font-size: var(--lumo-fontSize-s) !important;
     }
 }
+
+/* ── Service Catalog grid responsive columns ────────────────────────── */
+
+/* Tablet (≤1023px): hide low-priority columns */
+@media (max-width: 1023px) {
+    vaadin-grid::part(capabilityName),
+    vaadin-grid::part(skillName),
+    vaadin-grid::part(securityMode),
+    vaadin-grid::part(networkZone) {
+        display: none;
+    }
+}
+
+/* Mobile (≤599px): hide more columns, keep essential ones */
+@media (max-width: 599px) {
+    vaadin-grid::part(capabilityName),
+    vaadin-grid::part(skillName),
+    vaadin-grid::part(accessMode),
+    vaadin-grid::part(securityMode),
+    vaadin-grid::part(deploymentName),
+    vaadin-grid::part(networkZone),
+    vaadin-grid::part(containerImage) {
+        display: none;
+    }
+}

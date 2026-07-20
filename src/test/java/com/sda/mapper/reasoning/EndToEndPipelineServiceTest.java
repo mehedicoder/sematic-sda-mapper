@@ -22,7 +22,7 @@ class EndToEndPipelineServiceTest {
     @DisplayName("MTP AML parse should produce Jena Model with Skills and Bindings")
     void shouldParseMtpAmlIntoModel() {
         try (InputStream input = getClass().getClassLoader()
-                .getResourceAsStream("examples/mtp-fermentation-skid.xml")) {
+                .getResourceAsStream("examples/req002-mtp-fermentation-skid.xml")) {
             assertNotNull(input);
             ParseResult result = mtpParser.parse(input);
             assertNotNull(result.model(), "Model should not be null");
@@ -30,7 +30,7 @@ class EndToEndPipelineServiceTest {
 
             long skillCount = result.model().listSubjectsWithProperty(
                 result.model().createProperty("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-                result.model().createResource("http://www.example.org/sda#Skill")
+                result.model().createResource("http://www.example.org/css#Skill")
             ).toList().size();
             assertTrue(skillCount > 0, "Model should contain Skill instances");
         } catch (Exception e) {
@@ -42,7 +42,7 @@ class EndToEndPipelineServiceTest {
     @DisplayName("OPC UA datasheet parse should produce Jena Model with Connectors")
     void shouldParseUaDatasheetIntoModel() {
         try (InputStream input = getClass().getClassLoader()
-                .getResourceAsStream("examples/uaserver-ahu01.json")) {
+                .getResourceAsStream("examples/req003-uaserver-ahu01.json")) {
             assertNotNull(input);
             ParseResult result = uaParser.parse(input);
             assertNotNull(result.model(), "Model should not be null");
@@ -66,7 +66,7 @@ class EndToEndPipelineServiceTest {
         loader.loadOntology();
 
         try (InputStream input = getClass().getClassLoader()
-                .getResourceAsStream("examples/mtp-fermentation-skid.xml")) {
+                .getResourceAsStream("examples/req002-mtp-fermentation-skid.xml")) {
             assertNotNull(input);
             ParseResult result = mtpParser.parse(input);
 

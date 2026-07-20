@@ -1,0 +1,52 @@
+PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX css:  <http://www.example.org/css#>
+PREFIX sda:  <http://www.example.org/sda#>
+
+# Service Catalog: extract all services with their full CSS-SDA chain
+SELECT ?service ?serviceLabel ?capabilityLabel ?skillLabel
+       ?protocol ?accessMode ?securityMode
+       ?recall ?latency ?image
+       ?connectorLabel ?informationModel
+       ?deployLabel ?sil ?determinism ?networkZone
+WHERE {
+    ?service      a                  sda:Service ;
+                 rdfs:label          ?serviceLabel ;
+                 sda:reportedRecall  ?recall ;
+                 sda:reportedLatency ?latency .
+
+    OPTIONAL { ?service sda:image ?image }
+
+    # Capability chain: Service ← isImplementedBy ← Skill ← realisedBy ← Capability
+    OPTIONAL {
+        ?capability  sda:realisedBy     ?skill .
+        ?skill       sda:isImplementedBy ?service .
+        ?capability  rdfs:label          ?capabilityLabel .
+        ?skill       rdfs:label          ?skillLabel .
+    }
+
+    # Binding chain: Service → usesBinding → CommunicationBinding
+    OPTIONAL {
+        ?service     sda:usesBinding    ?binding .
+        ?binding     sda:protocol       ?protocol ;
+                     sda:accessMode     ?accessMode .
+        OPTIONAL { ?binding sda:securityMode ?securityMode }
+
+        # Connector chain: CommunicationBinding → usesConnector → DataConnector
+        OPTIONAL {
+            ?binding   sda:usesConnector  ?connector .
+            ?connector rdfs:label          ?connectorLabel .
+            OPTIONAL { ?connector sda:informationModel ?informationModel }
+        }
+    }
+
+    # Deployment chain: Service → isDeployedBy → DeploymentContext
+    OPTIONAL {
+        ?service     sda:isDeployedBy   ?deploy .
+        ?deploy      rdfs:label         ?deployLabel .
+        OPTIONAL { ?deploy sda:safetyIntegrityLevel ?sil }
+        OPTIONAL { ?deploy sda:determinismClass     ?determinism }
+        OPTIONAL { ?deploy sda:networkZone          ?networkZone }
+    }
+}
+ORDER BY ?serviceLabel

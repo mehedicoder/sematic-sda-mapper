@@ -20,6 +20,9 @@ public record MatchRequirementResponse(
     String explanation,
     String lifecycleStatus,
     String requirementId,
+    String safetyIntegrityLevel,
+    String determinismClass,
+    String networkZone,
     String dockerComposeManifest,
     String kubernetesManifest
 ) {
@@ -45,6 +48,9 @@ public record MatchRequirementResponse(
             result.explanation(),
             result.lifecycleStatus(),
             result.requirementId(),
+            result.safetyIntegrityLevel(),
+            result.determinismClass(),
+            result.networkZone(),
             null,
             null
         );
@@ -76,6 +82,9 @@ public record MatchRequirementResponse(
             result.explanation(),
             result.lifecycleStatus(),
             result.requirementId(),
+            result.safetyIntegrityLevel(),
+            result.determinismClass(),
+            result.networkZone(),
             dockerComposeManifest,
             kubernetesManifest
         );

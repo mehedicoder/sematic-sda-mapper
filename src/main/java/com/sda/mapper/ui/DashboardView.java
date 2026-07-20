@@ -66,27 +66,27 @@ public class DashboardView extends VerticalLayout {
         servicesCard = new DashboardCard(
             VaadinIcon.CONNECT, "Registered Services", serviceCount,
             "var(--lumo-primary-color)",
-            createRouterLink(ServiceInstancesView.class, "Service Instances"));
+            createRouterLink(com.sda.mapper.ui.catalog.ServiceCatalogView.class, "Service Catalog"));
 
         capabilitiesCard = new DashboardCard(
             VaadinIcon.CUBE, "Capabilities", capabilityCount,
             "var(--lumo-success-color)",
-            createRouterLink(OntologyExplorerView.class, "Ontology Explorer"));
+            createRouterLink(com.sda.mapper.ui.catalog.ServiceCatalogView.class, "Service Catalog"));
 
         skillsCard = new DashboardCard(
             VaadinIcon.WRENCH, "Skills", skillCount,
             "var(--lumo-contrast-color)",
-            createRouterLink(OntologyExplorerView.class, "Ontology Explorer"));
+            createRouterLink(com.sda.mapper.ui.catalog.ServiceCatalogView.class, "Service Catalog"));
 
         mappingsCard = new DashboardCard(
             VaadinIcon.ARROW_RIGHT, "Semantic Mappings", mappingCount,
             "var(--lumo-warning-color)",
-            createRouterLink(SearchView.class, "Search"));
+            createRouterLink(PipelineView.class, "Pipeline"));
 
         inferredCard = new DashboardCard(
             VaadinIcon.LIGHTBULB, "Inferred Capabilities", inferredCount,
             "var(--lumo-error-color)",
-            createRouterLink(OntologyExplorerView.class, "Ontology Explorer"));
+            createRouterLink(com.sda.mapper.ui.catalog.ServiceCatalogView.class, "Service Catalog"));
 
         var cardsLayout = new HorizontalLayout(
             servicesCard, capabilitiesCard, skillsCard, mappingsCard, inferredCard);

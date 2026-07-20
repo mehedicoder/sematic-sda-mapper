@@ -4,7 +4,7 @@ PREFIX css:  <http://www.example.org/css#>
 PREFIX sda:  <http://www.example.org/sda#>
 PREFIX :     <http://www.example.org/instance#>
 
-SELECT ?requirement ?capability ?skill ?service ?binding ?protocol ?accessMode ?recall ?latency ?networkZone ?connector ?connectorLabel ?deploy ?deployLabel
+SELECT ?requirement ?capability ?skill ?service ?binding ?protocol ?accessMode ?recall ?latency ?networkZone ?safetyIntegrityLevel ?determinismClass ?connector ?connectorLabel ?deploy ?deployLabel
 WHERE {
     # Bind the requirement to match (placeholder replaced at runtime)
     BIND(:REQ-003 AS ?requirement)
@@ -44,6 +44,9 @@ WHERE {
 
     FILTER (?onPlantNetwork = true)
     FILTER (?networkZone = "OT-Zone-3")
+
+    OPTIONAL { ?deploy sda:safetyIntegrityLevel ?safetyIntegrityLevel }
+    OPTIONAL { ?deploy sda:determinismClass     ?determinismClass }
 
     # R2a: Semantic concept coverage (paper Table I)
     FILTER NOT EXISTS {

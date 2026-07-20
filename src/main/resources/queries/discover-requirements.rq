@@ -1,0 +1,14 @@
+PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX sda:  <http://www.example.org/sda#>
+PREFIX :     <http://www.example.org/instance#>
+
+SELECT ?requirementId ?title ?description
+WHERE {
+    ?req  a              sda:Requirement ;
+          sda:requirementID ?requirementId .
+
+    OPTIONAL { ?req sda:title       ?title }
+    OPTIONAL { ?req sda:description ?description }
+}
+ORDER BY ?requirementId

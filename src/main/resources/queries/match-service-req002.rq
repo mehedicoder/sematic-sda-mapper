@@ -4,7 +4,7 @@ PREFIX css:  <http://www.example.org/css#>
 PREFIX sda:  <http://www.example.org/sda#>
 PREFIX :     <http://www.example.org/instance#>
 
-SELECT ?requirement ?capability ?skill ?service ?binding ?protocol ?accessMode ?recall ?latency ?safetyIntegrityLevel ?determinismClass ?connector ?connectorLabel ?deploy ?deployLabel
+SELECT ?requirement ?capability ?skill ?service ?binding ?protocol ?accessMode ?recall ?latency ?safetyIntegrityLevel ?determinismClass ?networkZone ?connector ?connectorLabel ?deploy ?deployLabel
 WHERE {
     # Bind the requirement to match (placeholder replaced at runtime)
     BIND(:REQ-002 AS ?requirement)
@@ -44,6 +44,8 @@ WHERE {
                   sda:determinismClass         ?determinismClass .
 
     FILTER (?onPlantNetwork = true)
+
+    OPTIONAL { ?deploy sda:networkZone ?networkZone }
 
     # R3: SIL and determinism class must match requirement
     FILTER (?safetyIntegrityLevel = "SIL-2")

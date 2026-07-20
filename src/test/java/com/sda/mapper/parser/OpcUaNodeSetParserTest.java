@@ -21,8 +21,8 @@ class OpcUaNodeSetParserTest {
     @Test
     @DisplayName("Should parse a real OPC UA NodeSet XML file with variables, objects, and methods")
     void shouldParseCompleteNodeSet() {
-        InputStream input = getClass().getResourceAsStream("/examples/uaserver-nodeset-complete.xml");
-        assertNotNull(input, "Test resource uaserver-nodeset-complete.xml must exist");
+        InputStream input = getClass().getResourceAsStream("/examples/req001-uaserver-nodeset-complete.xml");
+        assertNotNull(input, "Test resource req001-uaserver-nodeset-complete.xml must exist");
 
         ParseResult result = parser.parse(input);
 

@@ -65,7 +65,7 @@ public class MTPAmlParser implements Parser {
 
             Property rdfType = model.createProperty(RDF_TYPE);
             Property rdfsLabel = model.createProperty(RDFS_LABEL);
-            Resource skillClass = model.createResource(SDA_NS + "Skill");
+            Resource skillClass = model.createResource(CSS_NS + "Skill");
             Resource bindingClass = model.createResource(SDA_NS + "CommunicationBinding");
             Resource connectorClass = model.createResource(SDA_NS + "DataConnector");
             Property engineeringUnit = model.createProperty(SDA_NS + "engineeringUnit");

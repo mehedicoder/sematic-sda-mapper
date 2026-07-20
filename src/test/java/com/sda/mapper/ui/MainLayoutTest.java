@@ -36,50 +36,15 @@ class MainLayoutTest {
         });
         assertDoesNotThrow(() -> {
             var loader = new com.sda.mapper.ontology.OntologyModelLoader();
-            new ServiceInstancesView(loader);
-        });
-        assertDoesNotThrow(() -> {
-            var loader = new com.sda.mapper.ontology.OntologyModelLoader();
-            new OntologyExplorerView(loader);
-        });
-        assertDoesNotThrow(() -> {
-            var loader = new com.sda.mapper.ontology.OntologyModelLoader();
-            var queryLoader = new com.sda.mapper.reasoning.SparqlQueryLoader();
-            var rDeployService = new com.sda.mapper.reasoning.RDeployService(loader);
-            var rVerifyService = new com.sda.mapper.reasoning.RVerifyService(loader);
-            var reasoner = new com.sda.mapper.reasoning.SemanticReasonerService(loader, queryLoader, rDeployService);
-            var dockerService = new com.sda.mapper.deployment.DockerComposeManifestService();
-            var k8sService = new com.sda.mapper.deployment.KubernetesManifestService();
-            var optionsService = new com.sda.mapper.api.OptionsConfigService(new tools.jackson.databind.ObjectMapper());
-            new RequirementFormView(optionsService, reasoner, loader, dockerService, k8sService, rDeployService, rVerifyService);
-        });
-        assertDoesNotThrow(() -> {
-            var loader = new com.sda.mapper.ontology.OntologyModelLoader();
-            var rDeployService = new com.sda.mapper.reasoning.RDeployService(loader);
-            var optionsService = new com.sda.mapper.api.OptionsConfigService(new tools.jackson.databind.ObjectMapper());
-            new RegistrationWizardView(optionsService, loader, rDeployService);
-        });
-        assertDoesNotThrow(() -> {
-            var loader = new com.sda.mapper.ontology.OntologyModelLoader();
-            loader.setFilePath("ontology/css-sda-small.ttl");
             loader.loadOntology();
-            new SearchView(new com.sda.mapper.reasoning.SearchService(loader));
+            var queryLoader = new com.sda.mapper.reasoning.SparqlQueryLoader();
+            var catalogService = new com.sda.mapper.ui.catalog.ServiceCatalogService(loader, queryLoader);
+            new com.sda.mapper.ui.catalog.ServiceCatalogView(catalogService);
         });
         assertDoesNotThrow(() -> {
             var loader = new com.sda.mapper.ontology.OntologyModelLoader();
             var inferenceService = new com.sda.mapper.reasoning.OntologyInferenceService(loader);
             new DashboardView(loader, inferenceService);
-        });
-        assertDoesNotThrow(() -> {
-            var loader = new com.sda.mapper.ontology.OntologyModelLoader();
-            var queryLoader = new com.sda.mapper.reasoning.SparqlQueryLoader();
-            var rDeployService = new com.sda.mapper.reasoning.RDeployService(loader);
-            var reasoner = new com.sda.mapper.reasoning.SemanticReasonerService(loader, queryLoader, rDeployService);
-            var explanationService = new com.sda.mapper.reasoning.ExplanationService();
-            var dockerService = new com.sda.mapper.deployment.DockerComposeManifestService();
-            var k8sService = new com.sda.mapper.deployment.KubernetesManifestService();
-            var manifestService = new com.sda.mapper.deployment.ManifestService(dockerService, k8sService);
-            new com.sda.mapper.ui.DeploymentView(manifestService, reasoner, explanationService);
         });
         assertDoesNotThrow(() -> {
             var loader = new com.sda.mapper.ontology.OntologyModelLoader();

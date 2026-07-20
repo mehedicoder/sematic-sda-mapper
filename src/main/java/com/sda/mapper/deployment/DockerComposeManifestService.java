@@ -47,7 +47,7 @@ public class DockerComposeManifestService {
             serviceDef.put("environment", envVars);
         }
 
-        if (isOnPlantNetwork(result.deploymentContext())) {
+        if (isOnPlantNetwork(result)) {
             serviceDef.put("network_mode", "host");
         }
 
@@ -77,15 +77,24 @@ public class DockerComposeManifestService {
         if (result.deploymentContext() != null) {
             env.add("DEPLOYMENT_CONTEXT=" + result.deploymentContext());
         }
+        if (result.safetyIntegrityLevel() != null) {
+            env.add("SAFETY_INTEGRITY_LEVEL=" + result.safetyIntegrityLevel());
+        }
+        if (result.determinismClass() != null) {
+            env.add("DETERMINISM_CLASS=" + result.determinismClass());
+        }
+        if (result.networkZone() != null) {
+            env.add("NETWORK_ZONE=" + result.networkZone());
+        }
         env.add("RECALL=" + result.recall());
         env.add("LATENCY_MS=" + result.latencyMs());
 
         return env;
     }
 
-    private boolean isOnPlantNetwork(String deploymentContext) {
-        return deploymentContext != null
-            && deploymentContext.toLowerCase().contains("plant");
+    private boolean isOnPlantNetwork(ServiceMatchResult result) {
+        return result.deploymentContext() != null
+            && result.deploymentContext().toLowerCase().contains("plant");
     }
 
     private static String toServiceName(String serviceName) {

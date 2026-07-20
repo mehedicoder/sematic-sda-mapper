@@ -73,7 +73,7 @@ public class OpcUaNodeSetParser implements Parser {
             Property rdfType = model.createProperty(RDF_TYPE);
             Property rdfsLabel = model.createProperty(RDFS_LABEL);
             Resource connectorClass = model.createResource(SDA_NS + "DataConnector");
-            Resource skillClass = model.createResource(SDA_NS + "Skill");
+            Resource skillClass = model.createResource(CSS_NS + "Skill");
             Resource bindingClass = model.createResource(SDA_NS + "CommunicationBinding");
             Resource serviceClass = model.createResource(SDA_NS + "Service");
             Property informationModel = model.createProperty(SDA_NS + "informationModel");

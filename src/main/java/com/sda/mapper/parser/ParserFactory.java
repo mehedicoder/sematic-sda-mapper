@@ -17,12 +17,14 @@ public class ParserFactory {
     private final MTPAmlParser mtpAmlParser;
     private final UaServerDatasheetParser uaServerDatasheetParser;
     private final OpcUaNodeSetParser opcUaNodeSetParser;
+    private final AasParser aasParser;
 
     public ParserFactory(MTPAmlParser mtpAmlParser, UaServerDatasheetParser uaServerDatasheetParser,
-                         OpcUaNodeSetParser opcUaNodeSetParser) {
+                         OpcUaNodeSetParser opcUaNodeSetParser, AasParser aasParser) {
         this.mtpAmlParser = mtpAmlParser;
         this.uaServerDatasheetParser = uaServerDatasheetParser;
         this.opcUaNodeSetParser = opcUaNodeSetParser;
+        this.aasParser = aasParser;
     }
 
     /**
@@ -52,8 +54,9 @@ public class ParserFactory {
 
     /**
      * Returns the parser appropriate for the given filename and input content.
-     * For XML files, reads a small peek buffer to detect the root element and
-     * distinguish OPC UA NodeSet from MTP AML format.
+     * For JSON files, inspects the root element to distinguish AAS from OPC UA
+     * Datasheet format. For XML files, inspects the root element to distinguish
+     * OPC UA NodeSet from MTP AML format.
      *
      * @param filename the original filename of the uploaded file
      * @param input    the file content stream (must support mark/reset)
@@ -67,6 +70,9 @@ public class ParserFactory {
 
         String lower = filename.toLowerCase();
         if (lower.endsWith(".json")) {
+            if (input != null && input.markSupported()) {
+                return sniffJsonParser(input, uaServerDatasheetParser);
+            }
             return uaServerDatasheetParser;
         } else if (lower.endsWith(".xml") || lower.endsWith(".aml")) {
             if (input != null && input.markSupported()) {
@@ -77,6 +83,26 @@ public class ParserFactory {
             throw new ParserException("Unsupported file extension for: " + filename
                 + ". Supported extensions: .xml, .aml, .json");
         }
+    }
+
+    private Parser sniffJsonParser(java.io.InputStream input, Parser fallback) {
+        try {
+            byte[] buf = new byte[4096];
+            input.mark(buf.length);
+            int bytesRead = input.read(buf);
+            input.reset();
+            if (bytesRead > 0) {
+                String peek = new String(buf, 0, bytesRead);
+                if (peek.contains("assetAdministrationShells")) {
+                    log.info("Detected AAS JSON via content sniffing");
+                    return aasParser;
+                }
+            }
+        } catch (Exception e) {
+            log.debug("JSON content sniffing failed, falling back to default parser: {}",
+                e.getMessage());
+        }
+        return fallback;
     }
 
     private Parser sniffXmlParser(java.io.InputStream input, Parser fallback) {

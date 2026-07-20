@@ -23,8 +23,8 @@ class UaServerDatasheetParserTest {
     @Test
     @DisplayName("Should parse valid datasheet and return ParseResult with correct triple count")
     void shouldParseValidDatasheet() {
-        try (InputStream input = resource("uaserver-ahu01.json")) {
-            assertNotNull(input, "Test resource uaserver-ahu01.json must exist");
+        try (InputStream input = resource("req003-uaserver-ahu01.json")) {
+            assertNotNull(input, "Test resource req003-uaserver-ahu01.json must exist");
 
             ParseResult result = parser.parse(input);
 
@@ -41,7 +41,7 @@ class UaServerDatasheetParserTest {
     @Test
     @DisplayName("Should produce CommunicationBinding with endpoint")
     void shouldProduceCommunicationBindingWithEndpoint() {
-        try (InputStream input = resource("uaserver-ahu01.json")) {
+        try (InputStream input = resource("req003-uaserver-ahu01.json")) {
             assertNotNull(input);
 
             ParseResult result = parser.parse(input);
@@ -98,7 +98,7 @@ class UaServerDatasheetParserTest {
     @Test
     @DisplayName("Should produce DataConnector triples from NodeSets")
     void shouldProduceDataConnectorsFromNodeSets() {
-        try (InputStream input = resource("uaserver-ahu01.json")) {
+        try (InputStream input = resource("req003-uaserver-ahu01.json")) {
             assertNotNull(input);
 
             ParseResult result = parser.parse(input);

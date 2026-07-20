@@ -172,8 +172,8 @@ class EvaluationTest {
     void shouldParseMtpAmlWithModel() {
         MTPAmlParser parser = new MTPAmlParser();
         try (InputStream input = getClass().getClassLoader()
-                .getResourceAsStream("examples/mtp-fermentation-skid-complete.xml")) {
-            assertNotNull(input, "Test resource mtp-fermentation-skid-complete.xml must exist");
+                .getResourceAsStream("examples/req002-mtp-fermentation-skid-complete.xml")) {
+            assertNotNull(input, "Test resource req002-mtp-fermentation-skid-complete.xml must exist");
             ParseResult result = parser.parse(input);
             assertNotNull(result);
             assertEquals("MTP-AML", result.fileType());
@@ -193,8 +193,8 @@ class EvaluationTest {
     void shouldParseOpcUaDatasheetWithModel() {
         UaServerDatasheetParser parser = new UaServerDatasheetParser();
         try (InputStream input = getClass().getClassLoader()
-                .getResourceAsStream("examples/uaserver-ahu01-complete.json")) {
-            assertNotNull(input, "Test resource uaserver-ahu01-complete.json must exist");
+                .getResourceAsStream("examples/req003-uaserver-ahu01-complete.json")) {
+            assertNotNull(input, "Test resource req003-uaserver-ahu01-complete.json must exist");
             ParseResult result = parser.parse(input);
             assertNotNull(result);
             assertEquals("OPC-UA-Datasheet", result.fileType());
@@ -211,8 +211,8 @@ class EvaluationTest {
     void shouldParseMtpAmlFermentationSkidComplete() {
         MTPAmlParser parser = new MTPAmlParser();
         try (InputStream input = getClass().getClassLoader()
-                .getResourceAsStream("examples/mtp-fermentation-skid-complete.xml")) {
-            assertNotNull(input, "Test resource mtp-fermentation-skid-complete.xml must exist");
+                .getResourceAsStream("examples/req002-mtp-fermentation-skid-complete.xml")) {
+            assertNotNull(input, "Test resource req002-mtp-fermentation-skid-complete.xml must exist");
             ParseResult result = parser.parse(input);
             assertNotNull(result);
             assertEquals("MTP-AML", result.fileType());
@@ -227,8 +227,8 @@ class EvaluationTest {
     void shouldParseOpcUaDatasheetAhu01Complete() {
         UaServerDatasheetParser parser = new UaServerDatasheetParser();
         try (InputStream input = getClass().getClassLoader()
-                .getResourceAsStream("examples/uaserver-ahu01-complete.json")) {
-            assertNotNull(input, "Test resource uaserver-ahu01-complete.json must exist");
+                .getResourceAsStream("examples/req003-uaserver-ahu01-complete.json")) {
+            assertNotNull(input, "Test resource req003-uaserver-ahu01-complete.json must exist");
             ParseResult result = parser.parse(input);
             assertNotNull(result);
             assertEquals("OPC-UA-Datasheet", result.fileType());

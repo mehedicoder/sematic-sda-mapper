@@ -69,8 +69,12 @@ opc-ua:
     connect-timeout-ms: ${OPC_UA_CONNECT_TIMEOUT_MS:5000}
 
 # Ontology Inference Configuration
+vaadin:
+  productionMode: true
+
 app:
   ontology:
-    file-path: ontology/css-sda-small.ttl
+    file-paths:
+      - ontology/css-sda-small.ttl
     inference:
       enabled: ${ONTOLOGY_INFERENCE_ENABLED:true}

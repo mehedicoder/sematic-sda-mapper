@@ -51,8 +51,8 @@ services:
 
   tank-simulation:
     build:
-      context: .
-      dockerfile: docker/tank-simulation/Dockerfile
+      context: docker/tank-simulation
+      dockerfile: Dockerfile
     container_name: tank-simulation
     ports:
       - "4334:4334"

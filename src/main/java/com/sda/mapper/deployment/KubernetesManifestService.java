@@ -101,6 +101,15 @@ public class KubernetesManifestService {
         if (result.deploymentContext() != null) {
             env.add(Map.of("name", "DEPLOYMENT_CONTEXT", "value", result.deploymentContext()));
         }
+        if (result.safetyIntegrityLevel() != null) {
+            env.add(Map.of("name", "SAFETY_INTEGRITY_LEVEL", "value", result.safetyIntegrityLevel()));
+        }
+        if (result.determinismClass() != null) {
+            env.add(Map.of("name", "DETERMINISM_CLASS", "value", result.determinismClass()));
+        }
+        if (result.networkZone() != null) {
+            env.add(Map.of("name", "NETWORK_ZONE", "value", result.networkZone()));
+        }
         env.add(Map.of("name", "RECALL", "value", String.valueOf(result.recall())));
         env.add(Map.of("name", "LATENCY_MS", "value", String.valueOf(result.latencyMs())));
 
@@ -115,6 +124,15 @@ public class KubernetesManifestService {
         }
         if (result.protocol() != null) {
             selector.put("sda.ontology/protocol", result.protocol());
+        }
+        if (result.safetyIntegrityLevel() != null) {
+            selector.put("sda.ontology/sil", result.safetyIntegrityLevel());
+        }
+        if (result.determinismClass() != null) {
+            selector.put("sda.ontology/determinism", result.determinismClass());
+        }
+        if (result.networkZone() != null) {
+            selector.put("sda.ontology/network-zone", result.networkZone());
         }
 
         return selector;

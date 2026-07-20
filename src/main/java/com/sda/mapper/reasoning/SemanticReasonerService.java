@@ -10,6 +10,7 @@ import org.apache.jena.query.ResultSet;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.Statement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -55,11 +56,14 @@ public class SemanticReasonerService {
     }
 
     /**
-     * Matches a predefined requirement against the ontology.
-     * Loads the appropriate SPARQL query for the requirement ID
-     * and executes it against the loaded model.
+     * Matches a requirement against the ontology.
+     * <p>
+     * For predefined requirements (REQ-001, REQ-002, REQ-003), uses dedicated
+     * SPARQL queries (Mode A). For dynamically-created requirements (e.g. from
+     * RequirementFormView), extracts parameters from the ontology model and
+     * falls back to inline matching (Mode B).
      *
-     * @param requirementId the requirement ID (e.g. "REQ-001")
+     * @param requirementId the requirement ID (e.g. "REQ-001" or "REQ-a1b2c3d4")
      * @return a {@link ServiceMatchResult} with all matched service details
      */
     public ServiceMatchResult matchByRequirementId(String requirementId) {
@@ -67,11 +71,17 @@ public class SemanticReasonerService {
             return ServiceMatchResult.noMatch("Requirement ID is null or blank");
         }
 
+        // Mode A: predefined requirement with dedicated SPARQL query
         String queryPath = REQUIREMENT_QUERY_MAP.get(requirementId.toUpperCase());
-        if (queryPath == null) {
-            return ServiceMatchResult.noMatch("Unknown requirement ID: " + requirementId);
+        if (queryPath != null) {
+            return matchPredefinedRequirement(requirementId, queryPath);
         }
 
+        // Mode B fallback: extract parameters from ontology and use inline matching
+        return matchDynamicRequirement(requirementId);
+    }
+
+    private ServiceMatchResult matchPredefinedRequirement(String requirementId, String queryPath) {
         try {
             Model model = ontologyModelLoader.getModel();
             String queryStr = sparqlQueryLoader.loadQuery(queryPath);
@@ -93,10 +103,12 @@ public class SemanticReasonerService {
                     String lifecycleStatus = rDeployService.getLifecycleStatus(requirementId);
                     return new ServiceMatchResult(
                         result.matched(), result.serviceName(), result.containerImage(),
-                        result.capabilityName(), result.protocol(), result.accessMode(),
+                        result.capabilityName(), result.skillName(), result.protocol(), result.accessMode(),
                         result.bindingLabel(), result.connector(), result.deploymentContext(),
                         result.recall(), result.latencyMs(), result.explanation(),
-                        lifecycleStatus, requirementId);
+                        lifecycleStatus, requirementId,
+                        result.safetyIntegrityLevel(), result.determinismClass(),
+                        result.networkZone());
                 }
                 return result;
             }
@@ -105,6 +117,99 @@ public class SemanticReasonerService {
         } catch (Exception e) {
             throw new SparqlExecutionException(
                 "Failed to execute matching query for " + requirementId, e);
+        }
+    }
+
+    /**
+     * Matches a dynamically-created requirement by extracting its parameters
+     * from the ontology model and using inline matching (Mode B).
+     */
+    private ServiceMatchResult matchDynamicRequirement(String requirementId) {
+        Model model = ontologyModelLoader.getModel();
+        String resourceUri = INST_NS + requirementId;
+        Resource reqResource = model.getResource(resourceUri);
+
+        if (!reqResource.hasProperty(
+                org.apache.jena.vocabulary.RDF.type,
+                model.createResource(SDA_NS + "Requirement"))) {
+            return ServiceMatchResult.noMatch("Unknown requirement: " + requirementId);
+        }
+
+        Map<String, String> params = extractRequirementParams(model, reqResource);
+        if (params.isEmpty()) {
+            return ServiceMatchResult.noMatch(
+                "No matching parameters found for requirement " + requirementId);
+        }
+
+        log.info("Dynamic matching for {}: params={}", requirementId, params);
+        ServiceMatchResult result = matchInline(params);
+
+        if (result.matched()) {
+            rDeployService.execute(requirementId, result.serviceName(),
+                result.bindingLabel(), result.connector(),
+                result.deploymentContext());
+            String lifecycleStatus = rDeployService.getLifecycleStatus(requirementId);
+            return new ServiceMatchResult(
+                result.matched(), result.serviceName(), result.containerImage(),
+                result.capabilityName(), result.skillName(), result.protocol(), result.accessMode(),
+                result.bindingLabel(), result.connector(), result.deploymentContext(),
+                result.recall(), result.latencyMs(), result.explanation(),
+                lifecycleStatus, requirementId,
+                result.safetyIntegrityLevel(), result.determinismClass(),
+                result.networkZone());
+        }
+        return new ServiceMatchResult(
+            false, null, null, null, null, null, null, null, null, null,
+            0, 0, "No service matched dynamic requirement " + requirementId
+                + " with params: " + params,
+            null, requirementId, null, null, null);
+    }
+
+    /**
+     * Extracts matching parameters from a requirement resource in the ontology.
+     * Reads sda:protocol, sda:accessMode, sda:minRecall, sda:maxLatency,
+     * sda:networkZone, sda:determinismClass, sda:safetyIntegrityLevel.
+     */
+    private Map<String, String> extractRequirementParams(Model model, Resource reqResource) {
+        Map<String, String> params = new HashMap<>();
+        putIfPresent(model, reqResource, params, "protocol", "protocol");
+        putIfPresent(model, reqResource, params, "accessMode", "accessMode");
+        putIfPresent(model, reqResource, params, "networkZone", "networkZone");
+        putIfPresent(model, reqResource, params, "determinismClass", "determinismClass");
+        putIfPresent(model, reqResource, params, "safetyIntegrityLevel", "safetyIntegrityLevel");
+
+        // Extract recall/latency from constraints if present
+        extractConstraintParam(model, reqResource, params, "latency", "maxLatency");
+        extractConstraintParam(model, reqResource, params, "recall", "minRecall");
+
+        return params;
+    }
+
+    private void putIfPresent(Model model, Resource resource,
+                               Map<String, String> params, String ontologyProp, String paramKey) {
+        Statement stmt = resource.getProperty(model.createProperty(SDA_NS + ontologyProp));
+        if (stmt != null && stmt.getObject().isLiteral()) {
+            params.put(paramKey, stmt.getObject().asLiteral().getString());
+        }
+    }
+
+    private void extractConstraintParam(Model model, Resource reqResource,
+                                         Map<String, String> params, String constraintType, String paramKey) {
+        var constraints = reqResource.listProperties(
+            model.createProperty(SDA_NS + "hasConstraint")).toList();
+        for (var stmt : constraints) {
+            if (stmt.getObject().isResource()) {
+                Resource constraint = stmt.getObject().asResource();
+                Statement typeStmt = constraint.getProperty(
+                    model.createProperty(SDA_NS + "constraintType"));
+                if (typeStmt != null && constraintType.equals(typeStmt.getString())) {
+                    Statement valueStmt = constraint.getProperty(
+                        model.createProperty(SDA_NS + "constraintValue"));
+                    if (valueStmt != null) {
+                        params.put(paramKey, valueStmt.getString());
+                    }
+                }
+            }
         }
     }
 
@@ -178,6 +283,7 @@ public class SemanticReasonerService {
             SELECT ?capability ?skill ?service ?binding ?protocol ?accessMode
                    ?recall ?latency ?image ?label ?capLabel
                    ?connector ?connectorLabel ?deploy ?deployLabel
+                   ?safetyIntegrityLevel ?determinismClass ?networkZone
             WHERE {
                 ?service      a                  sda:Service ;
                              rdfs:label          ?label ;
@@ -210,16 +316,22 @@ public class SemanticReasonerService {
             """.formatted(protocol, accessMode, minRecall, maxLatency, onPlantNetwork));
 
         if (safetyIntegrityLevel != null) {
-            sb.append("                ?deploy sda:safetyIntegrityLevel ?sil .\n");
-            sb.append("                FILTER (?sil = \"%s\")\n".formatted(safetyIntegrityLevel));
+            sb.append("                ?deploy sda:safetyIntegrityLevel ?safetyIntegrityLevel .\n");
+            sb.append("                FILTER (?safetyIntegrityLevel = \"%s\")\n".formatted(safetyIntegrityLevel));
+        } else {
+            sb.append("                OPTIONAL { ?deploy sda:safetyIntegrityLevel ?safetyIntegrityLevel }\n");
         }
         if (determinismClass != null) {
-            sb.append("                ?deploy sda:determinismClass ?dc .\n");
-            sb.append("                FILTER (?dc = \"%s\")\n".formatted(determinismClass));
+            sb.append("                ?deploy sda:determinismClass ?determinismClass .\n");
+            sb.append("                FILTER (?determinismClass = \"%s\")\n".formatted(determinismClass));
+        } else {
+            sb.append("                OPTIONAL { ?deploy sda:determinismClass ?determinismClass }\n");
         }
         if (networkZone != null) {
-            sb.append("                ?deploy sda:networkZone ?nz .\n");
-            sb.append("                FILTER (?nz = \"%s\")\n".formatted(networkZone));
+            sb.append("                ?deploy sda:networkZone ?networkZone .\n");
+            sb.append("                FILTER (?networkZone = \"%s\")\n".formatted(networkZone));
+        } else {
+            sb.append("                OPTIONAL { ?deploy sda:networkZone ?networkZone }\n");
         }
 
         sb.append("            }\n");
@@ -271,6 +383,19 @@ public class SemanticReasonerService {
         String explanation = "Matched service '%s' with %s protocol, recall=%.2f, latency=%dms"
             .formatted(serviceName, protocol, recall, latency);
 
+        // Extract skill name from ?skill if present
+        String skillName = null;
+        if (sol.contains("skill") && sol.get("skill").isResource()) {
+            org.apache.jena.rdf.model.Resource skillRes = sol.getResource("skill");
+            var skillLabelStmt = skillRes.getProperty(
+                org.apache.jena.vocabulary.RDFS.label);
+            if (skillLabelStmt != null) {
+                skillName = skillLabelStmt.getString();
+            } else {
+                skillName = getLocalName(skillRes);
+            }
+        }
+
         // Extract binding label from ?binding
         String bindingLabel = null;
         if (sol.contains("binding") && sol.get("binding").isResource()) {
@@ -290,9 +415,15 @@ public class SemanticReasonerService {
         // Extract deployment context label from ?deployLabel
         String deploymentContext = getOptionalLiteral(sol, "deployLabel");
 
+        // Extract deployment context structured properties
+        String safetyIntegrityLevel = getOptionalLiteral(sol, "safetyIntegrityLevel");
+        String determinismClass = getOptionalLiteral(sol, "determinismClass");
+        String networkZone = getOptionalLiteral(sol, "networkZone");
+
         return new ServiceMatchResult(true, serviceName, containerImage,
-            capabilityName, protocol, accessMode, bindingLabel, connector, deploymentContext,
-            recall, latency, explanation, "Defined", requirementId);
+            capabilityName, skillName, protocol, accessMode, bindingLabel, connector, deploymentContext,
+            recall, latency, explanation, "Defined", requirementId,
+            safetyIntegrityLevel, determinismClass, networkZone);
     }
 
     private static String getLocalName(org.apache.jena.rdf.model.Resource resource) {

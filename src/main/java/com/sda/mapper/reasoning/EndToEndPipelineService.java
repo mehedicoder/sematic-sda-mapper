@@ -1,6 +1,7 @@
 package com.sda.mapper.reasoning;
 
 import com.sda.mapper.ontology.OntologyModelLoader;
+import com.sda.mapper.ontology.ServiceRegistrationService;
 import com.sda.mapper.parser.ParseResult;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
@@ -38,18 +39,21 @@ public class EndToEndPipelineService {
     private final OntologyInferenceService inferenceService;
     private final SemanticReasonerService reasonerService;
     private final RequirementDiscoveryService requirementDiscoveryService;
+    private final ServiceRegistrationService serviceRegistrationService;
 
     public EndToEndPipelineService(
             com.sda.mapper.parser.UploadService uploadService,
             OntologyModelLoader ontologyModelLoader,
             OntologyInferenceService inferenceService,
             SemanticReasonerService reasonerService,
-            RequirementDiscoveryService requirementDiscoveryService) {
+            RequirementDiscoveryService requirementDiscoveryService,
+            ServiceRegistrationService serviceRegistrationService) {
         this.uploadService = uploadService;
         this.ontologyModelLoader = ontologyModelLoader;
         this.inferenceService = inferenceService;
         this.reasonerService = reasonerService;
         this.requirementDiscoveryService = requirementDiscoveryService;
+        this.serviceRegistrationService = serviceRegistrationService;
     }
 
     /**
@@ -60,11 +64,13 @@ public class EndToEndPipelineService {
      * @param input               the file content stream
      * @param requirementIds      optional list of requirement IDs to match (null or empty = discover all)
      * @param newRequirementParams optional form parameters for creating a new requirement (null = skip)
+     * @param persistToOntology   if true, persist parsed triples to the uploaded instances TTL file
      * @return a {@link PipelineResult} containing parse info, match results, and warnings
      */
     public PipelineResult execute(String filename, InputStream input,
                                    List<String> requirementIds,
-                                   Map<String, String> newRequirementParams) {
+                                   Map<String, String> newRequirementParams,
+                                   boolean persistToOntology) {
         log.info("Starting end-to-end pipeline for: {}", filename);
         long startTime = System.currentTimeMillis();
 
@@ -116,6 +122,20 @@ public class EndToEndPipelineService {
         long elapsed = System.currentTimeMillis() - startTime;
         log.info("Pipeline completed in {}ms", elapsed);
 
+        // 5. Persist to ontology if requested
+        boolean persisted = false;
+        if (persistToOntology && parsedModel != null) {
+            try {
+                serviceRegistrationService.registerService(parsedModel);
+                persisted = true;
+                warnings.add("Persisted " + parsedModel.size() + " triples to ontology");
+                log.info("Persisted {} triples to uploaded instances", parsedModel.size());
+            } catch (com.sda.mapper.error.OntologyConflictException e) {
+                warnings.add("Persistence blocked: " + e.getMessage());
+                log.warn("Persistence blocked by conflict: {}", e.getMessage());
+            }
+        }
+
         return new PipelineResult(
             parseResult.fileType(),
             parseResult.tripleCount(),
@@ -123,7 +143,8 @@ public class EndToEndPipelineService {
             inferredTriples,
             matches,
             warnings,
-            elapsed
+            elapsed,
+            persisted
         );
     }
 
@@ -204,7 +225,8 @@ public class EndToEndPipelineService {
         int inferredTripleCount,
         Map<String, ServiceMatchResult> matches,
         List<String> warnings,
-        long elapsedMs
+        long elapsedMs,
+        boolean persisted
     ) {
     }
 }

@@ -19,7 +19,8 @@ public record ServiceCatalogEntry(
     String deploymentName,
     String safetyIntegrityLevel,
     String determinismClass,
-    String networkZone
+    String networkZone,
+    String source
 ) {
     public String recallFormatted() {
         return String.format("%.2f", recall);

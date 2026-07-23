@@ -111,6 +111,61 @@ Stop the service:
 docker compose down
 ```
 
+## Deployment
+
+### Build the JAR
+
+```bash
+mvn clean package -DskipTests
+```
+
+The fat JAR is written to `target/semantic-sda-mapper-*.jar`. Run it directly:
+
+```bash
+java -jar target/semantic-sda-mapper-*.jar
+```
+
+To enable the `container` Spring profile (liveness/readiness probes):
+
+```bash
+java -jar target/semantic-sda-mapper-*.jar --spring.profiles.active=container
+```
+
+### Docker
+
+Build the image:
+
+```bash
+docker build -t semantic-sda-mapper:local -f docker/Dockerfile .
+```
+
+Run with the `container` profile:
+
+```bash
+docker run --rm -p 8080:8080 -e SPRING_PROFILES_ACTIVE=container semantic-sda-mapper:local
+```
+
+### Docker Compose (production-like)
+
+```bash
+docker compose up --build -d
+```
+
+Health checks are configured via the `container` profile. Monitor with:
+
+```bash
+docker compose ps
+docker compose logs -f semantic-sda-mapper
+```
+
+### Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `SERVER_PORT` | `8080` | Application HTTP port |
+| `SPRING_PROFILES_ACTIVE` | — | Active Spring profiles (e.g. `container`) |
+| `JAVA_OPTS` | — | JVM arguments passed to the runtime |
+
 ## Troubleshooting
 
 ### Maven uses an older Java version

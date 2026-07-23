@@ -8,6 +8,7 @@ import com.sda.mapper.reasoning.RequirementDiscoveryService;
 import com.sda.mapper.reasoning.ServiceMatchResult;
 import com.sda.mapper.error.ParserException;
 import com.vaadin.flow.component.Text;
+import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.checkbox.CheckboxGroup;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.details.Details;
@@ -62,6 +63,7 @@ public class PipelineView extends VerticalLayout {
     private final MemoryBuffer buffer;
     private final Upload upload;
     private final CheckboxGroup<String> requirementFilter;
+    private final Checkbox persistToOntology;
     private final VerticalLayout resultsLayout;
 
     // New requirement form fields
@@ -109,6 +111,9 @@ public class PipelineView extends VerticalLayout {
         requirementFilter.setValue(Set.copyOf(discovered));
         requirementFilter.setWidthFull();
 
+        persistToOntology = new Checkbox("Persist parsed triples to ontology (Service Catalog)");
+        persistToOntology.setWidthFull();
+
         upload.addSucceededListener(event ->
             handleUpload(event.getFileName(), buffer.getInputStream()));
         upload.addFileRemovedListener(event ->
@@ -116,6 +121,7 @@ public class PipelineView extends VerticalLayout {
 
         add(upload);
         add(requirementFilter);
+        add(persistToOntology);
         add(buildNewRequirementSection());
         add(new Hr());
 
@@ -197,7 +203,8 @@ public class PipelineView extends VerticalLayout {
                 log.info("Creating new requirement from form: {}", newReqParams);
             }
 
-            PipelineResult result = pipelineService.execute(filename, inputStream, selectedReqs, newReqParams);
+            PipelineResult result = pipelineService.execute(filename, inputStream, selectedReqs, newReqParams,
+                Boolean.TRUE.equals(persistToOntology.getValue()));
             showResults(filename, result);
         } catch (ParserException e) {
             log.warn("Pipeline parse failed for {}: {}", filename, e.getMessage());
@@ -225,6 +232,12 @@ public class PipelineView extends VerticalLayout {
         );
         stats.getStyle().set("display", "flex").set("flex-direction", "column").set("gap", "4px");
         resultsLayout.add(stats);
+
+        if (result.persisted()) {
+            Span persistedBadge = new Span("Persisted to ontology catalog");
+            persistedBadge.addClassNames(LumoUtility.FontWeight.BOLD, LumoUtility.TextColor.SUCCESS);
+            resultsLayout.add(persistedBadge);
+        }
 
         if (!result.warnings().isEmpty()) {
             resultsLayout.add(new H3("Warnings"));

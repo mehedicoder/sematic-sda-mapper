@@ -8,7 +8,10 @@ import com.sda.mapper.reasoning.RDeployService;
 import com.sda.mapper.reasoning.RequirementDiscoveryService;
 import com.sda.mapper.reasoning.SemanticReasonerService;
 import com.sda.mapper.reasoning.SparqlQueryLoader;
+import com.sda.mapper.ontology.OntologyConflictDetector;
 import com.sda.mapper.ontology.OntologyModelLoader;
+import com.sda.mapper.ontology.OntologyPersistenceService;
+import com.sda.mapper.ontology.ServiceRegistrationService;
 import com.sda.mapper.parser.UploadService;
 import com.sda.mapper.parser.ParserFactory;
 import com.sda.mapper.parser.MTPAmlParser;
@@ -41,8 +44,13 @@ class PipelineViewTest {
             ontologyModelLoader, sparqlQueryLoader, rDeployService);
         RequirementDiscoveryService discoveryService = new RequirementDiscoveryService(
             ontologyModelLoader, sparqlQueryLoader);
+        OntologyPersistenceService persistenceService = new OntologyPersistenceService();
+        OntologyConflictDetector conflictDetector = new OntologyConflictDetector();
+        ServiceRegistrationService registrationService = new ServiceRegistrationService(
+            conflictDetector, persistenceService, ontologyModelLoader);
         EndToEndPipelineService pipelineService = new EndToEndPipelineService(
-            uploadService, ontologyModelLoader, inferenceService, reasonerService, discoveryService);
+            uploadService, ontologyModelLoader, inferenceService, reasonerService, discoveryService,
+            registrationService);
         DockerComposeManifestService dockerComposeService = new DockerComposeManifestService();
         KubernetesManifestService kubernetesService = new KubernetesManifestService();
         return new PipelineView(pipelineService, dockerComposeService, kubernetesService, discoveryService);

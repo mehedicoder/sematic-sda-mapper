@@ -78,7 +78,8 @@ public class ServiceCatalogService {
             getString(sol, "deployLabel"),
             getString(sol, "sil"),
             getString(sol, "determinism"),
-            getString(sol, "networkZone")
+            getString(sol, "networkZone"),
+            getString(sol, "source")
         );
     }
 

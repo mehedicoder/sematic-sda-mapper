@@ -76,5 +76,6 @@ app:
   ontology:
     file-paths:
       - ontology/css-sda-small.ttl
+    uploaded-file-path: ${UPLOADED_INSTANCES_PATH:ontology/uploaded-instances.ttl}
     inference:
       enabled: ${ONTOLOGY_INFERENCE_ENABLED:true}

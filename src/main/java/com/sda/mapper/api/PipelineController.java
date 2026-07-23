@@ -75,7 +75,8 @@ public class PipelineController {
             @RequestParam(value = "newReqMaxLatency", required = false) String newReqMaxLatency,
             @RequestParam(value = "newReqNetworkZone", required = false) String newReqNetworkZone,
             @RequestParam(value = "newReqDeterminism", required = false) String newReqDeterminism,
-            @RequestParam(value = "newReqSil", required = false) String newReqSil) {
+            @RequestParam(value = "newReqSil", required = false) String newReqSil,
+            @RequestParam(value = "persistToOntology", required = false, defaultValue = "false") boolean persistToOntology) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(
                 new ValidationErrorResponse(java.util.List.of(
@@ -127,7 +128,8 @@ public class PipelineController {
         }
 
         try {
-            PipelineResult result = pipelineService.execute(filename, file.getInputStream(), reqIds, newReqParams);
+            PipelineResult result = pipelineService.execute(filename, file.getInputStream(), reqIds, newReqParams,
+                persistToOntology);
             PipelineResponse response = toResponse(result);
             return ResponseEntity.ok(response);
         } catch (ParserException ex) {

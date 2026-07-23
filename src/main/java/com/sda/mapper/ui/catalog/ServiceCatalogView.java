@@ -220,6 +220,18 @@ public class ServiceCatalogView extends VerticalLayout {
             .setWidth("220px")
             .setResizable(true);
 
+        g.addColumn(entry -> {
+            String src = entry.source();
+            Span badge = new Span(src != null ? src : "designed");
+            badge.getElement().setAttribute("theme",
+                "badge " + ("uploaded".equals(src) ? "success" : "contrast"));
+            return badge;
+        })
+            .setHeader("Source")
+            .setKey("source")
+            .setWidth("100px")
+            .setResizable(true);
+
         g.addSelectionListener(e -> {
             var selected = e.getFirstSelectedItem();
             selected.ifPresentOrElse(

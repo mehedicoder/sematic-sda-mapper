@@ -12,6 +12,9 @@ import org.springframework.stereotype.Component;
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 /**
@@ -25,6 +28,7 @@ public class OntologyModelLoader {
     private static final Logger log = LoggerFactory.getLogger(OntologyModelLoader.class);
 
     private List<String> filePaths = List.of("ontology/css-sda-small.ttl");
+    private String uploadedFilePath = "ontology/uploaded-instances.ttl";
     private Model model;
     private boolean loaded = false;
 
@@ -59,12 +63,34 @@ public class OntologyModelLoader {
             }
         }
 
+        loadUploadedInstances();
+
         loaded = true;
         long classCount = model.listSubjectsWithProperty(
             org.apache.jena.vocabulary.RDF.type,
             org.apache.jena.vocabulary.RDFS.Class).toList().size();
         log.info("Ontology loaded successfully: {} total triples, {} classes from {} files",
             model.size(), classCount, filePaths.size());
+    }
+
+    private void loadUploadedInstances() {
+        Path uploadedPath = Paths.get(uploadedFilePath).toAbsolutePath().normalize();
+        if (!Files.exists(uploadedPath)) {
+            log.debug("No uploaded instances file at: {}", uploadedPath);
+            return;
+        }
+        try (InputStream in = Files.newInputStream(uploadedPath)) {
+            Model uploadedModel = ModelFactory.createDefaultModel();
+            uploadedModel.read(in, null, "TTL");
+            model.add(uploadedModel);
+            log.info("Loaded uploaded instances: {} triples from {}", uploadedModel.size(), uploadedPath);
+        } catch (IOException e) {
+            throw new OntologyLoadingException(
+                "Failed to read uploaded instances file: " + uploadedPath, e);
+        } catch (Exception e) {
+            throw new OntologyLoadingException(
+                "Failed to parse uploaded instances file (invalid TTL?): " + uploadedPath, e);
+        }
     }
 
     /**
@@ -93,6 +119,24 @@ public class OntologyModelLoader {
 
     public void setFilePaths(List<String> filePaths) {
         this.filePaths = filePaths;
+    }
+
+    public String getUploadedFilePath() {
+        return uploadedFilePath;
+    }
+
+    public void setUploadedFilePath(String uploadedFilePath) {
+        this.uploadedFilePath = uploadedFilePath;
+    }
+
+    /**
+     * Reloads the ontology model from all configured files.
+     * Used after uploaded instances are added or removed.
+     */
+    public synchronized void reload() {
+        log.info("Reloading ontology model from {} files", filePaths.size());
+        loaded = false;
+        loadOntology();
     }
 
     /**

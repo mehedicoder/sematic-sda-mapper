@@ -13,8 +13,10 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("Parser Factory")
 class ParserFactoryTest {
 
+    private final AasParser aasParser = new AasParser();
     private final ParserFactory factory = new ParserFactory(
-        new MTPAmlParser(), new UaServerDatasheetParser(), new OpcUaNodeSetParser(), new AasParser());
+        new MTPAmlParser(), new UaServerDatasheetParser(), new OpcUaNodeSetParser(),
+        aasParser, new AasXParser(aasParser));
 
     @Test
     @DisplayName("Should return MTPAmlParser for .xml extension via extension-only lookup")
@@ -42,6 +44,7 @@ class ParserFactoryTest {
     void shouldThrowForUnknownExtension() {
         assertThrows(ParserException.class, () -> factory.getParser("test-file.txt"));
         assertThrows(ParserException.class, () -> factory.getParser("test-file.csv"));
+        assertThrows(ParserException.class, () -> factory.getParser("test-file.zip"));
     }
 
     @Test
@@ -97,5 +100,27 @@ class ParserFactoryTest {
         InputStream input = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
         Parser parser = factory.getParser("test-file.json", input);
         assertInstanceOf(UaServerDatasheetParser.class, parser);
+    }
+
+    @Test
+    @DisplayName("Should return AasXParser for .aasx extension via extension-only lookup")
+    void shouldReturnAasXParserForAasx() {
+        Parser parser = factory.getParser("device.aasx");
+        assertInstanceOf(AasXParser.class, parser);
+    }
+
+    @Test
+    @DisplayName("Should return AasXParser for .AASX (uppercase) extension")
+    void shouldReturnAasXParserForUppercaseAasx() {
+        Parser parser = factory.getParser("DEVICE.AASX");
+        assertInstanceOf(AasXParser.class, parser);
+    }
+
+    @Test
+    @DisplayName("Should return AasXParser for .aasx extension with content stream")
+    void shouldReturnAasXParserForAasxWithContent() {
+        InputStream input = new ByteArrayInputStream(new byte[0]);
+        Parser parser = factory.getParser("device.aasx", input);
+        assertInstanceOf(AasXParser.class, parser);
     }
 }

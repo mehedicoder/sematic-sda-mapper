@@ -4,12 +4,10 @@ import com.sda.mapper.deployment.DockerComposeManifestService;
 import com.sda.mapper.deployment.KubernetesManifestService;
 import com.sda.mapper.reasoning.EndToEndPipelineService;
 import com.sda.mapper.reasoning.EndToEndPipelineService.PipelineResult;
-import com.sda.mapper.reasoning.RequirementDiscoveryService;
 import com.sda.mapper.reasoning.ServiceMatchResult;
 import com.sda.mapper.error.ParserException;
 import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.checkbox.Checkbox;
-import com.vaadin.flow.component.checkbox.CheckboxGroup;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.details.Details;
 import com.vaadin.flow.component.formlayout.FormLayout;
@@ -28,7 +26,6 @@ import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.textfield.TextArea;
-import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.upload.Upload;
 import com.vaadin.flow.component.upload.receivers.MemoryBuffer;
 import com.vaadin.flow.router.PageTitle;
@@ -39,15 +36,13 @@ import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Vaadin view for executing the full end-to-end semantic mapping pipeline.
  * Users upload an input file (MTP AML, OPC UA Server Datasheet, or AAS),
- * optionally select which requirements to match, and view per-requirement
- * results including generated Docker Compose and Kubernetes manifests.
+ * specify requirement parameters manually, and view the match result
+ * including generated Docker Compose and Kubernetes manifests.
  */
 @Route(value = "pipeline", layout = MainLayout.class)
 @PageTitle("Semantic Reasoner")
@@ -58,33 +53,27 @@ public class PipelineView extends VerticalLayout {
     private final EndToEndPipelineService pipelineService;
     private final DockerComposeManifestService dockerComposeService;
     private final KubernetesManifestService kubernetesService;
-    private final RequirementDiscoveryService requirementDiscoveryService;
 
     private final MemoryBuffer buffer;
     private final Upload upload;
-    private final CheckboxGroup<String> requirementFilter;
     private final Checkbox persistToOntology;
     private final VerticalLayout resultsLayout;
 
-    // New requirement form fields
-    private final TextField newReqTitle = new TextField("Title");
-    private final TextArea newReqDescription = new TextArea("Description");
-    private final ComboBox<String> newReqProtocol = new ComboBox<>("Protocol");
-    private final ComboBox<String> newReqAccessMode = new ComboBox<>("Access Mode");
-    private final NumberField newReqMinRecall = new NumberField("Min Recall");
-    private final NumberField newReqMaxLatency = new NumberField("Max Latency (ms)");
-    private final ComboBox<String> newReqNetworkZone = new ComboBox<>("Network Zone");
-    private final ComboBox<String> newReqDeterminism = new ComboBox<>("Determinism Class");
-    private final ComboBox<String> newReqSil = new ComboBox<>("Safety Integrity Level");
+    private final ComboBox<String> protocolField;
+    private final ComboBox<String> accessModeField;
+    private final NumberField minRecallField;
+    private final NumberField maxLatencyField;
+    private final Checkbox onPlantNetworkField;
+    private final ComboBox<String> silField;
+    private final ComboBox<String> determinismField;
+    private final ComboBox<String> networkZoneField;
 
     public PipelineView(EndToEndPipelineService pipelineService,
                         DockerComposeManifestService dockerComposeService,
-                        KubernetesManifestService kubernetesService,
-                        RequirementDiscoveryService requirementDiscoveryService) {
+                        KubernetesManifestService kubernetesService) {
         this.pipelineService = pipelineService;
         this.dockerComposeService = dockerComposeService;
         this.kubernetesService = kubernetesService;
-        this.requirementDiscoveryService = requirementDiscoveryService;
 
         setWidthFull();
         setPadding(true);
@@ -92,7 +81,7 @@ public class PipelineView extends VerticalLayout {
 
         add(new H2("Semantic Reasoner"));
         add(new Paragraph("Upload an input file (MTP AML .xml/.aml, OPC UA Server Datasheet .json, or AAS .xml) "
-            + "to execute the full semantic mapping pipeline: Parse → Lift → Infer → Match → Manifest."));
+            + "and specify requirement parameters to execute the semantic mapping pipeline."));
 
         buffer = new MemoryBuffer();
         upload = new Upload(buffer);
@@ -104,15 +93,47 @@ public class PipelineView extends VerticalLayout {
         );
         upload.setMaxFiles(1);
 
-        requirementFilter = new CheckboxGroup<>();
-        requirementFilter.setLabel("Requirements to match");
-        List<String> discovered = requirementDiscoveryService.discoverRequirementIds();
-        requirementFilter.setItems(discovered);
-        requirementFilter.setValue(Set.copyOf(discovered));
-        requirementFilter.setWidthFull();
-
         persistToOntology = new Checkbox("Persist parsed triples to ontology (Service Catalog)");
         persistToOntology.setWidthFull();
+
+        protocolField = new ComboBox<>("Protocol");
+        protocolField.setItems("OPC-UA", "PROFINET", "BACnet", "HTTP", "MQTT");
+        protocolField.setValue("OPC-UA");
+
+        accessModeField = new ComboBox<>("Access Mode");
+        accessModeField.setItems("read-only", "read-write", "write-only");
+        accessModeField.setValue("read-only");
+
+        minRecallField = new NumberField("Min Recall");
+        minRecallField.setValue(0.90);
+
+        maxLatencyField = new NumberField("Max Latency (ms)");
+        maxLatencyField.setValue(60.0);
+
+        onPlantNetworkField = new Checkbox("On Plant Network", true);
+
+        silField = new ComboBox<>("Safety Integrity Level");
+        silField.setItems("SIL-0", "SIL-1", "SIL-2", "SIL-3", "SIL-4");
+        silField.setPlaceholder("Optional");
+
+        determinismField = new ComboBox<>("Determinism Class");
+        determinismField.setItems("HardRealTime", "SoftRealTime", "NonRealTime");
+        determinismField.setPlaceholder("Optional");
+
+        networkZoneField = new ComboBox<>("Network Zone");
+        networkZoneField.setItems("OT-Zone-1", "OT-Zone-2", "OT-Zone-3");
+        networkZoneField.setPlaceholder("Optional");
+
+        FormLayout reqForm = new FormLayout();
+        reqForm.add(protocolField, accessModeField, minRecallField, maxLatencyField,
+            onPlantNetworkField, silField, determinismField, networkZoneField);
+        reqForm.setResponsiveSteps(
+            new FormLayout.ResponsiveStep("0", 1),
+            new FormLayout.ResponsiveStep("400px", 2),
+            new FormLayout.ResponsiveStep("800px", 4));
+
+        Details requirementDetails = new Details("Requirement Parameters", reqForm);
+        requirementDetails.setOpened(true);
 
         upload.addSucceededListener(event ->
             handleUpload(event.getFileName(), buffer.getInputStream()));
@@ -120,9 +141,8 @@ public class PipelineView extends VerticalLayout {
             log.info("Upload cancelled: {}", event.getFileName()));
 
         add(upload);
-        add(requirementFilter);
+        add(requirementDetails);
         add(persistToOntology);
-        add(buildNewRequirementSection());
         add(new Hr());
 
         resultsLayout = new VerticalLayout();
@@ -131,79 +151,25 @@ public class PipelineView extends VerticalLayout {
         add(resultsLayout);
     }
 
-    private Details buildNewRequirementSection() {
-        newReqProtocol.setItems("OPC-UA", "PROFINET", "BACnet", "HTTP", "MQTT");
-        newReqProtocol.setPlaceholder("Select protocol");
-        newReqAccessMode.setItems("read-only", "read-write", "write-only");
-        newReqAccessMode.setPlaceholder("Select access mode");
-        newReqNetworkZone.setItems("OT-Zone-1", "OT-Zone-2", "OT-Zone-3");
-        newReqNetworkZone.setPlaceholder("Select zone");
-        newReqDeterminism.setItems("HardRealTime", "SoftRealTime", "NonRealTime");
-        newReqDeterminism.setPlaceholder("Select determinism");
-        newReqSil.setItems("SIL-0", "SIL-1", "SIL-2", "SIL-3", "SIL-4");
-        newReqSil.setPlaceholder("Select SIL");
-
-        newReqMinRecall.setValue(0.90);
-        newReqMaxLatency.setValue(60.0);
-
-        FormLayout form = new FormLayout();
-        form.add(newReqTitle, newReqDescription, newReqProtocol, newReqAccessMode,
-            newReqMinRecall, newReqMaxLatency, newReqNetworkZone, newReqDeterminism, newReqSil);
-        form.setResponsiveSteps(
-            new FormLayout.ResponsiveStep("0", 1),
-            new FormLayout.ResponsiveStep("400px", 2),
-            new FormLayout.ResponsiveStep("800px", 3));
-
-        Details details = new Details("Create New Requirement (optional)", form);
-        details.setOpened(false);
-        return details;
-    }
-
-    private Map<String, String> collectNewRequirementParams() {
+    private Map<String, String> collectRequirementParams() {
         Map<String, String> params = new HashMap<>();
-        if (newReqTitle.getValue() != null && !newReqTitle.getValue().isBlank()) {
-            params.put("title", newReqTitle.getValue());
-        }
-        if (newReqDescription.getValue() != null && !newReqDescription.getValue().isBlank()) {
-            params.put("description", newReqDescription.getValue());
-        }
-        if (newReqProtocol.getValue() != null) {
-            params.put("protocol", newReqProtocol.getValue());
-        }
-        if (newReqAccessMode.getValue() != null) {
-            params.put("accessMode", newReqAccessMode.getValue());
-        }
-        if (newReqMinRecall.getValue() != null) {
-            params.put("minRecall", String.valueOf(newReqMinRecall.getValue()));
-        }
-        if (newReqMaxLatency.getValue() != null) {
-            params.put("maxLatency", String.valueOf(newReqMaxLatency.getValue().intValue()));
-        }
-        if (newReqNetworkZone.getValue() != null) {
-            params.put("networkZone", newReqNetworkZone.getValue());
-        }
-        if (newReqDeterminism.getValue() != null) {
-            params.put("determinismClass", newReqDeterminism.getValue());
-        }
-        if (newReqSil.getValue() != null) {
-            params.put("safetyIntegrityLevel", newReqSil.getValue());
-        }
+        if (protocolField.getValue() != null) params.put("protocol", protocolField.getValue());
+        if (accessModeField.getValue() != null) params.put("accessMode", accessModeField.getValue());
+        if (minRecallField.getValue() != null) params.put("minRecall", String.valueOf(minRecallField.getValue()));
+        if (maxLatencyField.getValue() != null) params.put("maxLatency", String.valueOf(maxLatencyField.getValue().intValue()));
+        params.put("onPlantNetwork", String.valueOf(Boolean.TRUE.equals(onPlantNetworkField.getValue())));
+        if (silField.getValue() != null) params.put("safetyIntegrityLevel", silField.getValue());
+        if (determinismField.getValue() != null) params.put("determinismClass", determinismField.getValue());
+        if (networkZoneField.getValue() != null) params.put("networkZone", networkZoneField.getValue());
         return params;
     }
 
     private void handleUpload(String filename, InputStream inputStream) {
         try {
-            List<String> selectedReqs = List.copyOf(requirementFilter.getValue());
-            if (selectedReqs.isEmpty()) {
-                selectedReqs = requirementDiscoveryService.discoverRequirementIds();
-            }
+            Map<String, String> reqParams = collectRequirementParams();
+            log.info("Pipeline match with params: {}", reqParams);
 
-            Map<String, String> newReqParams = collectNewRequirementParams();
-            if (newReqParams.containsKey("title") || newReqParams.containsKey("protocol")) {
-                log.info("Creating new requirement from form: {}", newReqParams);
-            }
-
-            PipelineResult result = pipelineService.execute(filename, inputStream, selectedReqs, newReqParams,
+            PipelineResult result = pipelineService.execute(filename, inputStream, reqParams,
                 Boolean.TRUE.equals(persistToOntology.getValue()));
             showResults(filename, result);
         } catch (ParserException e) {
@@ -275,7 +241,6 @@ public class PipelineView extends VerticalLayout {
         header.addClassNames("pipeline-match-header");
 
         panel.add(header);
-        panel.add(createSemanticChain(reqId, match));
         panel.add(createMatchDetails(match));
 
         TextArea explanationArea = new TextArea("Explanation");
@@ -301,64 +266,6 @@ public class PipelineView extends VerticalLayout {
 
         panel.add(explanationArea, yamlTabs, dockerArea, k8sArea);
         return panel;
-    }
-
-    private VerticalLayout createSemanticChain(String reqId, ServiceMatchResult match) {
-        VerticalLayout chain = new VerticalLayout();
-        chain.setWidthFull();
-        chain.setSpacing(false);
-        chain.addClassName("semantic-chain");
-
-        H3 chainHeader = new H3("Semantic Link Chain");
-        chainHeader.addClassNames(LumoUtility.FontSize.SMALL);
-        chain.add(chainHeader);
-
-        HorizontalLayout links = new HorizontalLayout();
-        links.setWidthFull();
-        links.setSpacing(true);
-        links.setWrap(true);
-        links.setAlignItems(FlexComponent.Alignment.CENTER);
-
-        links.add(createChainNode(reqId, "Requirement"));
-        links.add(createChainArrow("mapsToCapability"));
-        links.add(createChainNode(match.capabilityName(), "Capability"));
-        links.add(createChainArrow("realisedBy"));
-        links.add(createChainNode(match.skillName(), "Skill"));
-        links.add(createChainArrow("isImplementedBy"));
-        links.add(createChainNode(match.serviceName(), "Service"));
-        links.add(createChainArrow("usesBinding"));
-        links.add(createChainNode(match.bindingLabel(), "CommunicationBinding"));
-        links.add(createChainArrow("usesConnector"));
-        links.add(createChainNode(match.connector(), "DataConnector"));
-        links.add(createChainArrow("isDeployedBy"));
-        links.add(createChainNode(match.deploymentContext(), "DeploymentContext"));
-
-        chain.add(links);
-        return chain;
-    }
-
-    private VerticalLayout createChainNode(String label, String type) {
-        VerticalLayout node = new VerticalLayout();
-        node.setWidth(null);
-        node.setSpacing(false);
-        node.setPadding(false);
-        node.addClassName("chain-node");
-
-        Span nameSpan = new Span(label != null ? label : "N/A");
-        nameSpan.addClassNames(LumoUtility.FontWeight.BOLD, LumoUtility.FontSize.SMALL);
-
-        Span typeSpan = new Span(type);
-        typeSpan.addClassNames(LumoUtility.FontSize.XSMALL, LumoUtility.TextColor.SECONDARY);
-
-        node.add(nameSpan, typeSpan);
-        return node;
-    }
-
-    private Span createChainArrow(String property) {
-        Span arrow = new Span(" → " + property + " → ");
-        arrow.addClassNames(LumoUtility.FontSize.XSMALL, LumoUtility.TextColor.TERTIARY);
-        arrow.addClassName("chain-arrow");
-        return arrow;
     }
 
     private HorizontalLayout createMatchDetails(ServiceMatchResult match) {

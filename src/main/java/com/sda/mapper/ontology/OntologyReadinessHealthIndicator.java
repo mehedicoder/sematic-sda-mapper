@@ -24,15 +24,17 @@ public class OntologyReadinessHealthIndicator implements HealthIndicator {
             long classCount = model.listSubjectsWithProperty(
                 org.apache.jena.vocabulary.RDF.type,
                 org.apache.jena.vocabulary.RDFS.Class).toList().size();
-            return Health.up()
-                .withDetail("ontology", ontologyModelLoader.getFilePath())
+            var builder = Health.up()
                 .withDetail("status", "loaded")
                 .withDetail("triples", model.size())
-                .withDetail("classes", classCount)
-                .build();
+                .withDetail("classes", classCount);
+            var filePath = ontologyModelLoader.getFilePath();
+            if (filePath != null) {
+                builder.withDetail("ontology", filePath);
+            }
+            return builder.build();
         } else {
             return Health.down()
-                .withDetail("ontology", ontologyModelLoader.getFilePath())
                 .withDetail("status", "not-loaded")
                 .build();
         }

@@ -47,6 +47,7 @@ logging:
   level:
     root: INFO
     com.sda.mapper: DEBUG
+    org.flywaydb: DEBUG
     org.springframework.security: DEBUG
   pattern:
     level: "%5p [${spring.application.name},%X{traceId:-},%X{spanId:-}]"
@@ -74,8 +75,9 @@ vaadin:
 
 app:
   ontology:
-    file-paths:
-      - ontology/css-sda-small.ttl
+    file-paths: []
     uploaded-file-path: ${UPLOADED_INSTANCES_PATH:ontology/uploaded-instances.ttl}
     inference:
       enabled: ${ONTOLOGY_INFERENCE_ENABLED:true}
+  file-storage:
+    base-path: ${FILE_STORAGE_PATH:uploads}

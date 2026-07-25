@@ -24,35 +24,11 @@ class RequirementDiscoveryServiceTest {
     }
 
     @Test
-    @DisplayName("Should discover at least 3 requirements from ontology")
-    void shouldDiscoverAtLeast3Requirements() {
+    @DisplayName("Should discover zero requirements from empty ontology")
+    void shouldDiscoverZeroRequirements() {
         List<String> ids = discoveryService.discoverRequirementIds();
-        assertTrue(ids.size() >= 3,
-            "Ontology should contain at least REQ-001, REQ-002, REQ-003, found: " + ids);
-    }
-
-    @Test
-    @DisplayName("Should discover REQ-001 in the result set")
-    void shouldDiscoverReq001() {
-        List<String> ids = discoveryService.discoverRequirementIds();
-        assertTrue(ids.contains("REQ-001"),
-            "REQ-001 must be discovered from ontology");
-    }
-
-    @Test
-    @DisplayName("Should discover REQ-002 in the result set")
-    void shouldDiscoverReq002() {
-        List<String> ids = discoveryService.discoverRequirementIds();
-        assertTrue(ids.contains("REQ-002"),
-            "REQ-002 must be discovered from ontology");
-    }
-
-    @Test
-    @DisplayName("Should discover REQ-003 in the result set")
-    void shouldDiscoverReq003() {
-        List<String> ids = discoveryService.discoverRequirementIds();
-        assertTrue(ids.contains("REQ-003"),
-            "REQ-003 must be discovered from ontology");
+        assertEquals(0, ids.size(),
+            "Ontology should contain no built-in requirements, found: " + ids);
     }
 
     @Test
@@ -67,10 +43,10 @@ class RequirementDiscoveryServiceTest {
     }
 
     @Test
-    @DisplayName("Should return requirement IDs in sorted order")
-    void shouldReturnSortedIds() {
+    @DisplayName("Should return empty list for empty ontology")
+    void shouldReturnEmptyForEmptyOntology() {
         List<String> ids = discoveryService.discoverRequirementIds();
-        List<String> sorted = ids.stream().sorted().toList();
-        assertEquals(sorted, ids, "Requirement IDs should be sorted alphabetically");
+        assertNotNull(ids);
+        assertTrue(ids.isEmpty(), "Should return empty list when no requirements exist");
     }
 }

@@ -148,8 +148,8 @@ class PipelineIntegrationTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/pipeline/execute should return all 3 requirement matches")
-    void shouldReturnAllThreeRequirementMatches() throws Exception {
+    @DisplayName("POST /api/v1/pipeline/execute should return a match result")
+    void shouldReturnMatchResult() throws Exception {
         byte[] content = getClass().getClassLoader()
             .getResourceAsStream("examples/req002-mtp-fermentation-skid.xml")
             .readAllBytes();
@@ -164,9 +164,7 @@ class PipelineIntegrationTest {
         PipelineResponse response = objectMapper.readValue(
             result.getResponse().getContentAsString(), PipelineResponse.class);
 
-        assertTrue(response.matches().containsKey("REQ-001"), "Should contain REQ-001");
-        assertTrue(response.matches().containsKey("REQ-002"), "Should contain REQ-002");
-        assertTrue(response.matches().containsKey("REQ-003"), "Should contain REQ-003");
+        assertFalse(response.matches().isEmpty(), "Should have at least one match result");
     }
 
     @Test
@@ -218,8 +216,8 @@ class PipelineIntegrationTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/pipeline/execute with requirementIds filter should return only those matches")
-    void shouldFilterByRequirementIds() throws Exception {
+    @DisplayName("POST /api/v1/pipeline/execute with PROFINET params should match fermentation skid")
+    void shouldMatchWithProfinetParams() throws Exception {
         byte[] content = getClass().getClassLoader()
             .getResourceAsStream("examples/req002-mtp-fermentation-skid.xml")
             .readAllBytes();
@@ -230,7 +228,10 @@ class PipelineIntegrationTest {
         MvcResult result = mockMvc.perform(
                 multipart("/api/v1/pipeline/execute")
                     .file(file)
-                    .param("requirementIds", "REQ-002"))
+                    .param("protocol", "PROFINET")
+                    .param("accessMode", "read-write")
+                    .param("safetyIntegrityLevel", "SIL-2")
+                    .param("determinismClass", "HardRealTime"))
             .andExpect(status().isOk())
             .andExpect(content().contentType("application/json"))
             .andReturn();
@@ -238,8 +239,6 @@ class PipelineIntegrationTest {
         PipelineResponse response = objectMapper.readValue(
             result.getResponse().getContentAsString(), PipelineResponse.class);
 
-        assertTrue(response.matches().containsKey("REQ-002"), "Should contain REQ-002");
-        assertFalse(response.matches().containsKey("REQ-001"), "Should not contain REQ-001");
-        assertFalse(response.matches().containsKey("REQ-003"), "Should not contain REQ-003");
+        assertFalse(response.matches().isEmpty(), "Should match with PROFINET params");
     }
 }

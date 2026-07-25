@@ -5,7 +5,6 @@ import com.sda.mapper.deployment.KubernetesManifestService;
 import com.sda.mapper.reasoning.EndToEndPipelineService;
 import com.sda.mapper.reasoning.OntologyInferenceService;
 import com.sda.mapper.reasoning.RDeployService;
-import com.sda.mapper.reasoning.RequirementDiscoveryService;
 import com.sda.mapper.reasoning.SemanticReasonerService;
 import com.sda.mapper.reasoning.SparqlQueryLoader;
 import com.sda.mapper.ontology.OntologyConflictDetector;
@@ -18,6 +17,7 @@ import com.sda.mapper.parser.MTPAmlParser;
 import com.sda.mapper.parser.UaServerDatasheetParser;
 import com.sda.mapper.parser.OpcUaNodeSetParser;
 import com.sda.mapper.parser.AasParser;
+import com.sda.mapper.parser.AasXParser;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
@@ -30,9 +30,10 @@ import static org.junit.jupiter.api.Assertions.*;
 class PipelineViewTest {
 
     private PipelineView createPipelineView() {
+        AasParser aasParser = new AasParser();
         ParserFactory parserFactory = new ParserFactory(
             new MTPAmlParser(), new UaServerDatasheetParser(),
-            new OpcUaNodeSetParser(), new AasParser());
+            new OpcUaNodeSetParser(), aasParser, new AasXParser(aasParser));
         UploadService uploadService = new UploadService(parserFactory);
         OntologyModelLoader ontologyModelLoader = new OntologyModelLoader();
         ontologyModelLoader.setFilePath("ontology/css-sda-small.ttl");
@@ -42,18 +43,16 @@ class PipelineViewTest {
         RDeployService rDeployService = new RDeployService(ontologyModelLoader);
         SemanticReasonerService reasonerService = new SemanticReasonerService(
             ontologyModelLoader, sparqlQueryLoader, rDeployService);
-        RequirementDiscoveryService discoveryService = new RequirementDiscoveryService(
-            ontologyModelLoader, sparqlQueryLoader);
         OntologyPersistenceService persistenceService = new OntologyPersistenceService();
         OntologyConflictDetector conflictDetector = new OntologyConflictDetector();
         ServiceRegistrationService registrationService = new ServiceRegistrationService(
             conflictDetector, persistenceService, ontologyModelLoader);
         EndToEndPipelineService pipelineService = new EndToEndPipelineService(
-            uploadService, ontologyModelLoader, inferenceService, reasonerService, discoveryService,
+            uploadService, ontologyModelLoader, inferenceService, reasonerService,
             registrationService);
         DockerComposeManifestService dockerComposeService = new DockerComposeManifestService();
         KubernetesManifestService kubernetesService = new KubernetesManifestService();
-        return new PipelineView(pipelineService, dockerComposeService, kubernetesService, discoveryService);
+        return new PipelineView(pipelineService, dockerComposeService, kubernetesService);
     }
 
     @Test

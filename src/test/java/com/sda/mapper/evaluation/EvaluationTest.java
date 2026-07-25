@@ -28,7 +28,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@DisplayName("Evaluation Dataset — All Three Use Cases")
+@DisplayName("Evaluation Dataset — Use Case Matching via Inline Parameters")
 class EvaluationTest {
 
     private static SemanticReasonerService reasoner;
@@ -47,10 +47,17 @@ class EvaluationTest {
     }
 
     @Test
-    @DisplayName("REQ-001 should match SVC-FlowmeterDiagnostics (Use Case A)")
-    void shouldMatchReq001ToFlowmeterDiagnostics() {
-        ServiceMatchResult result = reasoner.matchByRequirementId("REQ-001");
-        assertTrue(result.matched(), "REQ-001 should match a service");
+    @DisplayName("Use Case A: OPC-UA read-only should match FlowmeterDiagnostics")
+    void shouldMatchFlowmeterDiagnostics() {
+        Map<String, String> params = new HashMap<>();
+        params.put("protocol", "OPC-UA");
+        params.put("accessMode", "read-only");
+        params.put("safetyIntegrityLevel", "SIL-0");
+        params.put("minRecall", "0.90");
+        params.put("maxLatency", "60");
+        params.put("onPlantNetwork", "true");
+        ServiceMatchResult result = reasoner.matchInline(params);
+        assertTrue(result.matched(), "OPC-UA read-only should match a service");
         assertEquals("Flowmeter Diagnostics Service", result.serviceName());
         assertEquals("OPC-UA", result.protocol());
         assertEquals("read-only", result.accessMode());
@@ -58,9 +65,16 @@ class EvaluationTest {
     }
 
     @Test
-    @DisplayName("REQ-001 match should populate connector and deploymentContext")
+    @DisplayName("Use Case A match should populate connector and deploymentContext")
     void shouldPopulateConnectorAndDeploymentContext() {
-        ServiceMatchResult result = reasoner.matchByRequirementId("REQ-001");
+        Map<String, String> params = new HashMap<>();
+        params.put("protocol", "OPC-UA");
+        params.put("accessMode", "read-only");
+        params.put("safetyIntegrityLevel", "SIL-0");
+        params.put("minRecall", "0.90");
+        params.put("maxLatency", "60");
+        params.put("onPlantNetwork", "true");
+        ServiceMatchResult result = reasoner.matchInline(params);
         assertTrue(result.matched());
         assertNotNull(result.connector(), "Connector should not be null");
         assertNotNull(result.deploymentContext(), "DeploymentContext should not be null");
@@ -71,73 +85,66 @@ class EvaluationTest {
     }
 
     @Test
-    @DisplayName("REQ-002 match should populate connector and deploymentContext")
-    void shouldPopulateConnectorAndDeploymentContextReq002() {
-        ServiceMatchResult result = reasoner.matchByRequirementId("REQ-002");
-        assertTrue(result.matched());
-        assertNotNull(result.connector(), "Connector should not be null");
-        assertNotNull(result.deploymentContext(), "DeploymentContext should not be null");
-    }
-
-    @Test
-    @DisplayName("REQ-003 match should populate connector and deploymentContext")
-    void shouldPopulateConnectorAndDeploymentContextReq003() {
-        ServiceMatchResult result = reasoner.matchByRequirementId("REQ-003");
-        assertTrue(result.matched());
-        assertNotNull(result.connector(), "Connector should not be null");
-        assertNotNull(result.deploymentContext(), "DeploymentContext should not be null");
-    }
-
-    @Test
-    @DisplayName("REQ-002 should match SVC-FermentationSkid (Use Case B)")
-    void shouldMatchReq002ToFermentationSkid() {
-        ServiceMatchResult result = reasoner.matchByRequirementId("REQ-002");
-        assertTrue(result.matched(), "REQ-002 should match a service");
-        assertEquals("Fermentation Skid Service", result.serviceName());
-    }
-
-    @Test
-    @DisplayName("REQ-003 should match SVC-HVACTempAnalysis (Use Case C)")
-    void shouldMatchReq003ToHvacTempAnalysis() {
-        ServiceMatchResult result = reasoner.matchByRequirementId("REQ-003");
-        assertTrue(result.matched(), "REQ-003 should match a service");
-        assertEquals("HVAC Temperature Analysis Service", result.serviceName());
-    }
-
-    @Test
-    @DisplayName("Mode B with SIL filter should match FermentationSkid")
-    void shouldMatchModeBWithSilFilter() {
+    @DisplayName("Use Case B: PROFINET + SIL-2 should match FermentationSkid")
+    void shouldMatchFermentationSkid() {
         Map<String, String> params = new HashMap<>();
         params.put("protocol", "PROFINET");
         params.put("accessMode", "read-write");
         params.put("safetyIntegrityLevel", "SIL-2");
         params.put("determinismClass", "HardRealTime");
         ServiceMatchResult result = reasoner.matchInline(params);
-        assertTrue(result.matched(), "Mode B with PROFINET + SIL-2 should match");
+        assertTrue(result.matched(), "PROFINET + SIL-2 should match");
         assertEquals("Fermentation Skid Service", result.serviceName());
     }
 
     @Test
-    @DisplayName("Mode B with networkZone filter should match HVACTempAnalysis")
-    void shouldMatchModeBWithNetworkZoneFilter() {
+    @DisplayName("Use Case B match should populate connector and deploymentContext")
+    void shouldPopulateConnectorAndDeploymentContextReq002() {
+        Map<String, String> params = new HashMap<>();
+        params.put("protocol", "PROFINET");
+        params.put("accessMode", "read-write");
+        params.put("safetyIntegrityLevel", "SIL-2");
+        params.put("determinismClass", "HardRealTime");
+        ServiceMatchResult result = reasoner.matchInline(params);
+        assertTrue(result.matched());
+        assertNotNull(result.connector(), "Connector should not be null");
+        assertNotNull(result.deploymentContext(), "DeploymentContext should not be null");
+    }
+
+    @Test
+    @DisplayName("Use Case C: OPC-UA + OT-Zone-3 should match HVACTempAnalysis")
+    void shouldMatchHvacTempAnalysis() {
         Map<String, String> params = new HashMap<>();
         params.put("protocol", "OPC-UA");
         params.put("accessMode", "read-only");
         params.put("networkZone", "OT-Zone-3");
         ServiceMatchResult result = reasoner.matchInline(params);
-        assertTrue(result.matched(), "Mode B with OPC-UA + OT-Zone-3 should match");
+        assertTrue(result.matched(), "OPC-UA + OT-Zone-3 should match");
         assertEquals("HVAC Temperature Analysis Service", result.serviceName());
     }
 
     @Test
-    @DisplayName("Mode B with wrong SIL should not match")
-    void shouldNotMatchModeBWithWrongSil() {
+    @DisplayName("Use Case C match should populate connector and deploymentContext")
+    void shouldPopulateConnectorAndDeploymentContextReq003() {
+        Map<String, String> params = new HashMap<>();
+        params.put("protocol", "OPC-UA");
+        params.put("accessMode", "read-only");
+        params.put("networkZone", "OT-Zone-3");
+        ServiceMatchResult result = reasoner.matchInline(params);
+        assertTrue(result.matched());
+        assertNotNull(result.connector(), "Connector should not be null");
+        assertNotNull(result.deploymentContext(), "DeploymentContext should not be null");
+    }
+
+    @Test
+    @DisplayName("Wrong SIL should not match FermentationSkid")
+    void shouldNotMatchWithWrongSil() {
         Map<String, String> params = new HashMap<>();
         params.put("protocol", "PROFINET");
         params.put("accessMode", "read-write");
         params.put("safetyIntegrityLevel", "SIL-3");
         ServiceMatchResult result = reasoner.matchInline(params);
-        assertFalse(result.matched(), "Mode B with wrong SIL should not match");
+        assertFalse(result.matched(), "Wrong SIL should not match");
     }
 
     @Test

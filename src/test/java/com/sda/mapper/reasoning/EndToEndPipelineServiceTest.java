@@ -89,7 +89,14 @@ class EndToEndPipelineServiceTest {
         var rDeployService = new RDeployService(loader);
         var reasoner = new SemanticReasonerService(loader, queryLoader, rDeployService);
 
-        ServiceMatchResult result = reasoner.matchByRequirementId("REQ-001");
+        Map<String, String> params = Map.of(
+            "protocol", "OPC-UA",
+            "accessMode", "read-only",
+            "minRecall", "0.90",
+            "maxLatency", "60",
+            "onPlantNetwork", "true"
+        );
+        ServiceMatchResult result = reasoner.matchInline(params);
         assertTrue(result.matched());
         assertNotNull(result.connector(), "connector should be populated");
         assertNotNull(result.deploymentContext(), "deploymentContext should be populated");

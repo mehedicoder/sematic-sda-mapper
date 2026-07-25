@@ -25,7 +25,7 @@ class PipelineControllerTest {
     private EndToEndPipelineService pipelineService;
 
     @Test
-    @DisplayName("Should execute full pipeline with MTP AML file and return matches")
+    @DisplayName("Should execute full pipeline with MTP AML file and OPC-UA read-only params")
     void shouldExecutePipelineWithMtpAml() throws Exception {
         try (InputStream input = getClass().getClassLoader()
                 .getResourceAsStream("examples/req002-mtp-fermentation-skid.xml")) {
@@ -34,7 +34,8 @@ class PipelineControllerTest {
             MockMultipartFile file = new MockMultipartFile(
                 "file", "req002-mtp-fermentation-skid.xml", "application/xml", input);
 
-            var response = controller.execute(file, null, null, null, null, null, null, null, null, null, false);
+            var response = controller.execute(file, "OPC-UA", "read-only", 0.90, 60, true,
+                null, null, null, false);
             assertEquals(200, response.getStatusCode().value());
             assertNotNull(response.getBody());
 
@@ -62,7 +63,8 @@ class PipelineControllerTest {
             MockMultipartFile file = new MockMultipartFile(
                 "file", "req003-uaserver-ahu01.json", "application/json", input);
 
-            var response = controller.execute(file, null, null, null, null, null, null, null, null, null, false);
+            var response = controller.execute(file, "OPC-UA", "read-only", 0.90, 60, true,
+                null, null, null, false);
             assertEquals(200, response.getStatusCode().value());
 
             var body = (PipelineResponse) response.getBody();
@@ -82,7 +84,8 @@ class PipelineControllerTest {
             MockMultipartFile file = new MockMultipartFile(
                 "file", "req002-mtp-fermentation-skid.xml", "application/xml", input);
 
-            var response = controller.execute(file, null, null, null, null, null, null, null, null, null, false);
+            var response = controller.execute(file, "OPC-UA", "read-only", 0.90, 60, true,
+                null, null, null, false);
             var body = (PipelineResponse) response.getBody();
 
             boolean anyMatched = body.matches().values().stream()
@@ -110,7 +113,8 @@ class PipelineControllerTest {
         MockMultipartFile emptyFile = new MockMultipartFile(
             "file", "test.xml", "application/xml", new byte[0]);
 
-        var response = controller.execute(emptyFile, null, null, null, null, null, null, null, null, null, false);
+        var response = controller.execute(emptyFile, "OPC-UA", "read-only", 0.90, 60, true,
+            null, null, null, false);
         assertEquals(400, response.getStatusCode().value());
     }
 
@@ -120,7 +124,8 @@ class PipelineControllerTest {
         MockMultipartFile unsupportedFile = new MockMultipartFile(
             "file", "test.txt", "text/plain", "hello world".getBytes());
 
-        var response = controller.execute(unsupportedFile, null, null, null, null, null, null, null, null, null, false);
+        var response = controller.execute(unsupportedFile, "OPC-UA", "read-only", 0.90, 60, true,
+            null, null, null, false);
         assertEquals(400, response.getStatusCode().value());
     }
 
@@ -134,7 +139,8 @@ class PipelineControllerTest {
             MockMultipartFile file = new MockMultipartFile(
                 "file", "req002-mtp-fermentation-skid.xml", "application/xml", input);
 
-            var response = controller.execute(file, null, null, null, null, null, null, null, null, null, false);
+            var response = controller.execute(file, "OPC-UA", "read-only", 0.90, 60, true,
+                null, null, null, false);
             var body = (PipelineResponse) response.getBody();
             assertNotNull(body.warnings());
         }
@@ -150,15 +156,16 @@ class PipelineControllerTest {
             MockMultipartFile file = new MockMultipartFile(
                 "file", "req002-mtp-fermentation-skid.xml", "application/xml", input);
 
-            var response = controller.execute(file, null, null, null, null, null, null, null, null, null, false);
+            var response = controller.execute(file, "OPC-UA", "read-only", 0.90, 60, true,
+                null, null, null, false);
             var body = (PipelineResponse) response.getBody();
             assertTrue(body.elapsedMs() >= 0, "Elapsed time should be non-negative");
         }
     }
 
     @Test
-    @DisplayName("Should filter pipeline to specific requirement IDs when provided")
-    void shouldFilterByRequirementIds() throws Exception {
+    @DisplayName("Should match PROFINET read-write service with SIL-2 determinism params")
+    void shouldMatchWithSpecificParams() throws Exception {
         try (InputStream input = getClass().getClassLoader()
                 .getResourceAsStream("examples/req002-mtp-fermentation-skid.xml")) {
             assertNotNull(input);
@@ -166,33 +173,12 @@ class PipelineControllerTest {
             MockMultipartFile file = new MockMultipartFile(
                 "file", "req002-mtp-fermentation-skid.xml", "application/xml", input);
 
-            var response = controller.execute(file, "REQ-002", null, null, null, null, null, null, null, null, false);
+            var response = controller.execute(file, "PROFINET", "read-write", 0.90, 60, true,
+                "SIL-2", "HardRealTime", null, false);
             assertEquals(200, response.getStatusCode().value());
 
             var body = (PipelineResponse) response.getBody();
-            assertTrue(body.matches().containsKey("REQ-002"), "Should contain REQ-002");
-            assertFalse(body.matches().containsKey("REQ-001"), "Should not contain REQ-001");
-            assertFalse(body.matches().containsKey("REQ-003"), "Should not contain REQ-003");
-        }
-    }
-
-    @Test
-    @DisplayName("Should filter pipeline to multiple specific requirement IDs")
-    void shouldFilterByMultipleRequirementIds() throws Exception {
-        try (InputStream input = getClass().getClassLoader()
-                .getResourceAsStream("examples/req002-mtp-fermentation-skid.xml")) {
-            assertNotNull(input);
-
-            MockMultipartFile file = new MockMultipartFile(
-                "file", "req002-mtp-fermentation-skid.xml", "application/xml", input);
-
-            var response = controller.execute(file, "REQ-001,REQ-003", null, null, null, null, null, null, null, null, false);
-            assertEquals(200, response.getStatusCode().value());
-
-            var body = (PipelineResponse) response.getBody();
-            assertTrue(body.matches().containsKey("REQ-001"), "Should contain REQ-001");
-            assertTrue(body.matches().containsKey("REQ-003"), "Should contain REQ-003");
-            assertFalse(body.matches().containsKey("REQ-002"), "Should not contain REQ-002");
+            assertFalse(body.matches().isEmpty(), "Should have match results");
         }
     }
 }

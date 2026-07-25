@@ -128,11 +128,11 @@ class RDeployServiceTest {
     }
 
     @Test
-    @DisplayName("Should report lifecycleStatus=Defined before deploy")
+    @DisplayName("Should report lifecycleStatus=Unknown for requirement not in ontology")
     void shouldReportDefinedBeforeDeploy() {
         String status = service.getLifecycleStatus("REQ-002");
-        assertEquals("Defined", status,
-            "lifecycleStatus should be 'Defined' before R-Deploy");
+        assertEquals("Unknown", status,
+            "lifecycleStatus should be 'Unknown' for a requirement not yet in the ontology");
     }
 
     @Test

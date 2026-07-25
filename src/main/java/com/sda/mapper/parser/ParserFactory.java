@@ -18,13 +18,16 @@ public class ParserFactory {
     private final UaServerDatasheetParser uaServerDatasheetParser;
     private final OpcUaNodeSetParser opcUaNodeSetParser;
     private final AasParser aasParser;
+    private final AasXParser aasXParser;
 
     public ParserFactory(MTPAmlParser mtpAmlParser, UaServerDatasheetParser uaServerDatasheetParser,
-                         OpcUaNodeSetParser opcUaNodeSetParser, AasParser aasParser) {
+                         OpcUaNodeSetParser opcUaNodeSetParser, AasParser aasParser,
+                         AasXParser aasXParser) {
         this.mtpAmlParser = mtpAmlParser;
         this.uaServerDatasheetParser = uaServerDatasheetParser;
         this.opcUaNodeSetParser = opcUaNodeSetParser;
         this.aasParser = aasParser;
+        this.aasXParser = aasXParser;
     }
 
     /**
@@ -42,13 +45,15 @@ public class ParserFactory {
         }
 
         String lower = filename.toLowerCase();
-        if (lower.endsWith(".json")) {
+        if (lower.endsWith(".aasx")) {
+            return aasXParser;
+        } else if (lower.endsWith(".json")) {
             return uaServerDatasheetParser;
         } else if (lower.endsWith(".xml") || lower.endsWith(".aml")) {
             return mtpAmlParser;
         } else {
             throw new ParserException("Unsupported file extension for: " + filename
-                + ". Supported extensions: .xml, .aml, .json");
+                + ". Supported extensions: .xml, .aml, .json, .aasx");
         }
     }
 
@@ -69,7 +74,9 @@ public class ParserFactory {
         }
 
         String lower = filename.toLowerCase();
-        if (lower.endsWith(".json")) {
+        if (lower.endsWith(".aasx")) {
+            return aasXParser;
+        } else if (lower.endsWith(".json")) {
             if (input != null && input.markSupported()) {
                 return sniffJsonParser(input, uaServerDatasheetParser);
             }

@@ -2,6 +2,7 @@ package com.sda.mapper.api;
 
 import com.sda.mapper.api.dto.MatchRequirementRequest;
 import com.sda.mapper.api.dto.MatchRequirementResponse;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,11 +19,24 @@ class RequirementMatchingControllerTest {
     @Autowired
     private RequirementMatchingController controller;
 
+    private String persistedRequirementId;
+
+    @BeforeEach
+    void setUp() {
+        var persistRequest = new MatchRequirementRequest(
+            null, "FlowRate", "OPC-UA", "read-only", "m\u00B3/h",
+            "SIL-0", "OT-Zone-1", "SoftRealTime", null, null, 0.0, 100.0
+        );
+        var persistResponse = controller.persistRequirement(persistRequest);
+        var body = (Map<String, String>) persistResponse.getBody();
+        persistedRequirementId = body.get("requirementId");
+    }
+
     @Test
     @DisplayName("Should return 200 with matched service when requirementId is provided")
     void shouldMatchByRequirementId() {
         var request = new MatchRequirementRequest(
-            "REQ-001", null, null, null, null, null, null, null, null, null, null, null
+            persistedRequirementId, null, null, null, null, null, null, null, null, null, null, null
         );
         var response = controller.match(request);
         assertEquals(200, response.getStatusCode().value());
@@ -36,7 +50,7 @@ class RequirementMatchingControllerTest {
     @DisplayName("Should include connector and deploymentContext in Mode A response")
     void shouldReturnConnectorAndDeploymentContextInModeA() {
         var request = new MatchRequirementRequest(
-            "REQ-001", null, null, null, null, null, null, null, null, null, null, null
+            persistedRequirementId, null, null, null, null, null, null, null, null, null, null, null
         );
         var response = controller.match(request);
         var body = (MatchRequirementResponse) response.getBody();
@@ -48,7 +62,7 @@ class RequirementMatchingControllerTest {
     @DisplayName("Should include manifests in match response for matched service")
     void shouldIncludeManifestsInResponse() {
         var request = new MatchRequirementRequest(
-            "REQ-001", null, null, null, null, null, null, null, null, null, null, null
+            persistedRequirementId, null, null, null, null, null, null, null, null, null, null, null
         );
         var response = controller.match(request);
         var body = (MatchRequirementResponse) response.getBody();

@@ -26,14 +26,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
  * REST controller for executing the full end-to-end semantic mapping pipeline.
  * Accepts an input file (MTP AML, OPC UA Server Datasheet, or AAS JSON),
  * parses it, lifts triples into the ontology, runs OWL inference,
- * matches all predefined requirements via SPARQL, and generates
+ * matches requirements via inline parameters, and generates
  * Docker Compose and Kubernetes deployment manifests.
  */
 @RestController
@@ -58,24 +57,31 @@ public class PipelineController {
 
     /**
      * Executes the full end-to-end pipeline: Parse → Lift → Infer → Match → Manifest.
-     * When {@code requirementIds} is omitted or empty, all predefined requirements are matched.
+     * Requirements are specified by the user via inline parameters.
      *
-     * @param file           the input file (MTP AML, OPC UA Server Datasheet, or AAS JSON)
-     * @param requirementIds optional comma-separated list of requirement IDs to match
-     * @return the pipeline response with per-requirement match results and manifests
+     * @param file                the input file (MTP AML, OPC UA Server Datasheet, or AAS JSON)
+     * @param protocol            the required communication protocol (e.g. "OPC-UA", "PROFINET")
+     * @param accessMode          the required access mode (e.g. "read-only", "read-write")
+     * @param minRecall           minimum recall threshold (default 0.90)
+     * @param maxLatency          maximum latency threshold in ms (default 60)
+     * @param onPlantNetwork      whether service must be on plant network (default true)
+     * @param safetyIntegrityLevel optional SIL filter (e.g. "SIL-2")
+     * @param determinismClass    optional determinism class filter (e.g. "HardRealTime")
+     * @param networkZone         optional network zone filter (e.g. "OT-Zone-3")
+     * @param persistToOntology   whether to persist parsed triples to ontology
+     * @return the pipeline response with match result and manifests
      */
     @PostMapping("/execute")
     public ResponseEntity<?> execute(
             @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "requirementIds", required = false) String requirementIds,
-            @RequestParam(value = "newReqTitle", required = false) String newReqTitle,
-            @RequestParam(value = "newReqProtocol", required = false) String newReqProtocol,
-            @RequestParam(value = "newReqAccessMode", required = false) String newReqAccessMode,
-            @RequestParam(value = "newReqMinRecall", required = false) String newReqMinRecall,
-            @RequestParam(value = "newReqMaxLatency", required = false) String newReqMaxLatency,
-            @RequestParam(value = "newReqNetworkZone", required = false) String newReqNetworkZone,
-            @RequestParam(value = "newReqDeterminism", required = false) String newReqDeterminism,
-            @RequestParam(value = "newReqSil", required = false) String newReqSil,
+            @RequestParam(value = "protocol", defaultValue = "OPC-UA") String protocol,
+            @RequestParam(value = "accessMode", defaultValue = "read-only") String accessMode,
+            @RequestParam(value = "minRecall", defaultValue = "0.90") double minRecall,
+            @RequestParam(value = "maxLatency", defaultValue = "60") int maxLatency,
+            @RequestParam(value = "onPlantNetwork", defaultValue = "true") boolean onPlantNetwork,
+            @RequestParam(value = "safetyIntegrityLevel", required = false) String safetyIntegrityLevel,
+            @RequestParam(value = "determinismClass", required = false) String determinismClass,
+            @RequestParam(value = "networkZone", required = false) String networkZone,
             @RequestParam(value = "persistToOntology", required = false, defaultValue = "false") boolean persistToOntology) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(
@@ -102,33 +108,27 @@ public class PipelineController {
             );
         }
 
-        log.info("Pipeline execution requested: filename={}, size={}", filename, file.getSize());
+        log.info("Pipeline execution requested: filename={}, size={}, protocol={}, accessMode={}",
+            filename, file.getSize(), protocol, accessMode);
 
-        List<String> reqIds = null;
-        if (requirementIds != null && !requirementIds.isBlank()) {
-            reqIds = java.util.Arrays.stream(requirementIds.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .toList();
-            log.info("Filtering pipeline to requirement IDs: {}", reqIds);
+        Map<String, String> reqParams = new java.util.HashMap<>();
+        reqParams.put("protocol", protocol);
+        reqParams.put("accessMode", accessMode);
+        reqParams.put("minRecall", String.valueOf(minRecall));
+        reqParams.put("maxLatency", String.valueOf(maxLatency));
+        reqParams.put("onPlantNetwork", String.valueOf(onPlantNetwork));
+        if (safetyIntegrityLevel != null && !safetyIntegrityLevel.isBlank()) {
+            reqParams.put("safetyIntegrityLevel", safetyIntegrityLevel);
         }
-
-        Map<String, String> newReqParams = null;
-        if (newReqTitle != null || newReqProtocol != null) {
-            newReqParams = new java.util.HashMap<>();
-            if (newReqTitle != null) newReqParams.put("title", newReqTitle);
-            if (newReqProtocol != null) newReqParams.put("protocol", newReqProtocol);
-            if (newReqAccessMode != null) newReqParams.put("accessMode", newReqAccessMode);
-            if (newReqMinRecall != null) newReqParams.put("minRecall", newReqMinRecall);
-            if (newReqMaxLatency != null) newReqParams.put("maxLatency", newReqMaxLatency);
-            if (newReqNetworkZone != null) newReqParams.put("networkZone", newReqNetworkZone);
-            if (newReqDeterminism != null) newReqParams.put("determinismClass", newReqDeterminism);
-            if (newReqSil != null) newReqParams.put("safetyIntegrityLevel", newReqSil);
-            log.info("Creating new requirement from API params: {}", newReqParams);
+        if (determinismClass != null && !determinismClass.isBlank()) {
+            reqParams.put("determinismClass", determinismClass);
+        }
+        if (networkZone != null && !networkZone.isBlank()) {
+            reqParams.put("networkZone", networkZone);
         }
 
         try {
-            PipelineResult result = pipelineService.execute(filename, file.getInputStream(), reqIds, newReqParams,
+            PipelineResult result = pipelineService.execute(filename, file.getInputStream(), reqParams,
                 persistToOntology);
             PipelineResponse response = toResponse(result);
             return ResponseEntity.ok(response);

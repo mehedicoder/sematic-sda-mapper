@@ -27,69 +27,6 @@ class SemanticReasonerServiceTest {
         reasoner = new SemanticReasonerService(sharedLoader, queryLoader, rDeployService);
     }
 
-    // ════════════════════════════════════════════════════════════════════
-    // Mode A: matchByRequirementId
-    // ════════════════════════════════════════════════════════════════════
-
-    @Test
-    @DisplayName("Should match REQ-001 and return matched=true with correct service name")
-    void shouldMatchReq001WithCorrectService() {
-        ServiceMatchResult result = reasoner.matchByRequirementId("REQ-001");
-        assertTrue(result.matched(), "REQ-001 should match a service");
-        assertEquals("Flowmeter Diagnostics Service", result.serviceName(),
-            "REQ-001 should match SVC-FlowmeterDiagnostics");
-    }
-
-    @Test
-    @DisplayName("Should match REQ-001 and return correct protocol OPC-UA")
-    void shouldMatchReq001WithOpcUaProtocol() {
-        ServiceMatchResult result = reasoner.matchByRequirementId("REQ-001");
-        assertTrue(result.matched());
-        assertEquals("OPC-UA", result.protocol(),
-            "REQ-001 match must use OPC-UA protocol");
-        assertEquals("read-only", result.accessMode(),
-            "REQ-001 match must use read-only access mode");
-    }
-
-    @Test
-    @DisplayName("Should match REQ-001 and return recall >= 0.90")
-    void shouldMatchReq001WithHighRecall() {
-        ServiceMatchResult result = reasoner.matchByRequirementId("REQ-001");
-        assertTrue(result.matched());
-        assertTrue(result.recall() >= 0.90,
-            "REQ-001 match must have recall >= 0.90, was: " + result.recall());
-    }
-
-    @Test
-    @DisplayName("Should match REQ-002 and return matched=true with SVC-FermentationSkid")
-    void shouldMatchReq002WithFermentationSkid() {
-        ServiceMatchResult result = reasoner.matchByRequirementId("REQ-002");
-        assertTrue(result.matched(), "REQ-002 should match a service");
-        assertEquals("Fermentation Skid Service", result.serviceName(),
-            "REQ-002 should match SVC-FermentationSkid");
-    }
-
-    @Test
-    @DisplayName("Should match REQ-003 and return matched=true with SVC-HVACTempAnalysis")
-    void shouldMatchReq003WithHvacTempAnalysis() {
-        ServiceMatchResult result = reasoner.matchByRequirementId("REQ-003");
-        assertTrue(result.matched(), "REQ-003 should match a service");
-        assertEquals("HVAC Temperature Analysis Service", result.serviceName(),
-            "REQ-003 should match SVC-HVACTempAnalysis");
-    }
-
-    @Test
-    @DisplayName("Should return matched=false for nonexistent requirement ID")
-    void shouldReturnNoMatchForNonexistentId() {
-        ServiceMatchResult result = reasoner.matchByRequirementId("NONEXISTENT");
-        assertFalse(result.matched(), "NONEXISTENT should not match any service");
-        assertNotNull(result.explanation(), "Explanation should be provided for no-match");
-    }
-
-    // ════════════════════════════════════════════════════════════════════
-    // Mode B: matchInline
-    // ════════════════════════════════════════════════════════════════════
-
     @Test
     @DisplayName("Should match inline with correct OPC-UA read-only parameters")
     void shouldMatchInlineWithCorrectParameters() {
@@ -134,12 +71,8 @@ class SemanticReasonerServiceTest {
         assertFalse(result.matched(), "Null parameters should not match");
     }
 
-    // ════════════════════════════════════════════════════════════════════
-    // Mode B fallback: matchByRequirementId for dynamic requirements
-    // ════════════════════════════════════════════════════════════════════
-
     @Test
-    @DisplayName("Should match dynamic requirement with OPC-UA read-only params via Mode B fallback")
+    @DisplayName("Should match dynamic requirement with OPC-UA read-only params")
     void shouldMatchDynamicRequirementWithOpcUaParams() {
         Model model = sharedLoader.getModel();
         String reqId = "REQ-TEST-DYN-01";
@@ -155,7 +88,7 @@ class SemanticReasonerServiceTest {
 
         ServiceMatchResult result = reasoner.matchByRequirementId(reqId);
         assertTrue(result.matched(),
-            "Dynamic requirement with OPC-UA read-only should match via Mode B fallback");
+            "Dynamic requirement with OPC-UA read-only should match");
         assertEquals("OPC-UA", result.protocol());
         assertEquals(reqId, result.requirementId());
     }
@@ -196,5 +129,27 @@ class SemanticReasonerServiceTest {
         ServiceMatchResult result = reasoner.matchByRequirementId(reqId);
         assertFalse(result.matched(),
             "Dynamic requirement with no parameters should not match");
+    }
+
+    @Test
+    @DisplayName("Should return no match for null requirement ID")
+    void shouldReturnNoMatchForNullId() {
+        ServiceMatchResult result = reasoner.matchByRequirementId(null);
+        assertFalse(result.matched());
+    }
+
+    @Test
+    @DisplayName("Should return no match for blank requirement ID")
+    void shouldReturnNoMatchForBlankId() {
+        ServiceMatchResult result = reasoner.matchByRequirementId("  ");
+        assertFalse(result.matched());
+    }
+
+    @Test
+    @DisplayName("Should return no match for nonexistent requirement ID")
+    void shouldReturnNoMatchForNonexistentId() {
+        ServiceMatchResult result = reasoner.matchByRequirementId("NONEXISTENT");
+        assertFalse(result.matched(), "NONEXISTENT should not match any service");
+        assertNotNull(result.explanation(), "Explanation should be provided for no-match");
     }
 }

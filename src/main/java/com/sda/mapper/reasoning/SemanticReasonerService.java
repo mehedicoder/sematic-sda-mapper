@@ -22,11 +22,12 @@ import java.util.Map;
  * Executes SPARQL matching queries against the CSS-SDA ontology model
  * to find services that satisfy given requirements.
  * <p>
- * Supports two matching modes:
- * <ul>
- *   <li><b>Mode A</b> — match by predefined requirement ID ({@code REQ-001}, {@code REQ-002}, {@code REQ-003})</li>
- *   <li><b>Mode B</b> — match by inline parameters (protocol, accessMode, recall threshold, etc.)</li>
- * </ul>
+ * Requirements are dynamically created by users during the upload process.
+ * Matching works by extracting parameters from the requirement in the ontology
+ * (protocol, accessMode, recall, latency, etc.) and building an inline SPARQL query.
+ * <p>
+ * Also supports direct inline matching via {@link #matchInline(Map)} for
+ * requirements specified as parameters without ontology persistence.
  */
 @Service
 public class SemanticReasonerService {
@@ -36,12 +37,6 @@ public class SemanticReasonerService {
     private static final String INST_NS = "http://www.example.org/instance#";
     private static final String SDA_NS = "http://www.example.org/sda#";
     private static final String CSS_NS = "http://www.example.org/css#";
-
-    private static final Map<String, String> REQUIREMENT_QUERY_MAP = Map.of(
-        "REQ-001", "queries/match-service.rq",
-        "REQ-002", "queries/match-service-req002.rq",
-        "REQ-003", "queries/match-service-req003.rq"
-    );
 
     private final OntologyModelLoader ontologyModelLoader;
     private final SparqlQueryLoader sparqlQueryLoader;
@@ -58,12 +53,10 @@ public class SemanticReasonerService {
     /**
      * Matches a requirement against the ontology.
      * <p>
-     * For predefined requirements (REQ-001, REQ-002, REQ-003), uses dedicated
-     * SPARQL queries (Mode A). For dynamically-created requirements (e.g. from
-     * RequirementFormView), extracts parameters from the ontology model and
-     * falls back to inline matching (Mode B).
+     * Extracts parameters from the requirement resource in the ontology model
+     * and uses inline matching to find a suitable service.
      *
-     * @param requirementId the requirement ID (e.g. "REQ-001" or "REQ-a1b2c3d4")
+     * @param requirementId the requirement ID (e.g. "REQ-a1b2c3d4")
      * @return a {@link ServiceMatchResult} with all matched service details
      */
     public ServiceMatchResult matchByRequirementId(String requirementId) {
@@ -71,58 +64,12 @@ public class SemanticReasonerService {
             return ServiceMatchResult.noMatch("Requirement ID is null or blank");
         }
 
-        // Mode A: predefined requirement with dedicated SPARQL query
-        String queryPath = REQUIREMENT_QUERY_MAP.get(requirementId.toUpperCase());
-        if (queryPath != null) {
-            return matchPredefinedRequirement(requirementId, queryPath);
-        }
-
-        // Mode B fallback: extract parameters from ontology and use inline matching
         return matchDynamicRequirement(requirementId);
-    }
-
-    private ServiceMatchResult matchPredefinedRequirement(String requirementId, String queryPath) {
-        try {
-            Model model = ontologyModelLoader.getModel();
-            String queryStr = sparqlQueryLoader.loadQuery(queryPath);
-            Query query = QueryFactory.create(queryStr);
-
-            try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
-                ResultSet rs = qe.execSelect();
-                if (!rs.hasNext()) {
-                    return ServiceMatchResult.noMatch(
-                        "No service matched requirement " + requirementId);
-                }
-
-                QuerySolution sol = rs.next();
-                ServiceMatchResult result = extractMatchResult(sol, requirementId);
-                if (result.matched()) {
-                    rDeployService.execute(requirementId, result.serviceName(),
-                        result.bindingLabel(), result.connector(),
-                        result.deploymentContext());
-                    String lifecycleStatus = rDeployService.getLifecycleStatus(requirementId);
-                    return new ServiceMatchResult(
-                        result.matched(), result.serviceName(), result.containerImage(),
-                        result.capabilityName(), result.skillName(), result.protocol(), result.accessMode(),
-                        result.bindingLabel(), result.connector(), result.deploymentContext(),
-                        result.recall(), result.latencyMs(), result.explanation(),
-                        lifecycleStatus, requirementId,
-                        result.safetyIntegrityLevel(), result.determinismClass(),
-                        result.networkZone());
-                }
-                return result;
-            }
-        } catch (SparqlExecutionException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new SparqlExecutionException(
-                "Failed to execute matching query for " + requirementId, e);
-        }
     }
 
     /**
      * Matches a dynamically-created requirement by extracting its parameters
-     * from the ontology model and using inline matching (Mode B).
+     * from the ontology model and using inline matching.
      */
     private ServiceMatchResult matchDynamicRequirement(String requirementId) {
         Model model = ontologyModelLoader.getModel();
@@ -302,6 +249,17 @@ public class SemanticReasonerService {
                     ?capability  sda:realisedBy     ?skill .
                     ?skill       sda:isImplementedBy ?service .
                     ?capability  rdfs:label          ?capLabel .
+                }
+
+                FILTER NOT EXISTS {
+                    ?skill sda:requiresConcept ?reqConcept .
+                    FILTER NOT EXISTS {
+                        ?anyDC sda:providesConcept ?reqConcept .
+                    }
+                }
+
+                FILTER NOT EXISTS {
+                    ?device sda:hasNE107Status :NE107-Failure .
                 }
 
                 FILTER (?protocol = "%s")

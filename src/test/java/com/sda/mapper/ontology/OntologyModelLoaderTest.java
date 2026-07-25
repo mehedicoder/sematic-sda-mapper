@@ -92,24 +92,28 @@ class OntologyModelLoaderTest {
     }
 
     @Test
-    @DisplayName("Should contain Requirement properties from paper Figure 5")
+    @DisplayName("Should contain sda:Requirement class definition and its property definitions")
     void shouldContainRequirementProperties() {
         var loader = new OntologyModelLoader();
         loader.setFilePath("ontology/css-sda-small.ttl");
         loader.loadOntology();
         Model model = loader.getModel();
         String sdaNs = "http://www.example.org/sda#";
-        String instNs = "http://www.example.org/instance#";
 
-        Resource req001 = model.getResource(instNs + "REQ-001");
-        assertNotNull(req001, "REQ-001 must exist");
-        assertEquals("REQ-001", req001.getProperty(model.createProperty(sdaNs + "requirementID")).getString());
-        assertEquals("Flowmeter Asset-Health Monitoring", req001.getProperty(model.createProperty(sdaNs + "title")).getString());
-        assertNotNull(req001.getProperty(model.createProperty(sdaNs + "description")), "REQ-001 must have description");
-        assertNotNull(req001.getProperty(model.createProperty(sdaNs + "rationale")), "REQ-001 must have rationale");
-        assertNotNull(req001.getProperty(model.createProperty(sdaNs + "acceptanceCondition")), "REQ-001 must have acceptanceCondition");
-        assertEquals("AssetDiagnostics", req001.getProperty(model.createProperty(sdaNs + "requirementType")).getString());
-        assertEquals("High", req001.getProperty(model.createProperty(sdaNs + "hasPriority")).getString());
+        Resource requirementClass = model.getResource(sdaNs + "Requirement");
+        assertTrue(model.containsResource(requirementClass),
+            "sda:Requirement class must be defined in the ontology");
+
+        assertTrue(model.containsResource(model.createResource(sdaNs + "requirementID")),
+            "sda:requirementID property must be defined");
+        assertTrue(model.containsResource(model.createResource(sdaNs + "title")),
+            "sda:title property must be defined");
+        assertTrue(model.containsResource(model.createResource(sdaNs + "description")),
+            "sda:description property must be defined");
+        assertTrue(model.containsResource(model.createResource(sdaNs + "verifiedBy")),
+            "sda:verifiedBy property must be defined");
+        assertTrue(model.containsResource(model.createResource(sdaNs + "hasConstraint")),
+            "sda:hasConstraint property must be defined");
     }
 
     @Test

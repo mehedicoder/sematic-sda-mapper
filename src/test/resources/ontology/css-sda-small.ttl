@@ -1,0 +1,825 @@
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix css:  <http://www.example.org/css#> .
+@prefix sda:  <http://www.example.org/sda#> .
+@prefix :     <http://www.example.org/instance#> .
+
+# ── CSS-SDA core classes (paper Figure 5, Section 4.2) ───────────────
+
+css:UseCase       a rdfs:Class ;
+    rdfs:label      "UseCase" .
+
+sda:Requirement   a rdfs:Class ;
+    rdfs:label      "Requirement" .
+
+css:Capability    a rdfs:Class ;
+    rdfs:label      "Capability" .
+
+css:Skill         a rdfs:Class ;
+    rdfs:label      "Skill" .
+
+sda:Service       a rdfs:Class ;
+    rdfs:label      "Service" .
+
+sda:CommunicationBinding a rdfs:Class ;
+    rdfs:label           "CommunicationBinding" .
+
+sda:DataConnector       a rdfs:Class ;
+    rdfs:label           "DataConnector" .
+
+sda:DeploymentContext   a rdfs:Class ;
+    rdfs:label           "DeploymentContext" .
+
+# ── Capability sub-classes ─────────────────────────────────────────────
+
+sda:OfferedCapability   a rdfs:Class ;
+    rdfs:subClassOf      css:Capability ;
+    rdfs:label           "OfferedCapability" .
+
+sda:RequiredCapability  a rdfs:Class ;
+    rdfs:subClassOf      css:Capability ;
+    rdfs:label           "RequiredCapability" .
+
+# ── Physical asset classes ─────────────────────────────────────────────
+
+sda:MTPModule     a rdfs:Class ;
+    rdfs:label    "MTPModule" .
+
+sda:FieldDevice   a rdfs:Class ;
+    rdfs:label    "FieldDevice" .
+
+sda:BACnetDevice  a rdfs:Class ;
+    rdfs:subClassOf sda:FieldDevice ;
+    rdfs:label    "BACnetDevice" .
+
+sda:EnergyMeter   a rdfs:Class ;
+    rdfs:subClassOf sda:FieldDevice ;
+    rdfs:label    "EnergyMeter" .
+
+# ── NE 107 diagnostic classes ─────────────────────────────────────────
+
+sda:NE107Status   a rdfs:Class ;
+    rdfs:label    "NE107Status" .
+
+sda:NE107SubCode  a rdfs:Class ;
+    rdfs:label    "NE107SubCode" .
+
+sda:DegradedMode  a rdfs:Class ;
+    rdfs:subClassOf css:Skill ;
+    rdfs:label    "DegradedMode" .
+
+# ── Paper experiment classes (G2, G3, G8) ──────────────────────────────
+
+sda:RequirementParameter  a rdfs:Class ;
+    rdfs:label              "RequirementParameter" .
+
+sda:RequirementConstraint a rdfs:Class ;
+    rdfs:label              "RequirementConstraint" .
+
+sda:VerificationCriterion a rdfs:Class ;
+    rdfs:label              "VerificationCriterion" .
+
+sda:Concept               a rdfs:Class ;
+    rdfs:label              "Concept" .
+
+# ── Object properties ──────────────────────────────────────────────────
+
+sda:mapsToCapability  a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:RequiredCapability ;
+    rdfs:range         sda:OfferedCapability ;
+    rdfs:label         "mapsToCapability" .
+
+sda:realisedBy       a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        css:Capability ;
+    rdfs:range         css:Skill ;
+    rdfs:label         "realisedBy" .
+
+sda:isImplementedBy  a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        css:Skill ;
+    rdfs:range         sda:Service ;
+    rdfs:label         "isImplementedBy" .
+
+sda:usesBinding      a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:Service ;
+    rdfs:range         sda:CommunicationBinding ;
+    rdfs:label         "usesBinding" .
+
+sda:usesConnector    a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:CommunicationBinding ;
+    rdfs:range         sda:DataConnector ;
+    rdfs:label         "usesConnector" .
+
+sda:isDeployedBy     a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:Service ;
+    rdfs:range         sda:DeploymentContext ;
+    rdfs:label         "isDeployedBy" .
+
+sda:hasNE107Status   a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:FieldDevice ;
+    rdfs:range         sda:NE107Status ;
+    rdfs:label         "hasNE107Status" .
+
+sda:hasSubCode       a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:NE107Status ;
+    rdfs:range         sda:NE107SubCode ;
+    rdfs:label         "hasSubCode" .
+
+sda:belongsToSite    a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        rdfs:Resource ;
+    rdfs:range         rdfs:Resource ;
+    rdfs:label         "belongsToSite" .
+
+sda:hasParameter     a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:Requirement ;
+    rdfs:range         rdfs:Resource ;
+    rdfs:label         "hasParameter" .
+
+sda:hasConstraint    a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:Requirement ;
+    rdfs:range         rdfs:Resource ;
+    rdfs:label         "hasConstraint" .
+
+sda:specifiedBy      a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        css:Capability ;
+    rdfs:range         rdfs:Resource ;
+    rdfs:label         "specifiedBy" .
+
+sda:verifiedBy       a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:Requirement ;
+    rdfs:range         rdfs:Resource ;
+    rdfs:label         "verifiedBy" .
+
+sda:requiresFunction a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        css:Capability ;
+    rdfs:range         rdfs:Resource ;
+    rdfs:label         "requiresFunction" .
+
+sda:operatesOn       a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        css:Capability ;
+    rdfs:range         rdfs:Resource ;
+    rdfs:label         "operatesOn" .
+
+sda:exposedAs        a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        css:Capability ;
+    rdfs:range         rdfs:Resource ;
+    rdfs:label         "exposedAs" .
+
+sda:mapsTo           a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:RequiredCapability ;
+    rdfs:range         sda:OfferedCapability ;
+    rdfs:label         "mapsTo" .
+
+# ── UseCase → Requirement (G1) ──────────────────────────────────────────
+
+sda:hasRequirement   a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        css:UseCase ;
+    rdfs:range         sda:Requirement ;
+    rdfs:label         "hasRequirement" .
+
+# ── R2a semantic concept matching (G8) ──────────────────────────────────
+
+sda:requiresConcept  a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        css:Skill ;
+    rdfs:range         sda:Concept ;
+    rdfs:label         "requiresConcept" .
+
+sda:providesConcept  a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:DataConnector ;
+    rdfs:range         sda:Concept ;
+    rdfs:label         "providesConcept" .
+
+# ── R-Deploy bound properties (G6) ──────────────────────────────────────
+
+sda:boundService     a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:Requirement ;
+    rdfs:range         sda:Service ;
+    rdfs:label         "boundService" .
+
+sda:boundBinding     a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:Requirement ;
+    rdfs:range         sda:CommunicationBinding ;
+    rdfs:label         "boundBinding" .
+
+sda:boundConnector   a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:Requirement ;
+    rdfs:range         sda:DataConnector ;
+    rdfs:label         "boundConnector" .
+
+sda:boundContext     a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:Requirement ;
+    rdfs:range         sda:DeploymentContext ;
+    rdfs:label         "boundContext" .
+
+sda:matchedCandidate a rdf:Property, owl:ObjectProperty ;
+    rdfs:domain        sda:Requirement ;
+    rdfs:range         sda:Service ;
+    rdfs:label         "matchedCandidate" .
+
+# ── Data properties ────────────────────────────────────────────────────
+
+sda:requirementID    a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:Requirement ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "requirementID" .
+
+sda:requirementType  a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:Requirement ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "requirementType" .
+
+sda:lifecycleStatus  a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:Requirement ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "lifecycleStatus" .
+
+sda:capabilityID     a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:OfferedCapability ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "capabilityID" .
+
+sda:reportedRecall   a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:Service ;
+    rdfs:range    xsd:double ;
+    rdfs:label    "reportedRecall" .
+
+sda:reportedLatency  a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:Service ;
+    rdfs:range    xsd:integer ;
+    rdfs:label    "reportedLatency" .
+
+sda:protocol         a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:CommunicationBinding ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "protocol" .
+
+sda:accessMode       a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:CommunicationBinding ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "accessMode" .
+
+sda:securityMode     a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:CommunicationBinding ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "securityMode" .
+
+sda:informationModel a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:DataConnector ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "informationModel" .
+
+sda:semanticID       a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:DataConnector ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "semanticID" .
+
+sda:onPlantNetwork   a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:DeploymentContext ;
+    rdfs:range    xsd:boolean ;
+    rdfs:label    "onPlantNetwork" .
+
+sda:safetyIntegrityLevel a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:DeploymentContext ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "safetyIntegrityLevel" .
+
+sda:determinismClass a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:DeploymentContext ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "determinismClass" .
+
+sda:networkZone      a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:DeploymentContext ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "networkZone" .
+
+sda:image            a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:Service ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "image" .
+
+sda:engineeringUnit  a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   css:Skill ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "engineeringUnit" .
+
+sda:hasDiagnosticString a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:NE107Status ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "hasDiagnosticString" .
+
+sda:hasDegradationLevel a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:DegradedMode ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "hasDegradationLevel" .
+
+sda:isGateway        a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:DataConnector ;
+    rdfs:range    xsd:boolean ;
+    rdfs:label    "isGateway" .
+
+# ── VerificationCriterion data properties (G3) ─────────────────────────
+
+sda:criterionType    a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:VerificationCriterion ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "criterionType" .
+
+sda:criterionMetric  a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:VerificationCriterion ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "criterionMetric" .
+
+sda:criterionThreshold a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:VerificationCriterion ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "criterionThreshold" .
+
+sda:criterionOperator a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:VerificationCriterion ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "criterionOperator" .
+
+# ── RequirementParameter data properties (G2) ──────────────────────────
+
+sda:parameterName    a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:RequirementParameter ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "parameterName" .
+
+sda:parameterValue   a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:RequirementParameter ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "parameterValue" .
+
+sda:parameterUnit    a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:RequirementParameter ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "parameterUnit" .
+
+# ── RequirementConstraint data properties (G2) ─────────────────────────
+
+sda:constraintType   a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:RequirementConstraint ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "constraintType" .
+
+sda:constraintValue  a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:RequirementConstraint ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "constraintValue" .
+
+sda:constraintOperator a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:RequirementConstraint ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "constraintOperator" .
+
+# ── Requirement data properties (paper Figure 5) ────────────────────
+
+sda:title            a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:Requirement ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "title" .
+
+sda:description      a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   rdfs:Resource ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "description" .
+
+sda:rationale        a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:Requirement ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "rationale" .
+
+sda:acceptanceCondition a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:Requirement ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "acceptanceCondition" .
+
+sda:hasPriority      a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   sda:Requirement ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "hasPriority" .
+
+# ── Capability data properties (paper Figure 5) ─────────────────────
+
+sda:capabilityName   a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   css:Capability ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "capabilityName" .
+
+sda:version          a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   rdfs:Resource ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "version" .
+
+# ── Skill data properties (nominal range) ───────────────────────────
+
+sda:nominalRange_min a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   css:Skill ;
+    rdfs:range    xsd:double ;
+    rdfs:label    "nominalRange_min" .
+
+sda:nominalRange_max a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   css:Skill ;
+    rdfs:range    xsd:double ;
+    rdfs:label    "nominalRange_max" .
+# ── Source tracking property ───────────────────────────────────
+
+sda:source           a rdf:Property, owl:DatatypeProperty ;
+    rdfs:domain   rdfs:Resource ;
+    rdfs:range    xsd:string ;
+    rdfs:label    "source" .
+
+
+# ── NE 107 status individuals ──────────────────────────────────────────
+
+:NE107-Good       a sda:NE107Status ;
+    rdfs:label   "Good" ;
+    sda:hasDiagnosticString ""  ;
+
+    sda:source            "designed" .
+:NE107-Maintenance a sda:NE107Status ;
+    rdfs:label   "Maintenance" ;
+    sda:hasDiagnosticString "Maintenance required"  ;
+
+    sda:source            "designed" .
+:NE107-Failure    a sda:NE107Status ;
+    rdfs:label   "Failure" ;
+    sda:hasDiagnosticString "Device failure"  ;
+
+    sda:source            "designed" .
+:NE107-Sensor     a sda:NE107SubCode ;
+    rdfs:label   "Sensor"  ;
+
+    sda:source            "designed" .
+:NE107-WireBreak  a sda:NE107SubCode ;
+    rdfs:label   "WireBreak"  ;
+
+    sda:source            "designed" .
+:NE107-ShortCircuit a sda:NE107SubCode ;
+    rdfs:label   "ShortCircuit"  ;
+
+    sda:source            "designed" .
+:NE107-Function   a sda:NE107SubCode ;
+    rdfs:label   "Function"  ;
+
+# ══════════════════════════════════════════════════════════════════════
+# USE CASE A (MVP): Flowmeter NE 107 — Paper Section 4.4, Table I
+# ══════════════════════════════════════════════════════════════════════
+
+# PA-DIM Concept individuals (G8)
+    sda:source            "designed" .
+:PA-DIM-FlowConcept      a sda:Concept ;
+    rdfs:label            "PA-DIM Flow Concept" ;
+    sda:description       "IEC 61987-42 flow measurement concept from PA-DIM"  ;
+
+    sda:source            "designed" .
+:PA-DIM-TemperatureConcept  a sda:Concept ;
+    rdfs:label            "PA-DIM Temperature Concept" ;
+    sda:description       "IEC 61987-22 temperature measurement concept from PA-DIM"  ;
+
+# Offered capability
+    sda:source            "designed" .
+:OC-ACM-Flowmeter  a     sda:OfferedCapability ;
+    rdfs:label            "Asset Condition Monitoring for Flowmeter" ;
+    sda:capabilityID      "ACM-001" ;
+    sda:capabilityName    "AssetConditionMonitoring" ;
+    sda:description       "Monitors flowmeter health via NE 107 diagnostics" ;
+    sda:version           "1.0" ;
+    sda:realisedBy        :SK-FlowmeterDiagnostics  ;
+
+# Skill
+    sda:source            "designed" .
+:SK-FlowmeterDiagnostics  a css:Skill ;
+    rdfs:label            "Flowmeter Diagnostics Skill" ;
+    sda:engineeringUnit   "l/min" ;
+    sda:nominalRange_min  0.0 ;
+    sda:nominalRange_max  100.0 ;
+    sda:requiresConcept   :PA-DIM-FlowConcept ;
+    sda:isImplementedBy   :SVC-FlowmeterDiagnostics  ;
+
+# Service
+    sda:source            "designed" .
+:SVC-FlowmeterDiagnostics  a sda:Service ;
+    rdfs:label            "Flowmeter Diagnostics Service" ;
+    sda:reportedRecall    0.94 ;
+    sda:reportedLatency   45 ;
+    sda:image             "registry.local/flowmeter-diagnostics:1.0" ;
+    sda:usesBinding       :CB-Flowmeter-OPCUA ;
+    sda:isDeployedBy      :DEPLOY-OnPrem  ;
+
+# Communication binding
+    sda:source            "designed" .
+:CB-Flowmeter-OPCUA  a   sda:CommunicationBinding ;
+    rdfs:label            "OPC-UA binding for flowmeter" ;
+    sda:protocol          "OPC-UA" ;
+    sda:accessMode        "read-only" ;
+    sda:securityMode      "SignAndEncrypt" ;
+    sda:usesConnector     :DC-Flowmeter-FT101  ;
+
+# Data connector
+    sda:source            "designed" .
+:DC-Flowmeter-FT101  a   sda:DataConnector ;
+    rdfs:label            "FT101 flowmeter OPC-UA connector" ;
+    sda:informationModel  "OPC-UA" ;
+    sda:semanticID        "IEC-61987-42" ;
+    sda:providesConcept   :PA-DIM-FlowConcept ;
+    sda:isGateway         false  ;
+
+# Deployment context
+    sda:source            "designed" .
+:DEPLOY-OnPrem  a        sda:DeploymentContext ;
+    rdfs:label            "On-premise deployment" ;
+    sda:onPlantNetwork    true ;
+    sda:safetyIntegrityLevel "SIL-0" ;
+    sda:determinismClass  "SoftRealTime" ;
+    sda:networkZone       "OT-Zone-1"  ;
+
+# ── Negative candidates (Use Case A) ──────────────────────────────────
+
+# Wrong protocol (HTTP instead of OPC-UA)
+    sda:source            "designed" .
+:SVC-WrongProtocol  a    sda:Service ;
+    rdfs:label            "Wrong Protocol Service" ;
+    sda:reportedRecall    0.92 ;
+    sda:reportedLatency   50 ;
+    sda:usesBinding       :CB-WrongProtocol-HTTP  ;
+
+    sda:source            "designed" .
+:CB-WrongProtocol-HTTP  a sda:CommunicationBinding ;
+    rdfs:label            "HTTP binding" ;
+    sda:protocol          "HTTP" ;
+    sda:accessMode        "read-only" ;
+    sda:securityMode      "None" ;
+    sda:usesConnector     :DC-WrongProtocol  ;
+
+    sda:source            "designed" .
+:DC-WrongProtocol  a     sda:DataConnector ;
+    rdfs:label            "HTTP connector" ;
+    sda:informationModel  "HTTP" ;
+    sda:isGateway         false  ;
+
+# Wrong capability (FermentationControl, not AssetDiagnostics)
+    sda:source            "designed" .
+:SVC-WrongCapability  a  sda:Service ;
+    rdfs:label            "Wrong Capability Service" ;
+    sda:reportedRecall    0.91 ;
+    sda:reportedLatency   40 ;
+    sda:usesBinding       :CB-WrongCap-OPCUA  ;
+
+    sda:source            "designed" .
+:CB-WrongCap-OPCUA  a   sda:CommunicationBinding ;
+    rdfs:label            "OPC-UA binding for wrong capability" ;
+    sda:protocol          "OPC-UA" ;
+    sda:accessMode        "read-only" ;
+    sda:securityMode      "SignAndEncrypt" ;
+    sda:usesConnector     :DC-WrongCap  ;
+
+    sda:source            "designed" .
+:DC-WrongCap  a          sda:DataConnector ;
+    rdfs:label            "Wrong capability connector" ;
+    sda:informationModel  "OPC-UA" ;
+    sda:isGateway         false  ;
+
+# NE 107 Failure status (excluded by SPARQL)
+    sda:source            "designed" .
+:SVC-NE107Failure  a     sda:Service ;
+    rdfs:label            "NE 107 Failure Service" ;
+    sda:reportedRecall    0.93 ;
+    sda:reportedLatency   42 ;
+    sda:usesBinding       :CB-NE107Fail-OPCUA  ;
+
+    sda:source            "designed" .
+:CB-NE107Fail-OPCUA  a   sda:CommunicationBinding ;
+    rdfs:label            "OPC-UA binding for NE 107 failure" ;
+    sda:protocol          "OPC-UA" ;
+    sda:accessMode        "read-only" ;
+    sda:securityMode      "SignAndEncrypt" ;
+    sda:usesConnector     :DC-NE107Fail  ;
+
+    sda:source            "designed" .
+:DC-NE107Fail  a         sda:DataConnector ;
+    rdfs:label            "NE 107 failure connector" ;
+    sda:informationModel  "OPC-UA" ;
+    sda:isGateway         false  ;
+
+# Pump asset with NE 107 status linkage
+    sda:source            "designed" .
+:pump1Asset  a            sda:FieldDevice ;
+    rdfs:label            "Pump 1 Flowmeter" ;
+    sda:hasNE107Status    :NE107-Good  ;
+
+# Pump degradation modes
+    sda:source            "designed" .
+:pump1HealthyMode  a      sda:DegradedMode ;
+    rdfs:label            "Healthy Mode" ;
+    sda:hasDegradationLevel "Healthy"  ;
+
+    sda:source            "designed" .
+:pump1DegradedMode  a     sda:DegradedMode ;
+    rdfs:label            "Degraded Mode" ;
+    sda:hasDegradationLevel "Degraded"  ;
+
+    sda:source            "designed" .
+:pump1FaultedMode  a      sda:DegradedMode ;
+    rdfs:label            "Faulted Mode" ;
+    sda:hasDegradationLevel "Faulted"  ;
+
+# ══════════════════════════════════════════════════════════════════════
+# USE CASE B: Fermentation Skid (Skid-A1) — Critical Process Control
+# ══════════════════════════════════════════════════════════════════════
+
+# Physical asset
+    sda:source            "designed" .
+:Skid-A1  a               sda:MTPModule ;
+    rdfs:label            "Fermentation Skid A1" ;
+    sda:belongsToSite     :PlantA  ;
+
+# Offered capabilities
+    sda:source            "designed" .
+:OC-TempControl  a        sda:OfferedCapability ;
+    rdfs:label            "Temperature Control Capability" ;
+    sda:capabilityID      "TC-001" ;
+    sda:capabilityName    "TemperatureControl" ;
+    sda:description       "Controls fermentation vessel temperature within ±0.5°C" ;
+    sda:version           "1.0" ;
+    sda:realisedBy        :SK-FermentationControl  ;
+
+    sda:source            "designed" .
+:OC-DosingControl  a      sda:OfferedCapability ;
+    rdfs:label            "Dosing Control Capability" ;
+    sda:capabilityID      "DC-001" ;
+    sda:capabilityName    "DosingControl" ;
+    sda:description       "Controls nutrient dosing rate during fermentation" ;
+    sda:version           "1.0" ;
+    sda:realisedBy        :SK-DosingControl  ;
+
+# Skills
+    sda:source            "designed" .
+:SK-FermentationControl  a css:Skill ;
+    rdfs:label            "Fermentation Control Skill" ;
+    sda:engineeringUnit   "°C" ;
+    sda:nominalRange_min  15.0 ;
+    sda:nominalRange_max  40.0 ;
+    sda:isImplementedBy   :SVC-FermentationSkid  ;
+
+    sda:source            "designed" .
+:SK-DosingControl  a      css:Skill ;
+    rdfs:label            "Dosing Control Skill" ;
+    sda:engineeringUnit   "mL/min" ;
+    sda:nominalRange_min  0.0 ;
+    sda:nominalRange_max  50.0 ;
+    sda:isImplementedBy   :SVC-FermentationSkid  ;
+
+# Service
+    sda:source            "designed" .
+:SVC-FermentationSkid  a  sda:Service ;
+    rdfs:label            "Fermentation Skid Service" ;
+    sda:reportedRecall    0.96 ;
+    sda:reportedLatency   20 ;
+    sda:image             "registry.local/fermentation-skid:1.0" ;
+    sda:usesBinding       :CB-Skid-A1-PROFINET ;
+    sda:usesBinding       :CB-Skid-A1-OPCUA ;
+    sda:isDeployedBy      :DEPLOY-Critical  ;
+
+# Communication bindings
+    sda:source            "designed" .
+:CB-Skid-A1-PROFINET  a   sda:CommunicationBinding ;
+    rdfs:label            "PROFINET binding for Skid-A1" ;
+    sda:protocol          "PROFINET" ;
+    sda:accessMode        "read-write" ;
+    sda:securityMode      "SignAndEncrypt" ;
+    sda:usesConnector     :DC-Skid-A1-OPCUA  ;
+
+    sda:source            "designed" .
+:CB-Skid-A1-OPCUA  a     sda:CommunicationBinding ;
+    rdfs:label            "OPC-UA gateway binding for Skid-A1" ;
+    sda:protocol          "OPC-UA" ;
+    sda:accessMode        "read-only" ;
+    sda:securityMode      "SignAndEncrypt" ;
+    sda:usesConnector     :DC-Skid-A1-OPCUA  ;
+
+# Data connector
+    sda:source            "designed" .
+:DC-Skid-A1-OPCUA  a     sda:DataConnector ;
+    rdfs:label            "Skid-A1 OPC-UA connector" ;
+    sda:informationModel  "OPC-UA" ;
+    sda:semanticID        "VDI/VDE/NAMUR 2658" ;
+    sda:isGateway         true  ;
+
+# Deployment context
+    sda:source            "designed" .
+:DEPLOY-Critical  a       sda:DeploymentContext ;
+    rdfs:label            "Critical process deployment" ;
+    sda:onPlantNetwork    true ;
+    sda:safetyIntegrityLevel "SIL-2" ;
+    sda:determinismClass  "HardRealTime" ;
+    sda:networkZone       "OT-Zone-1"  ;
+
+# Site
+    sda:source            "designed" .
+:PlantA  a                rdfs:Resource ;
+    rdfs:label            "Plant A"  ;
+
+# ══════════════════════════════════════════════════════════════════════
+# USE CASE C: HVAC Plant (AHU-01 + EM-01) — Non-Critical Monitoring
+# ══════════════════════════════════════════════════════════════════════
+
+# Physical assets
+    sda:source            "designed" .
+:AHU-01  a                 sda:BACnetDevice ;
+    rdfs:label             "AHU-01 Air Handling Unit" ;
+    sda:belongsToSite      :PlantB  ;
+
+    sda:source            "designed" .
+:EM-01  a                  sda:EnergyMeter ;
+    rdfs:label             "EM-01 Energy Meter" ;
+    sda:belongsToSite      :PlantB  ;
+
+# Offered capability
+    sda:source            "designed" .
+:OC-HVACTempMonitoring  a sda:OfferedCapability ;
+    rdfs:label            "HVAC Temperature Monitoring Capability" ;
+    sda:capabilityID      "HVAC-001" ;
+    sda:capabilityName    "HVACTemperatureMonitoring" ;
+    sda:description       "Monitors HVAC supply air temperature for energy optimization" ;
+    sda:version           "1.0" ;
+    sda:realisedBy        :SK-HVACTempAnalysis  ;
+
+# Skill
+    sda:source            "designed" .
+:SK-HVACTempAnalysis  a   css:Skill ;
+    rdfs:label            "HVAC Temperature Analysis Skill" ;
+    sda:engineeringUnit   "°C" ;
+    sda:nominalRange_min  -10.0 ;
+    sda:nominalRange_max  50.0 ;
+    sda:isImplementedBy   :SVC-HVACTempAnalysis  ;
+
+# Service
+    sda:source            "designed" .
+:SVC-HVACTempAnalysis  a  sda:Service ;
+    rdfs:label            "HVAC Temperature Analysis Service" ;
+    sda:reportedRecall    0.91 ;
+    sda:reportedLatency   55 ;
+    sda:image             "registry.local/hvac-temp-analysis:1.0" ;
+    sda:usesBinding       :CB-AHU01-BACnet ;
+    sda:usesBinding       :CB-AHU01-OPCUA ;
+    sda:usesBinding       :CB-EM01-OPCUA ;
+    sda:isDeployedBy      :DEPLOY-OTZone3  ;
+
+# Communication bindings
+    sda:source            "designed" .
+:CB-AHU01-BACnet  a       sda:CommunicationBinding ;
+    rdfs:label            "BACnet binding for AHU-01" ;
+    sda:protocol          "BACnet" ;
+    sda:accessMode        "read-only" ;
+    sda:securityMode      "Sign" ;
+    sda:usesConnector     :DC-AHU01-OPCUA  ;
+
+    sda:source            "designed" .
+:CB-AHU01-OPCUA  a       sda:CommunicationBinding ;
+    rdfs:label            "OPC-UA gateway binding for AHU-01" ;
+    sda:protocol          "OPC-UA" ;
+    sda:accessMode        "read-only" ;
+    sda:securityMode      "SignAndEncrypt" ;
+    sda:usesConnector     :DC-AHU01-OPCUA  ;
+
+    sda:source            "designed" .
+:CB-EM01-OPCUA  a         sda:CommunicationBinding ;
+    rdfs:label            "OPC-UA native binding for EM-01" ;
+    sda:protocol          "OPC-UA" ;
+    sda:accessMode        "read-only" ;
+    sda:securityMode      "SignAndEncrypt" ;
+    sda:usesConnector     :DC-EM01-OPCUA  ;
+
+# Data connectors
+    sda:source            "designed" .
+:DC-AHU01-OPCUA  a       sda:DataConnector ;
+    rdfs:label            "AHU-01 OPC-UA gateway connector" ;
+    sda:informationModel  "OPC-UA" ;
+    sda:isGateway         true  ;
+
+    sda:source            "designed" .
+:DC-EM01-OPCUA  a         sda:DataConnector ;
+    rdfs:label            "EM-01 native OPC-UA connector" ;
+    sda:informationModel  "OPC-UA" ;
+    sda:semanticID        "IDTA-02009-1-0" ;
+    sda:isGateway         false  ;
+
+# Deployment context
+    sda:source            "designed" .
+:DEPLOY-OTZone3  a        sda:DeploymentContext ;
+    rdfs:label            "OT Zone 3 deployment" ;
+    sda:onPlantNetwork    true ;
+    sda:safetyIntegrityLevel "SIL-0" ;
+    sda:determinismClass  "SoftRealTime" ;
+    sda:networkZone       "OT-Zone-3"  ;
+
+# Site
+    sda:source            "designed" .
+:PlantB  a                rdfs:Resource ;
+    rdfs:label            "Plant B"  ;
+
+    sda:source            "designed" .

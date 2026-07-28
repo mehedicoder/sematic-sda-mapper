@@ -4,19 +4,19 @@ Semantic SDA Mapper is a Java and Spring Boot prototype for mapping industrial a
 
 ## Prerequisites
 
-- JDK 25
+- JDK 21
 - Maven 3.9 or newer
 - Docker Engine
 - Docker Compose
 
-Confirm that Maven uses Java 25:
+Confirm that Maven uses Java 21:
 
 ```bash
 java -version
 mvn -version
 ```
 
-Both commands must report Java 25 before running the Maven build.
+Both commands must report Java 21 before running the Maven build.
 
 ## Test
 
@@ -74,7 +74,7 @@ curl http://localhost:8080/actuator/health/readiness
 
 ## Docker Image
 
-Build the Java 25 image:
+Build the Java 21 image:
 
 ```bash
 docker build -t semantic-sda-mapper:local -f docker/Dockerfile .

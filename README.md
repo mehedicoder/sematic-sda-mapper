@@ -115,7 +115,7 @@ docker compose down
 
 ### Maven uses an older Java version
 
-Set `JAVA_HOME` to a JDK 25 installation and ensure `%JAVA_HOME%\bin` on Windows or `$JAVA_HOME/bin` on Linux/macOS appears before older Java installations on `PATH`. Run `mvn -version` again to confirm Java 25 is active.
+Set `JAVA_HOME` to a JDK 21 installation and ensure `%JAVA_HOME%\bin` on Windows or `$JAVA_HOME/bin` on Linux/macOS appears before older Java installations on `PATH`. Run `mvn -version` again to confirm Java 21 is active.
 
 ### Port 8080 is already in use
 

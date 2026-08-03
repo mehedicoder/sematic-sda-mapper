@@ -1,5 +1,6 @@
 package com.sda.mapper.ontology;
 
+import com.sda.mapper.support.DemoAboxBuilder;
 import org.apache.jena.query.Query;
 import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
@@ -28,17 +29,18 @@ import static org.junit.jupiter.api.Assertions.*;
 class SparqlMatchingTest {
 
     private static final String INST_NS = "http://www.example.org/instance#";
-    private static final String SDA_NS = "http://www.example.org/sda#";
+    private static final String SDA_NS = "https://example.org/ontology/sda#";
     private static Model model;
 
     @BeforeAll
     static void loadOntology() throws IOException {
-        ClassPathResource resource = new ClassPathResource("ontology/css-sda-small.ttl");
+        ClassPathResource resource = new ClassPathResource("ontology/css-sda-unified.ttl");
         assertTrue(resource.exists(), "Ontology file must exist");
         model = ModelFactory.createDefaultModel();
         try (InputStream in = resource.getInputStream()) {
             model.read(in, null, "TTL");
         }
+        DemoAboxBuilder.apply(model);
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -114,6 +116,7 @@ class SparqlMatchingTest {
         try (var in = new ByteArrayInputStream(loadOntologyBytes())) {
             modifiedModel.read(in, null, "TTL");
         }
+        DemoAboxBuilder.apply(modifiedModel);
 
         var pumpAsset = modifiedModel.createResource(INST_NS + "pump1Asset");
         var failureStatus = modifiedModel.createResource(INST_NS + "NE107-Failure");
@@ -276,7 +279,7 @@ class SparqlMatchingTest {
     }
 
     private byte[] loadOntologyBytes() throws IOException {
-        ClassPathResource resource = new ClassPathResource("ontology/css-sda-small.ttl");
+        ClassPathResource resource = new ClassPathResource("ontology/css-sda-unified.ttl");
         assertTrue(resource.exists(), "Ontology file must exist");
         try (InputStream in = resource.getInputStream()) {
             return in.readAllBytes();

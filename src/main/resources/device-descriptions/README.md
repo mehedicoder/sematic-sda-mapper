@@ -32,7 +32,7 @@ multi-source parsing and semantic lifting:
 
 ## Semantic Mapping
 
-Source field → Ontology concept (css-sda-small.ttl)
+Source field → Ontology concept (css-sda-unified.ttl)
 
 ### AAS → Ontology
 

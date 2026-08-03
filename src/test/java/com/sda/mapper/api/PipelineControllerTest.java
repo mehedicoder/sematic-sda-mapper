@@ -34,7 +34,7 @@ class PipelineControllerTest {
             MockMultipartFile file = new MockMultipartFile(
                 "file", "req002-mtp-fermentation-skid.xml", "application/xml", input);
 
-            var response = controller.execute(file, null, null, null, null, null, null, null, null, null);
+            var response = controller.execute(file, "REQ-002", null, null, null, null, null, null, null, null);
             assertEquals(200, response.getStatusCode().value());
             assertNotNull(response.getBody());
 
@@ -62,7 +62,7 @@ class PipelineControllerTest {
             MockMultipartFile file = new MockMultipartFile(
                 "file", "req003-uaserver-ahu01.json", "application/json", input);
 
-            var response = controller.execute(file, null, null, null, null, null, null, null, null, null);
+            var response = controller.execute(file, "REQ-003", null, null, null, null, null, null, null, null);
             assertEquals(200, response.getStatusCode().value());
 
             var body = (PipelineResponse) response.getBody();
@@ -82,7 +82,7 @@ class PipelineControllerTest {
             MockMultipartFile file = new MockMultipartFile(
                 "file", "req002-mtp-fermentation-skid.xml", "application/xml", input);
 
-            var response = controller.execute(file, null, null, null, null, null, null, null, null, null);
+            var response = controller.execute(file, "REQ-002", null, null, null, null, null, null, null, null);
             var body = (PipelineResponse) response.getBody();
 
             boolean anyMatched = body.matches().values().stream()
@@ -153,6 +153,25 @@ class PipelineControllerTest {
             var response = controller.execute(file, null, null, null, null, null, null, null, null, null);
             var body = (PipelineResponse) response.getBody();
             assertTrue(body.elapsedMs() >= 0, "Elapsed time should be non-negative");
+        }
+    }
+
+    @Test
+    @DisplayName("Should not auto-match requirements when requirementIds are omitted")
+    void shouldNotAutoMatchWithoutRequirementIds() throws Exception {
+        try (InputStream input = getClass().getClassLoader()
+                .getResourceAsStream("examples/req002-mtp-fermentation-skid.xml")) {
+            assertNotNull(input);
+
+            MockMultipartFile file = new MockMultipartFile(
+                "file", "req002-mtp-fermentation-skid.xml", "application/xml", input);
+
+            var response = controller.execute(file, null, null, null, null, null, null, null, null, null);
+            assertEquals(200, response.getStatusCode().value());
+
+            var body = (PipelineResponse) response.getBody();
+            assertTrue(body.matches().isEmpty(),
+                "No requirements should be auto-matched when none are provided");
         }
     }
 

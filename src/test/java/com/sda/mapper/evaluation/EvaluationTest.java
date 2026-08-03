@@ -2,6 +2,7 @@ package com.sda.mapper.evaluation;
 
 import com.sda.mapper.ontology.OntologyModelLoader;
 import com.sda.mapper.parser.MTPAmlParser;
+import com.sda.mapper.support.DemoAboxBuilder;
 import com.sda.mapper.parser.ParseResult;
 import com.sda.mapper.parser.UaServerDatasheetParser;
 import com.sda.mapper.reasoning.RDeployService;
@@ -38,8 +39,9 @@ class EvaluationTest {
     @BeforeAll
     static void setUp() {
         loader = new OntologyModelLoader();
-        loader.setFilePath("ontology/css-sda-small.ttl");
+        loader.setFilePath("ontology/css-sda-unified.ttl");
         loader.loadOntology();
+        DemoAboxBuilder.apply(loader.getModel());
         model = loader.getModel();
         var queryLoader = new SparqlQueryLoader();
         var rDeployService = new RDeployService(loader);
@@ -181,7 +183,7 @@ class EvaluationTest {
             assertNotNull(result.model(), "Model should not be null");
             assertTrue(result.model().size() > 0, "Model should contain triples");
             assertTrue(result.model().containsResource(
-                result.model().createResource("http://www.example.org/sda#Service")),
+                result.model().createResource("https://example.org/ontology/sda#Service")),
                 "Model should contain Service resources");
         } catch (Exception e) {
             fail("Should not throw: " + e.getMessage());

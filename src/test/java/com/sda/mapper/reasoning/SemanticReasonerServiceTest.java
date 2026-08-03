@@ -1,6 +1,7 @@
 package com.sda.mapper.reasoning;
 
 import com.sda.mapper.ontology.OntologyModelLoader;
+import com.sda.mapper.support.DemoAboxBuilder;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.junit.jupiter.api.BeforeAll;
@@ -20,8 +21,9 @@ class SemanticReasonerServiceTest {
     @BeforeAll
     static void setUp() {
         sharedLoader = new OntologyModelLoader();
-        sharedLoader.setFilePath("ontology/css-sda-small.ttl");
+        sharedLoader.setFilePath("ontology/css-sda-unified.ttl");
         sharedLoader.loadOntology();
+        DemoAboxBuilder.apply(sharedLoader.getModel());
         var queryLoader = new SparqlQueryLoader();
         var rDeployService = new RDeployService(sharedLoader);
         reasoner = new SemanticReasonerService(sharedLoader, queryLoader, rDeployService);
@@ -121,17 +123,20 @@ class SemanticReasonerServiceTest {
     }
 
     @Test
-    @DisplayName("Should return no match for empty parameters")
-    void shouldReturnNoMatchForEmptyParameters() {
+    @DisplayName("Should fall back to defaults and match when no explicit parameters are provided")
+    void shouldMatchWithDefaultsForEmptyParameters() {
         ServiceMatchResult result = reasoner.matchInline(Map.of());
-        assertFalse(result.matched(), "Empty parameters should not match");
+        assertTrue(result.matched(), "Empty parameters should fall back to defaults and match");
+        assertEquals("OPC-UA", result.protocol());
+        assertEquals("read-only", result.accessMode());
     }
 
     @Test
-    @DisplayName("Should return no match for null parameters")
-    void shouldReturnNoMatchForNullParameters() {
+    @DisplayName("Should handle null parameters by falling back to defaults")
+    void shouldMatchWithDefaultsForNullParameters() {
         ServiceMatchResult result = reasoner.matchInline(null);
-        assertFalse(result.matched(), "Null parameters should not match");
+        assertTrue(result.matched(), "Null parameters should fall back to defaults and match");
+        assertEquals("OPC-UA", result.protocol());
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -148,10 +153,10 @@ class SemanticReasonerServiceTest {
         Resource req = model.createResource(uri);
         req.addProperty(
             model.createProperty("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-            model.createResource("http://www.example.org/sda#Requirement"));
-        req.addProperty(model.createProperty("http://www.example.org/sda#requirementID"), reqId);
-        req.addProperty(model.createProperty("http://www.example.org/sda#protocol"), "OPC-UA");
-        req.addProperty(model.createProperty("http://www.example.org/sda#accessMode"), "read-only");
+            model.createResource("https://example.org/ontology/sda#Requirement"));
+        req.addProperty(model.createProperty("https://example.org/ontology/sda#RequirementID"), reqId);
+        req.addProperty(model.createProperty("https://example.org/ontology/sda#protocol"), "OPC-UA");
+        req.addProperty(model.createProperty("https://example.org/ontology/sda#accessMode"), "read-only");
 
         ServiceMatchResult result = reasoner.matchByRequirementId(reqId);
         assertTrue(result.matched(),
@@ -170,10 +175,10 @@ class SemanticReasonerServiceTest {
         Resource req = model.createResource(uri);
         req.addProperty(
             model.createProperty("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-            model.createResource("http://www.example.org/sda#Requirement"));
-        req.addProperty(model.createProperty("http://www.example.org/sda#requirementID"), reqId);
-        req.addProperty(model.createProperty("http://www.example.org/sda#protocol"), "MQTT");
-        req.addProperty(model.createProperty("http://www.example.org/sda#accessMode"), "read-only");
+            model.createResource("https://example.org/ontology/sda#Requirement"));
+        req.addProperty(model.createProperty("https://example.org/ontology/sda#RequirementID"), reqId);
+        req.addProperty(model.createProperty("https://example.org/ontology/sda#protocol"), "MQTT");
+        req.addProperty(model.createProperty("https://example.org/ontology/sda#accessMode"), "read-only");
 
         ServiceMatchResult result = reasoner.matchByRequirementId(reqId);
         assertFalse(result.matched(),
@@ -181,8 +186,8 @@ class SemanticReasonerServiceTest {
     }
 
     @Test
-    @DisplayName("Should return no match for dynamic requirement with no parameters")
-    void shouldNotMatchDynamicRequirementWithNoParams() {
+    @DisplayName("Should match a dynamic requirement with no parameters using defaults")
+    void shouldMatchDynamicRequirementWithNoParamsUsingDefaults() {
         Model model = sharedLoader.getModel();
         String reqId = "REQ-TEST-DYN-03";
         String uri = "http://www.example.org/instance#" + reqId;
@@ -190,11 +195,12 @@ class SemanticReasonerServiceTest {
         Resource req = model.createResource(uri);
         req.addProperty(
             model.createProperty("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-            model.createResource("http://www.example.org/sda#Requirement"));
-        req.addProperty(model.createProperty("http://www.example.org/sda#requirementID"), reqId);
+            model.createResource("https://example.org/ontology/sda#Requirement"));
+        req.addProperty(model.createProperty("https://example.org/ontology/sda#RequirementID"), reqId);
 
         ServiceMatchResult result = reasoner.matchByRequirementId(reqId);
-        assertFalse(result.matched(),
-            "Dynamic requirement with no parameters should not match");
+        assertTrue(result.matched(),
+            "Dynamic requirement with no parameters should fall back to defaults and match");
+        assertEquals("OPC-UA", result.protocol());
     }
 }

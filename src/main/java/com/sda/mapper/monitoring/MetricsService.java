@@ -19,8 +19,7 @@ import java.util.concurrent.TimeUnit;
 public class MetricsService {
 
     private static final Logger log = LoggerFactory.getLogger(MetricsService.class);
-    private static final String SDA_NS = "http://www.example.org/sda#";
-    private static final String CSS_NS = "http://www.example.org/css#";
+    private static final String SDA_NS = "https://example.org/ontology/sda#";
 
     private final OntologyModelLoader ontologyModelLoader;
     private final MeterRegistry meterRegistry;

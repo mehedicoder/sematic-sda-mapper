@@ -2,6 +2,7 @@ package com.sda.mapper.ui;
 
 import com.sda.mapper.ontology.OntologyModelLoader;
 import com.sda.mapper.reasoning.SparqlQueryLoader;
+import com.sda.mapper.support.DemoAboxBuilder;
 import com.sda.mapper.ui.catalog.ServiceCatalogService;
 import com.sda.mapper.ui.catalog.ServiceCatalogView;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -18,6 +19,7 @@ class ServiceCatalogViewTest {
     private ServiceCatalogView createView() {
         OntologyModelLoader ontologyModelLoader = new OntologyModelLoader();
         ontologyModelLoader.loadOntology();
+        DemoAboxBuilder.apply(ontologyModelLoader.getModel());
         SparqlQueryLoader sparqlQueryLoader = new SparqlQueryLoader();
         ServiceCatalogService catalogService = new ServiceCatalogService(ontologyModelLoader, sparqlQueryLoader);
         return new ServiceCatalogView(catalogService);

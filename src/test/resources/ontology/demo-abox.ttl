@@ -1,0 +1,416 @@
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sda:  <https://example.org/ontology/sda#> .
+@prefix :     <http://www.example.org/instance#> .
+
+# ── Test ABox fixture ──────────────────────────────────────────────────
+# Demo instance data used by the test suite. It is the faithful migration
+# of css-sda-unified-old.ttl (lines 429-858) onto the canonical TBox
+# vocabulary: sda: = https://example.org/ontology/sda#,
+# : = http://www.example.org/instance#.
+#
+# Notable property/class renames applied:
+#   css:Skill  -> sda:Skill          (css namespace merged into sda)
+#   css:UseCase -> sda:UseCase
+#   Service -> usesBinding -> Binding  -> Service -> hasBinding -> Binding
+#   Service -> usesConnector -> ...    -> Service -> hasConnector -> Connector
+#   New R2a chain: Connector -> mapsVariable -> ProcessVariable -> describedBy -> Concept
+
+# ── NE 107 status individuals ──────────────────────────────────────────
+
+:NE107-Good       a sda:NE107Status ;
+    rdfs:label   "Good" ;
+    sda:hasDiagnosticString "" .
+
+:NE107-Maintenance a sda:NE107Status ;
+    rdfs:label   "Maintenance" ;
+    sda:hasDiagnosticString "Maintenance required" .
+
+:NE107-Failure    a sda:NE107Status ;
+    rdfs:label   "Failure" ;
+    sda:hasDiagnosticString "Device failure" .
+
+:NE107-Sensor     a sda:NE107SubCode ;
+    rdfs:label   "Sensor" .
+
+:NE107-WireBreak  a sda:NE107SubCode ;
+    rdfs:label   "WireBreak" .
+
+:NE107-ShortCircuit a sda:NE107SubCode ;
+    rdfs:label   "ShortCircuit" .
+
+:NE107-Function   a sda:NE107SubCode ;
+    rdfs:label   "Function" .
+
+# ══════════════════════════════════════════════════════════════════════
+# USE CASE A (MVP): Flowmeter NE 107 — Paper Section 4.4, Table I
+# ══════════════════════════════════════════════════════════════════════
+
+:UseCase-FlowmeterNE107  a sda:UseCase ;
+    rdfs:label            "Flowmeter Asset-Health Monitoring Use Case" ;
+    sda:description       "Monitor flowmeter FT-101 health using NE 107 diagnostics to prevent unplanned downtime" ;
+    sda:hasRequirement    :REQ-001 .
+
+:PA-DIM-FlowConcept      a sda:SemanticConcept ;
+    rdfs:label            "PA-DIM Flow Concept" ;
+    sda:description       "IEC 61987-42 flow measurement concept from PA-DIM" .
+
+:PA-DIM-TemperatureConcept  a sda:SemanticConcept ;
+    rdfs:label            "PA-DIM Temperature Concept" ;
+    sda:description       "IEC 61987-22 temperature measurement concept from PA-DIM" .
+
+:REQ-001  a               sda:Requirement ;
+    rdfs:label            "REQ-001 Flowmeter Asset-Health" ;
+    sda:requirementID     "REQ-001" ;
+    sda:title             "Flowmeter Asset-Health Monitoring" ;
+    sda:description       "Monitor the health of flowmeter FT-101 using NAMUR NE 107 diagnostics" ;
+    sda:rationale         "Prevent unplanned downtime through predictive asset diagnostics" ;
+    sda:acceptanceCondition "Service must provide asset condition monitoring via OPC UA" ;
+    sda:requirementType   "AssetDiagnostics" ;
+    sda:lifecycleStatus   "Defined" ;
+    sda:hasPriority       "High" ;
+    sda:hasParameter      :REQ-001-Param-MonitoringInterval ;
+    sda:hasParameter      :REQ-001-Param-AssetType ;
+    sda:hasConstraint     :REQ-001-Constraint-MaxLatency ;
+    sda:hasConstraint     :REQ-001-Constraint-MinRecall ;
+    sda:verifiedBy        :VC-REQ001-RecallCheck ;
+    sda:verifiedBy        :VC-REQ001-LatencyCheck ;
+    sda:mapsToCapability  :OC-ACM-Flowmeter .
+
+:REQ-001-Param-MonitoringInterval  a sda:RequirementParameter ;
+    rdfs:label                       "Monitoring Interval" ;
+    sda:parameterName                "monitoringInterval" ;
+    sda:parameterValue               "1000" ;
+    sda:parameterUnit                "ms" .
+
+:REQ-001-Param-AssetType  a sda:RequirementParameter ;
+    rdfs:label              "Asset Type" ;
+    sda:parameterName       "assetType" ;
+    sda:parameterValue      "Flowmeter" ;
+    sda:parameterUnit       "" .
+
+:REQ-001-Constraint-MaxLatency  a sda:RequirementConstraint ;
+    rdfs:label                    "Maximum Latency" ;
+    sda:constraintType            "latency" ;
+    sda:constraintValue           "60" ;
+    sda:constraintOperator        "<=" .
+
+:REQ-001-Constraint-MinRecall  a sda:RequirementConstraint ;
+    rdfs:label                    "Minimum Recall" ;
+    sda:constraintType            "recall" ;
+    sda:constraintValue           "0.90" ;
+    sda:constraintOperator        ">=" .
+
+:VC-REQ001-RecallCheck  a sda:VerificationCriterion ;
+    rdfs:label              "Recall Check" ;
+    sda:criterionType       "performance" ;
+    sda:criterionMetric     "reportedRecall" ;
+    sda:criterionThreshold  "0.90" ;
+    sda:criterionOperator   ">=" .
+
+:VC-REQ001-LatencyCheck  a sda:VerificationCriterion ;
+    rdfs:label              "Latency Check" ;
+    sda:criterionType       "performance" ;
+    sda:criterionMetric     "reportedLatency" ;
+    sda:criterionThreshold  "60" ;
+    sda:criterionOperator   "<=" .
+
+:OC-ACM-Flowmeter  a     sda:OfferedCapability ;
+    rdfs:label            "Asset Condition Monitoring for Flowmeter" ;
+    sda:capabilityID      "ACM-001" ;
+    sda:capabilityName    "AssetConditionMonitoring" ;
+    sda:description       "Monitors flowmeter health via NE 107 diagnostics" ;
+    sda:version           "1.0" ;
+    sda:realisedBy        :SK-FlowmeterDiagnostics .
+
+:SK-FlowmeterDiagnostics  a sda:Skill ;
+    rdfs:label            "Flowmeter Diagnostics Skill" ;
+    sda:engineeringUnit   "l/min" ;
+    sda:nominalRange_min  0.0 ;
+    sda:nominalRange_max  100.0 ;
+    sda:requiresConcept   :PA-DIM-FlowConcept ;
+    sda:isImplementedBy   :SVC-FlowmeterDiagnostics .
+
+:SVC-FlowmeterDiagnostics  a sda:Service ;
+    rdfs:label            "Flowmeter Diagnostics Service" ;
+    sda:reportedRecall    0.94 ;
+    sda:reportedLatency   45 ;
+    sda:image             "registry.local/flowmeter-diagnostics:1.0" ;
+    sda:hasBinding        :CB-Flowmeter-OPCUA ;
+    sda:hasConnector      :DC-Flowmeter-FT101 ;
+    sda:isDeployedBy      :DEPLOY-OnPrem .
+
+:CB-Flowmeter-OPCUA  a   sda:CommunicationBinding ;
+    rdfs:label            "OPC-UA binding for flowmeter" ;
+    sda:protocol          "OPC-UA" ;
+    sda:accessMode        "read-only" ;
+    sda:securityMode      "SignAndEncrypt" .
+
+:DC-Flowmeter-FT101  a   sda:DataConnector ;
+    rdfs:label            "FT101 flowmeter OPC-UA connector" ;
+    sda:informationModel  "OPC-UA" ;
+    sda:semanticID        "IEC-61987-42" ;
+    sda:providesConcept   :PA-DIM-FlowConcept ;
+    sda:mapsVariable      :PV-Flow-FT101 ;
+    sda:isGateway         false .
+
+:PV-Flow-FT101  a         sda:ProcessVariable ;
+    rdfs:label            "FT101 Flow Process Variable" ;
+    sda:describedBy       :PA-DIM-FlowConcept .
+
+:DEPLOY-OnPrem  a        sda:DeploymentContext ;
+    rdfs:label            "On-premise deployment" ;
+    sda:onPlantNetwork    true ;
+    sda:safetyIntegrityLevel "SIL-0" ;
+    sda:determinismClass  "SoftRealTime" ;
+    sda:networkZone       "OT-Zone-1" .
+
+# ── Negative candidates (Use Case A) ──────────────────────────────────
+
+:SVC-WrongProtocol  a    sda:Service ;
+    rdfs:label            "Wrong Protocol Service" ;
+    sda:reportedRecall    0.92 ;
+    sda:reportedLatency   50 ;
+    sda:hasBinding        :CB-WrongProtocol-HTTP ;
+    sda:hasConnector      :DC-WrongProtocol .
+
+:CB-WrongProtocol-HTTP  a sda:CommunicationBinding ;
+    rdfs:label            "HTTP binding" ;
+    sda:protocol          "HTTP" ;
+    sda:accessMode        "read-only" ;
+    sda:securityMode      "None" .
+
+:DC-WrongProtocol  a     sda:DataConnector ;
+    rdfs:label            "HTTP connector" ;
+    sda:informationModel  "HTTP" ;
+    sda:isGateway         false .
+
+:SVC-WrongCapability  a  sda:Service ;
+    rdfs:label            "Wrong Capability Service" ;
+    sda:reportedRecall    0.91 ;
+    sda:reportedLatency   40 ;
+    sda:hasBinding        :CB-WrongCap-OPCUA ;
+    sda:hasConnector      :DC-WrongCap .
+
+:CB-WrongCap-OPCUA  a   sda:CommunicationBinding ;
+    rdfs:label            "OPC-UA binding for wrong capability" ;
+    sda:protocol          "OPC-UA" ;
+    sda:accessMode        "read-only" ;
+    sda:securityMode      "SignAndEncrypt" .
+
+:DC-WrongCap  a          sda:DataConnector ;
+    rdfs:label            "Wrong capability connector" ;
+    sda:informationModel  "OPC-UA" ;
+    sda:isGateway         false .
+
+:SVC-NE107Failure  a     sda:Service ;
+    rdfs:label            "NE 107 Failure Service" ;
+    sda:reportedRecall    0.93 ;
+    sda:reportedLatency   42 ;
+    sda:hasBinding        :CB-NE107Fail-OPCUA ;
+    sda:hasConnector      :DC-NE107Fail .
+
+:CB-NE107Fail-OPCUA  a   sda:CommunicationBinding ;
+    rdfs:label            "OPC-UA binding for NE 107 failure" ;
+    sda:protocol          "OPC-UA" ;
+    sda:accessMode        "read-only" ;
+    sda:securityMode      "SignAndEncrypt" .
+
+:DC-NE107Fail  a         sda:DataConnector ;
+    rdfs:label            "NE 107 failure connector" ;
+    sda:informationModel  "OPC-UA" ;
+    sda:isGateway         false .
+
+:pump1Asset  a            sda:FieldDevice ;
+    rdfs:label            "Pump 1 Flowmeter" ;
+    sda:hasNE107Status    :NE107-Good .
+
+:pump1HealthyMode  a      sda:DegradedMode ;
+    rdfs:label            "Healthy Mode" ;
+    sda:hasDegradationLevel "Healthy" .
+
+:pump1DegradedMode  a     sda:DegradedMode ;
+    rdfs:label            "Degraded Mode" ;
+    sda:hasDegradationLevel "Degraded" .
+
+:pump1FaultedMode  a      sda:DegradedMode ;
+    rdfs:label            "Faulted Mode" ;
+    sda:hasDegradationLevel "Faulted" .
+
+# ══════════════════════════════════════════════════════════════════════
+# USE CASE B: Fermentation Skid (Skid-A1) — Critical Process Control
+# ══════════════════════════════════════════════════════════════════════
+
+:Skid-A1  a               sda:MTPModule ;
+    rdfs:label            "Fermentation Skid A1" ;
+    sda:belongsToSite     :PlantA .
+
+:REQ-002  a               sda:Requirement ;
+    rdfs:label            "REQ-002 Fermentation Temperature Control" ;
+    sda:requirementID     "REQ-002" ;
+    sda:title             "Fermentation Temperature Control" ;
+    sda:description       "Control temperature during batch fermentation step 3" ;
+    sda:rationale         "Critical process control requires SIL-2 safety integrity" ;
+    sda:acceptanceCondition "Service must provide HardRealTime temperature control via PROFINET" ;
+    sda:requirementType   "CoreProcessControl" ;
+    sda:lifecycleStatus   "Defined" ;
+    sda:hasPriority       "Critical" ;
+    sda:mapsToCapability  :OC-TempControl .
+
+:OC-TempControl  a        sda:OfferedCapability ;
+    rdfs:label            "Temperature Control Capability" ;
+    sda:capabilityID      "TC-001" ;
+    sda:capabilityName    "TemperatureControl" ;
+    sda:description       "Controls fermentation vessel temperature within ±0.5°C" ;
+    sda:version           "1.0" ;
+    sda:realisedBy        :SK-FermentationControl .
+
+:OC-DosingControl  a      sda:OfferedCapability ;
+    rdfs:label            "Dosing Control Capability" ;
+    sda:capabilityID      "DC-001" ;
+    sda:capabilityName    "DosingControl" ;
+    sda:description       "Controls nutrient dosing rate during fermentation" ;
+    sda:version           "1.0" ;
+    sda:realisedBy        :SK-DosingControl .
+
+:SK-FermentationControl  a sda:Skill ;
+    rdfs:label            "Fermentation Control Skill" ;
+    sda:engineeringUnit   "°C" ;
+    sda:nominalRange_min  15.0 ;
+    sda:nominalRange_max  40.0 ;
+    sda:isImplementedBy   :SVC-FermentationSkid .
+
+:SK-DosingControl  a      sda:Skill ;
+    rdfs:label            "Dosing Control Skill" ;
+    sda:engineeringUnit   "mL/min" ;
+    sda:nominalRange_min  0.0 ;
+    sda:nominalRange_max  50.0 ;
+    sda:isImplementedBy   :SVC-FermentationSkid .
+
+:SVC-FermentationSkid  a  sda:Service ;
+    rdfs:label            "Fermentation Skid Service" ;
+    sda:reportedRecall    0.96 ;
+    sda:reportedLatency   20 ;
+    sda:image             "registry.local/fermentation-skid:1.0" ;
+    sda:hasBinding        :CB-Skid-A1-PROFINET ;
+    sda:hasBinding        :CB-Skid-A1-OPCUA ;
+    sda:hasConnector      :DC-Skid-A1-OPCUA ;
+    sda:isDeployedBy      :DEPLOY-Critical .
+
+:CB-Skid-A1-PROFINET  a   sda:CommunicationBinding ;
+    rdfs:label            "PROFINET binding for Skid-A1" ;
+    sda:protocol          "PROFINET" ;
+    sda:accessMode        "read-write" ;
+    sda:securityMode      "SignAndEncrypt" .
+
+:CB-Skid-A1-OPCUA  a     sda:CommunicationBinding ;
+    rdfs:label            "OPC-UA gateway binding for Skid-A1" ;
+    sda:protocol          "OPC-UA" ;
+    sda:accessMode        "read-only" ;
+    sda:securityMode      "SignAndEncrypt" .
+
+:DC-Skid-A1-OPCUA  a     sda:DataConnector ;
+    rdfs:label            "Skid-A1 OPC-UA connector" ;
+    sda:informationModel  "OPC-UA" ;
+    sda:semanticID        "VDI/VDE/NAMUR 2658" ;
+    sda:isGateway         true .
+
+:DEPLOY-Critical  a       sda:DeploymentContext ;
+    rdfs:label            "Critical process deployment" ;
+    sda:onPlantNetwork    true ;
+    sda:safetyIntegrityLevel "SIL-2" ;
+    sda:determinismClass  "HardRealTime" ;
+    sda:networkZone       "OT-Zone-1" .
+
+:PlantA  a                rdfs:Resource ;
+    rdfs:label            "Plant A" .
+
+# ══════════════════════════════════════════════════════════════════════
+# USE CASE C: HVAC Plant (AHU-01 + EM-01) — Non-Critical Monitoring
+# ══════════════════════════════════════════════════════════════════════
+
+:AHU-01  a                 sda:BACnetDevice ;
+    rdfs:label             "AHU-01 Air Handling Unit" ;
+    sda:belongsToSite      :PlantB .
+
+:EM-01  a                  sda:EnergyMeter ;
+    rdfs:label             "EM-01 Energy Meter" ;
+    sda:belongsToSite      :PlantB .
+
+:REQ-003  a               sda:Requirement ;
+    rdfs:label            "REQ-003 HVAC Temperature Monitoring" ;
+    sda:requirementID     "REQ-003" ;
+    sda:title             "HVAC Temperature Monitoring" ;
+    sda:description       "Monitor supply air temperature from AHU-01 for energy optimization" ;
+    sda:rationale         "Non-critical monitoring for energy efficiency improvements" ;
+    sda:acceptanceCondition "Service must provide read-only temperature data from OT Zone 3" ;
+    sda:requirementType   "MonitoringOptimization" ;
+    sda:lifecycleStatus   "Defined" ;
+    sda:hasPriority       "Medium" ;
+    sda:mapsToCapability  :OC-HVACTempMonitoring .
+
+:OC-HVACTempMonitoring  a sda:OfferedCapability ;
+    rdfs:label            "HVAC Temperature Monitoring Capability" ;
+    sda:capabilityID      "HVAC-001" ;
+    sda:capabilityName    "HVACTemperatureMonitoring" ;
+    sda:description       "Monitors HVAC supply air temperature for energy optimization" ;
+    sda:version           "1.0" ;
+    sda:realisedBy        :SK-HVACTempAnalysis .
+
+:SK-HVACTempAnalysis  a   sda:Skill ;
+    rdfs:label            "HVAC Temperature Analysis Skill" ;
+    sda:engineeringUnit   "°C" ;
+    sda:nominalRange_min  -10.0 ;
+    sda:nominalRange_max  50.0 ;
+    sda:isImplementedBy   :SVC-HVACTempAnalysis .
+
+:SVC-HVACTempAnalysis  a  sda:Service ;
+    rdfs:label            "HVAC Temperature Analysis Service" ;
+    sda:reportedRecall    0.91 ;
+    sda:reportedLatency   55 ;
+    sda:image             "registry.local/hvac-temp-analysis:1.0" ;
+    sda:hasBinding        :CB-AHU01-BACnet ;
+    sda:hasBinding        :CB-AHU01-OPCUA ;
+    sda:hasBinding        :CB-EM01-OPCUA ;
+    sda:hasConnector      :DC-AHU01-OPCUA ;
+    sda:hasConnector      :DC-EM01-OPCUA ;
+    sda:isDeployedBy      :DEPLOY-OTZone3 .
+
+:CB-AHU01-BACnet  a       sda:CommunicationBinding ;
+    rdfs:label            "BACnet binding for AHU-01" ;
+    sda:protocol          "BACnet" ;
+    sda:accessMode        "read-only" ;
+    sda:securityMode      "Sign" .
+
+:CB-AHU01-OPCUA  a       sda:CommunicationBinding ;
+    rdfs:label            "OPC-UA gateway binding for AHU-01" ;
+    sda:protocol          "OPC-UA" ;
+    sda:accessMode        "read-only" ;
+    sda:securityMode      "SignAndEncrypt" .
+
+:CB-EM01-OPCUA  a         sda:CommunicationBinding ;
+    rdfs:label            "OPC-UA native binding for EM-01" ;
+    sda:protocol          "OPC-UA" ;
+    sda:accessMode        "read-only" ;
+    sda:securityMode      "SignAndEncrypt" .
+
+:DC-AHU01-OPCUA  a       sda:DataConnector ;
+    rdfs:label            "AHU-01 OPC-UA gateway connector" ;
+    sda:informationModel  "OPC-UA" ;
+    sda:isGateway         true .
+
+:DC-EM01-OPCUA  a         sda:DataConnector ;
+    rdfs:label            "EM-01 native OPC-UA connector" ;
+    sda:informationModel  "OPC-UA" ;
+    sda:semanticID        "IDTA-02009-1-0" ;
+    sda:isGateway         false .
+
+:DEPLOY-OTZone3  a        sda:DeploymentContext ;
+    rdfs:label            "OT Zone 3 deployment" ;
+    sda:onPlantNetwork    true ;
+    sda:safetyIntegrityLevel "SIL-0" ;
+    sda:determinismClass  "SoftRealTime" ;
+    sda:networkZone       "OT-Zone-3" .
+
+:PlantB  a                rdfs:Resource ;
+    rdfs:label            "Plant B" .

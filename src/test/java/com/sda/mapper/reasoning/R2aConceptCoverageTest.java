@@ -1,10 +1,11 @@
 package com.sda.mapper.reasoning;
 
 import com.sda.mapper.ontology.OntologyModelLoader;
+import com.sda.mapper.support.DemoAboxBuilder;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.rdf.model.ResourceFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class R2aConceptCoverageTest {
 
     private static final String INST_NS = "http://www.example.org/instance#";
-    private static final String SDA_NS = "http://www.example.org/sda#";
+    private static final String SDA_NS = "https://example.org/ontology/sda#";
 
     private OntologyModelLoader loader;
     private SemanticReasonerService reasoner;
@@ -23,15 +24,16 @@ class R2aConceptCoverageTest {
     @BeforeEach
     void setUp() {
         loader = new OntologyModelLoader();
-        loader.setFilePath("ontology/css-sda-small.ttl");
+        loader.setFilePath("ontology/css-sda-unified.ttl");
         loader.loadOntology();
+        DemoAboxBuilder.apply(loader.getModel());
         var queryLoader = new SparqlQueryLoader();
         var deployService = new RDeployService(loader);
         reasoner = new SemanticReasonerService(loader, queryLoader, deployService);
     }
 
     @Test
-    @DisplayName("REQ-001 should match when DC-Flowmeter-FT101 provides required concept")
+    @DisplayName("REQ-001 should match when DC-Flowmeter-FT101 covers required concept")
     void shouldMatchWhenConceptIsProvided() {
         Model model = loader.getModel();
 
@@ -40,39 +42,36 @@ class R2aConceptCoverageTest {
             model.createProperty(SDA_NS + "requiresConcept"),
             model.createResource(INST_NS + "PA-DIM-FlowConcept"));
 
-        boolean hasProvidesConcept = model.contains(
-            model.createResource(INST_NS + "DC-Flowmeter-FT101"),
-            model.createProperty(SDA_NS + "providesConcept"),
-            model.createResource(INST_NS + "PA-DIM-FlowConcept"));
+        boolean hasConceptCoverage = hasConceptCoverage(model,
+            INST_NS + "DC-Flowmeter-FT101", INST_NS + "PA-DIM-FlowConcept");
 
         assertTrue(hasRequiresConcept, "SK-FlowmeterDiagnostics should requireConcept :PA-DIM-FlowConcept");
-        assertTrue(hasProvidesConcept, "DC-Flowmeter-FT101 should provideConcept :PA-DIM-FlowConcept");
+        assertTrue(hasConceptCoverage,
+            "DC-Flowmeter-FT101 should cover :PA-DIM-FlowConcept via mapsVariable + describedBy");
 
         ServiceMatchResult result = reasoner.matchByRequirementId("REQ-001");
         assertTrue(result.matched(),
-            "REQ-001 should match because DC-Flowmeter-FT101 provides the concept SK-FlowmeterDiagnostics requires");
+            "REQ-001 should match because DC-Flowmeter-FT101 maps a ProcessVariable described by the concept SK-FlowmeterDiagnostics requires");
     }
 
     @Test
-    @DisplayName("REQ-001 should NOT match when DC-Flowmeter-FT101 no longer provides required concept")
+    @DisplayName("REQ-001 should NOT match when DC-Flowmeter-FT101 no longer covers required concept")
     void shouldNotMatchWhenConceptIsRemoved() {
         Model model = loader.getModel();
 
-        Property providesConcept = model.createProperty(SDA_NS + "providesConcept");
-        Resource dc = model.createResource(INST_NS + "DC-Flowmeter-FT101");
-        Resource concept = model.createResource(INST_NS + "PA-DIM-FlowConcept");
+        assertTrue(hasConceptCoverage(model,
+            INST_NS + "DC-Flowmeter-FT101", INST_NS + "PA-DIM-FlowConcept"),
+            "Pre-condition: DC-Flowmeter-FT101 should cover the concept before removal");
 
-        assertTrue(dc.hasProperty(providesConcept, concept),
-            "Pre-condition: DC-Flowmeter-FT101 should provideConcept before removal");
+        removeConceptCoverage(model, INST_NS + "DC-Flowmeter-FT101", INST_NS + "PA-DIM-FlowConcept");
 
-        model.remove(dc, providesConcept, concept);
-
-        assertFalse(dc.hasProperty(providesConcept, concept),
-            "DC-Flowmeter-FT101 should no longer provideConcept after removal");
+        assertFalse(hasConceptCoverage(model,
+            INST_NS + "DC-Flowmeter-FT101", INST_NS + "PA-DIM-FlowConcept"),
+            "DC-Flowmeter-FT101 should no longer cover the concept after removal");
 
         ServiceMatchResult result = reasoner.matchByRequirementId("REQ-001");
         assertFalse(result.matched(),
-            "REQ-001 should NOT match because no DataConnector provides :PA-DIM-FlowConcept which SK-FlowmeterDiagnostics requires");
+            "REQ-001 should NOT match because no DataConnector covers :PA-DIM-FlowConcept which SK-FlowmeterDiagnostics requires");
     }
 
     @Test
@@ -89,39 +88,75 @@ class R2aConceptCoverageTest {
         assertTrue(skill.hasProperty(requiresConcept, missingConcept),
             "Pre-condition: skill should now requireConcept :PA-DIM-MissingConcept");
 
-        boolean anyProvidesMissing = model.contains(null,
-            model.createProperty(SDA_NS + "providesConcept"), missingConcept);
+        boolean anyCoversMissing = model.contains(null,
+            model.createProperty(SDA_NS + "describedBy"), missingConcept);
 
-        assertFalse(anyProvidesMissing,
-            "No DataConnector should provide :PA-DIM-MissingConcept");
+        assertFalse(anyCoversMissing,
+            "No ProcessVariable should be described by :PA-DIM-MissingConcept");
 
         ServiceMatchResult result = reasoner.matchByRequirementId("REQ-001");
         assertFalse(result.matched(),
-            "REQ-001 should NOT match because :PA-DIM-MissingConcept is required but not provided");
+            "REQ-001 should NOT match because :PA-DIM-MissingConcept is required but not covered");
     }
 
     @Test
-    @DisplayName("REQ-001 should match again after restoring providesConcept")
+    @DisplayName("REQ-001 should match again after restoring concept coverage")
     void shouldMatchAgainAfterRestoringConcept() {
         Model model = loader.getModel();
 
-        Property providesConcept = model.createProperty(SDA_NS + "providesConcept");
-        Resource dc = model.createResource(INST_NS + "DC-Flowmeter-FT101");
-        Resource concept = model.createResource(INST_NS + "PA-DIM-FlowConcept");
-
-        model.remove(dc, providesConcept, concept);
-        assertFalse(dc.hasProperty(providesConcept, concept), "Removed providesConcept");
+        removeConceptCoverage(model, INST_NS + "DC-Flowmeter-FT101", INST_NS + "PA-DIM-FlowConcept");
+        assertFalse(hasConceptCoverage(model,
+            INST_NS + "DC-Flowmeter-FT101", INST_NS + "PA-DIM-FlowConcept"),
+            "Removed concept coverage");
 
         ServiceMatchResult noMatch = reasoner.matchByRequirementId("REQ-001");
-        assertFalse(noMatch.matched(), "Should not match after removing concept");
+        assertFalse(noMatch.matched(), "Should not match after removing concept coverage");
 
-        dc.addProperty(providesConcept, concept);
-        assertTrue(dc.hasProperty(providesConcept, concept), "Restored providesConcept");
+        restoreConceptCoverage(model, INST_NS + "DC-Flowmeter-FT101", INST_NS + "PA-DIM-FlowConcept");
+        assertTrue(hasConceptCoverage(model,
+            INST_NS + "DC-Flowmeter-FT101", INST_NS + "PA-DIM-FlowConcept"),
+            "Restored concept coverage");
 
         loader.loadOntology();
+        DemoAboxBuilder.apply(loader.getModel());
 
         ServiceMatchResult match = reasoner.matchByRequirementId("REQ-001");
         assertTrue(match.matched(),
-            "Should match again after restoring providesConcept");
+            "Should match again after restoring concept coverage");
+    }
+
+    private static boolean hasConceptCoverage(Model model, String connectorUri, String conceptUri) {
+        Property mapsVariable = model.createProperty(SDA_NS + "mapsVariable");
+        Property describedBy = model.createProperty(SDA_NS + "describedBy");
+        Resource connector = model.createResource(connectorUri);
+        Resource concept = model.createResource(conceptUri);
+
+        return model.listStatements(connector, mapsVariable, (RDFNode) null).toList().stream()
+            .anyMatch(stmt -> stmt.getObject().isResource()
+                && stmt.getResource().hasProperty(describedBy, concept));
+    }
+
+    private static void removeConceptCoverage(Model model, String connectorUri, String conceptUri) {
+        Property mapsVariable = model.createProperty(SDA_NS + "mapsVariable");
+        Property describedBy = model.createProperty(SDA_NS + "describedBy");
+        Resource connector = model.createResource(connectorUri);
+
+        for (var stmt : model.listStatements(connector, mapsVariable, (RDFNode) null).toList()) {
+            if (stmt.getObject().isResource()) {
+                model.remove(stmt.getResource(), describedBy, model.createResource(conceptUri));
+            }
+        }
+    }
+
+    private static void restoreConceptCoverage(Model model, String connectorUri, String conceptUri) {
+        Property mapsVariable = model.createProperty(SDA_NS + "mapsVariable");
+        Property describedBy = model.createProperty(SDA_NS + "describedBy");
+        Resource connector = model.createResource(connectorUri);
+
+        for (var stmt : model.listStatements(connector, mapsVariable, (RDFNode) null).toList()) {
+            if (stmt.getObject().isResource()) {
+                stmt.getResource().addProperty(describedBy, model.createResource(conceptUri));
+            }
+        }
     }
 }

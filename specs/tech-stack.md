@@ -148,7 +148,7 @@ All externalized configuration uses Spring Boot's `${ENV_VAR:default}` binding. 
 
 | Env Variable | YAML Property | Default | Notes |
 |---|---|---|---|
-| `ONTOLOGY_FILE_PATH` | `app.ontology.file-path` | `ontology/css-sda-small.ttl` | Classpath path to ontology TTL |
+| `ONTOLOGY_FILE_PATH` | `app.ontology.file-path` | `ontology/css-sda-unified.ttl` | Classpath path to ontology TTL |
 | `ONTOLOGY_INFERENCE_ENABLED` | `app.ontology.inference-enabled` | `true` | Disable OWL reasoner for unit tests |
 | `SPARQL_QUERY_PATH` | `app.sparql.query-path` | `queries/match-service.rq` | Classpath path to SPARQL query |
 
@@ -222,7 +222,7 @@ management:
 
 app:
   ontology:
-    file-path: ${ONTOLOGY_FILE_PATH:ontology/css-sda-small.ttl}
+    file-path: ${ONTOLOGY_FILE_PATH:ontology/css-sda-unified.ttl}
     inference-enabled: ${ONTOLOGY_INFERENCE_ENABLED:true}
   sparql:
     query-path: ${SPARQL_QUERY_PATH:queries/match-service.rq}
@@ -327,7 +327,7 @@ semantic-sda-mapper
 │   │   └── resources/
 │   │       ├── application.yml
 │   │       ├── db/migration/V1__initial_schema.sql
-│   │       ├── ontology/css-sda-small.ttl
+│   │       ├── ontology/css-sda-unified.ttl
 │   │       ├── queries/match-service.rq
 │   │       ├── config/options.json
 │   │       └── k8s/deployment-template.yaml
@@ -350,7 +350,7 @@ semantic-sda-mapper
 │       │       ├── RegistrationWizardViewTest.java
 │       │       └── RequirementFormViewTest.java
 │       └── resources/
-│           ├── ontology/test-css-sda-small.ttl
+│           ├── ontology/test-css-sda-unified.ttl
 │           ├── queries/test-match-service.rq
 │           ├── config/test-options.json
 │           └── examples/
@@ -407,7 +407,7 @@ All custom exceptions extend `RuntimeException`. Map each to `ProblemDetail` via
 
 | Asset | Location |
 |---|---|
-| Ontology | `src/main/resources/ontology/css-sda-small.ttl` |
+| Ontology | `src/main/resources/ontology/css-sda-unified.ttl` |
 | SPARQL query | `src/main/resources/queries/match-service.rq` |
 | Kubernetes template | `src/main/resources/k8s/deployment-template.yaml` |
 

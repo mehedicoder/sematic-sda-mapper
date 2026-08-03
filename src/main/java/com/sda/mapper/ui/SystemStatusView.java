@@ -25,8 +25,7 @@ import java.util.Map;
 @PageTitle("System Status")
 public class SystemStatusView extends VerticalLayout {
 
-    private static final String SDA_NS = "http://www.example.org/sda#";
-    private static final String CSS_NS = "http://www.example.org/css#";
+    private static final String SDA_NS = "https://example.org/ontology/sda#";
 
     public SystemStatusView(OntologyModelLoader ontologyModelLoader,
                             MetricsService metricsService) {

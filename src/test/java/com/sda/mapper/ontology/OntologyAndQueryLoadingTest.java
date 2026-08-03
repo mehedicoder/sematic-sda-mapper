@@ -1,5 +1,6 @@
 package com.sda.mapper.ontology;
 
+import com.sda.mapper.support.DemoAboxBuilder;
 import org.apache.jena.query.Query;
 import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
@@ -25,9 +26,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("Ontology and SPARQL Query Loading")
 class OntologyAndQueryLoadingTest {
 
-    private static final String ONTOLOGY_PATH = "ontology/css-sda-small.ttl";
-    private static final String SDA_NS = "http://www.example.org/sda#";
-    private static final String CSS_NS = "http://www.example.org/css#";
+    private static final String ONTOLOGY_PATH = "ontology/css-sda-unified.ttl";
+    private static final String SDA_NS = "https://example.org/ontology/sda#";
     private static final String INST_NS = "http://www.example.org/instance#";
 
     private Model loadOntology() throws IOException {
@@ -38,6 +38,7 @@ class OntologyAndQueryLoadingTest {
         try (InputStream in = resource.getInputStream()) {
             model.read(in, null, "TTL");
         }
+        DemoAboxBuilder.apply(model);
         return model;
     }
 
@@ -63,12 +64,12 @@ class OntologyAndQueryLoadingTest {
             "Ontology must contain sda:DeploymentContext class");
         assertTrue(model.containsResource(model.createResource(SDA_NS + "Requirement")),
             "Ontology must contain sda:Requirement class");
-        assertTrue(model.containsResource(model.createResource(CSS_NS + "Capability")),
-            "Ontology must contain css:Capability class");
-        assertTrue(model.containsResource(model.createResource(CSS_NS + "Skill")),
-            "Ontology must contain css:Skill class");
-        assertTrue(model.containsResource(model.createResource(CSS_NS + "UseCase")),
-            "Ontology must contain css:UseCase class");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "Capability")),
+            "Ontology must contain sda:Capability class");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "Skill")),
+            "Ontology must contain sda:Skill class");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "UseCase")),
+            "Ontology must contain sda:UseCase class");
     }
 
     @Test

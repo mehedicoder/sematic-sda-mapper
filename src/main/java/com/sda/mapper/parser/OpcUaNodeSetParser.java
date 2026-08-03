@@ -32,8 +32,7 @@ public class OpcUaNodeSetParser implements Parser {
     private static final Logger log = LoggerFactory.getLogger(OpcUaNodeSetParser.class);
 
     private static final String INST_NS = "http://www.example.org/instance#";
-    private static final String SDA_NS = "http://www.example.org/sda#";
-    private static final String CSS_NS = "http://www.example.org/css#";
+    private static final String SDA_NS = "https://example.org/ontology/sda#";
     private static final String UA_NS = "http://opcfoundation.org/UA/2011/03/UANodeSet.xsd";
     private static final String RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
     private static final String RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label";
@@ -67,21 +66,20 @@ public class OpcUaNodeSetParser implements Parser {
 
             Model model = ModelFactory.createDefaultModel();
             model.setNsPrefix("sda", SDA_NS);
-            model.setNsPrefix("css", CSS_NS);
             model.setNsPrefix("inst", INST_NS);
 
             Property rdfType = model.createProperty(RDF_TYPE);
             Property rdfsLabel = model.createProperty(RDFS_LABEL);
             Resource connectorClass = model.createResource(SDA_NS + "DataConnector");
-            Resource skillClass = model.createResource(CSS_NS + "Skill");
+            Resource skillClass = model.createResource(SDA_NS + "Skill");
             Resource bindingClass = model.createResource(SDA_NS + "CommunicationBinding");
             Resource serviceClass = model.createResource(SDA_NS + "Service");
             Property informationModel = model.createProperty(SDA_NS + "informationModel");
             Property protocol = model.createProperty(SDA_NS + "protocol");
             Property accessMode = model.createProperty(SDA_NS + "accessMode");
             Property isImplementedBy = model.createProperty(SDA_NS + "isImplementedBy");
-            Property usesBinding = model.createProperty(SDA_NS + "usesBinding");
-            Property usesConnector = model.createProperty(SDA_NS + "usesConnector");
+            Property hasBinding = model.createProperty(SDA_NS + "hasBinding");
+            Property hasConnector = model.createProperty(SDA_NS + "hasConnector");
             Property uaNodeId = model.createProperty(SDA_NS + "uaNodeId");
             Property uaBrowseName = model.createProperty(SDA_NS + "uaBrowseName");
             Property dataType = model.createProperty(SDA_NS + "dataType");
@@ -190,11 +188,11 @@ public class OpcUaNodeSetParser implements Parser {
                 Resource serviceRes = model.createResource(INST_NS + serviceLocalName);
                 serviceRes.addProperty(rdfType, serviceClass);
                 serviceRes.addProperty(rdfsLabel, "OPC UA NodeSet service");
-                serviceRes.addProperty(usesBinding, bindingRes);
+                serviceRes.addProperty(hasBinding, bindingRes);
                 tripleCount += 3;
                 details.add("Service: " + INST_NS + serviceLocalName);
 
-                bindingRes.addProperty(usesConnector, connectorResources.get(0));
+                serviceRes.addProperty(hasConnector, connectorResources.get(0));
                 tripleCount++;
 
                 for (Resource skillRes : skillResources) {

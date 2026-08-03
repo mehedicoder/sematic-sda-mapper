@@ -58,7 +58,8 @@ public class PipelineController {
 
     /**
      * Executes the full end-to-end pipeline: Parse → Lift → Infer → Match → Manifest.
-     * When {@code requirementIds} is omitted or empty, all predefined requirements are matched.
+     * Requirements are never auto-selected: only the supplied {@code requirementIds}
+     * (and optionally a new requirement created from the newReq* form params) are matched.
      *
      * @param file           the input file (MTP AML, OPC UA Server Datasheet, or AAS JSON)
      * @param requirementIds optional comma-separated list of requirement IDs to match

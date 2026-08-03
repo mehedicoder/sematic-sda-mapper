@@ -78,7 +78,7 @@ class AasParserTest {
     }
 
     @Test
-    @DisplayName("Should create Skill resources with css:Skill rdf:type")
+    @DisplayName("Should create Skill resources with sda:Skill rdf:type")
     void shouldCreateCssSkillType() {
         try (InputStream input = resource("pump-aas.json")) {
             assertNotNull(input);
@@ -86,11 +86,11 @@ class AasParserTest {
             ParseResult result = parser.parse(input);
             Model model = result.model();
 
-            Resource skillType = model.createResource("http://www.example.org/css#Skill");
+            Resource skillType = model.createResource("https://example.org/ontology/sda#Skill");
             boolean hasSkillType = model.listSubjectsWithProperty(
                 model.createProperty("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
                 skillType).hasNext();
-            assertTrue(hasSkillType, "Parsed Skills should have css:Skill rdf:type");
+            assertTrue(hasSkillType, "Parsed Skills should have sda:Skill rdf:type");
         } catch (Exception e) {
             fail("Should not throw: " + e.getMessage());
         }

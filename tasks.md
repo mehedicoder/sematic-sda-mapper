@@ -531,6 +531,141 @@ Track completed work with validation evidence. Only the human engineer marks tas
 
 ---
 
+## Maintenance: Canonical Ontology Namespace Test Migration
+
+**Status:** [x] Completed
+**Branch:** `main`
+**Completed:** 2026-08-03
+**Tests:** 327 passing (0 failures, 0 errors, 0 skipped)
+
+### Completion Evidence
+
+- `mvn clean test` — BUILD SUCCESS, 327 tests, 0 failures
+- All tests migrated from the legacy `http://www.example.org/{sda,css}#` namespaces to the canonical TBox-only ontology `css-sda-unified.ttl` (`https://example.org/ontology/sda#`) plus a shared ABox fixture
+- No remaining `http://www.example.org/(sda|css)#` references outside the read-only reference file `src/main/resources/ontology/css-sda-unified-old.ttl`
+- Production `src/main` sources untouched except previously migrated files
+
+### What was built
+
+| Component | Files |
+|---|---|
+| Three-use-case ABox fixture (REQ-001/002/003, NE107, negative candidates, pump assets, R2a requiresConcept/mapsVariable/describedBy chain) | `src/test/resources/ontology/demo-abox.ttl` |
+| Test helper merging the ABox into a loaded Jena model | `src/test/java/com/sda/mapper/support/DemoAboxBuilder.java` |
+| ABox appended to Spring `app.ontology.file-paths` for Spring-context tests | `src/test/resources/application.yml` |
+
+### Updated test classes
+
+`EvaluationTest`, `SparqlMatchingTest`, `OntologyAndQueryLoadingTest`, `OntologyModelLoaderTest`, `LifecycleIntegrationTest`, `SemanticReasonerServiceTest`, `R2aConceptCoverageTest` (rewritten for the new requiresConcept/mapsVariable/describedBy chain), `RVerifyServiceTest`, `RequirementDiscoveryServiceTest`, `RDeployServiceTest`, `EndToEndPipelineServiceTest`, `OntologyInferenceServiceTest`, `DashboardViewTest`, `ServiceCatalogViewTest`, `OpcUaNodeSetParserTest`, `AasParserTest`
+
+### Key technical decisions
+
+- Hybrid fixture strategy: `demo-abox.ttl` shipped as a test resource and appended to the test `application.yml` `file-paths` (list-based) so Spring-managed `OntologyModelLoader` merges TBox + ABox; non-Spring unit tests use `DemoAboxBuilder.apply(loader.getModel())`.
+- All test constants consolidated to `SDA_NS = "https://example.org/ontology/sda#"` and `INST_NS = "http://www.example.org/instance#"`; `CSS_NS` removed.
+- `R2aConceptCoverageTest` rewritten semantically around `Skill → requiresConcept Concept`, `DataConnector → mapsVariable ProcessVariable`, `ProcessVariable → describedBy Concept`; restore test reloads the model and re-applies the ABox.
+- ABox must be re-applied after every `loader.loadOntology()` in tests that reload to reset lifecycle state.
+
+---
+
+## Maintenance: Requirement Form Mandatory Fields (PipelineView)
+
+**Status:** [x] Completed
+**Branch:** `main`
+**Completed:** 2026-08-03
+**Tests:** 328 passing (0 failures, 0 errors, 0 skipped)
+
+### Completion Evidence
+
+- `mvn clean test` — BUILD SUCCESS, 328 tests, 0 failures (was 327; +1 new UI test)
+- Canonical ontology and `src/main/resources/ontology/css-sda-unified.ttl` untouched
+
+### What was changed
+
+Per the paper's Requirement model (roadmap citation "Islam, Maurer, Diedrich 2026"), a requirement is defined by its title and description. All functional parameters are optional and fall back to defaults during matching.
+
+| Component | Files |
+|---|---|
+| Title + Description now mandatory (required indicators, validation, gate message); Protocol/Access Mode/Min Recall/Max Latency/Network Zone/Determinism/SIL optional with "(optional)" placeholders | `src/main/java/com/sda/mapper/ui/PipelineView.java` |
+| `matchInline` falls back to defaults on empty/null params instead of returning no-match; `matchDynamicRequirement` no longer short-circuits when a requirement has no explicit params | `src/main/java/com/sda/mapper/reasoning/SemanticReasonerService.java` |
+| PipelineViewTest rewritten: mandatory/optional semantics, error messages, required-indicator assertions (13 → 14 tests) | `src/test/java/com/sda/mapper/ui/PipelineViewTest.java` |
+| SemanticReasonerServiceTest updated: empty/null inline params and parameterless dynamic requirements now match via defaults (renamed 3 tests) | `src/test/java/com/sda/mapper/reasoning/SemanticReasonerServiceTest.java` |
+
+### Key technical decisions
+
+- Mandatory-ness grounded in the project's own documentation of the paper's Requirement model (roadmap Figure 5, `docs/USER-TEST-MANUAL.md` section 5): title + description are the requirement identity; parameters/constraints are optional individuals (`hasParameter`/`hasConstraint`) in the ontology.
+- The exact paper (Islam, Maurer, Diedrich 2026) is not publicly indexed; several web searches failed to retrieve it, so requiredness is derived from the project's documented model rather than a direct paper extract.
+- REST Mode B semantics unchanged: `RequirementMatchingController` still rejects an empty inline body (400) before calling `matchInline`, so the default-fallback relaxation only affects the UI pipeline path and dynamically-created requirements.
+
+---
+
+## Maintenance: Ontology Visualizer (OntologyView)
+
+**Status:** [x] Completed
+**Branch:** `main`
+**Completed:** 2026-08-03
+**Tests:** 343 passing (0 failures, 0 errors, 0 skipped)
+
+### Completion Evidence
+
+- `mvn clean test` — BUILD SUCCESS, 343 tests, 0 failures (was 328; +15 new view/data-service tests)
+- Canonical `src/main/resources/ontology/css-sda-unified.ttl` untouched (479 triples)
+
+### What was built
+
+Interactive dark-themed ontology visualizer at `/visualizer` grounded in the canonical TBox: 5 layers, 24 classes, 62 object properties (prompt's 25/52 counts reconciled to the actual TBox — see decision below).
+
+| Component | Files |
+|---|---|
+| Layer/class/relation records | `src/main/java/com/sda/mapper/model/OntologyLayer.java`, `OntologyClass.java`, `OntologyRelation.java` |
+| Static grounded data holder with the six required queries | `src/main/java/com/sda/mapper/service/OntologyDataService.java` |
+| View: header, stats pills, layer tabs, 280px class browser, inspector with neighborhood graph + core/supporting relation cards | `src/main/java/com/sda/mapper/ui/OntologyView.java` |
+| Strict palette CSS (`.ontology-root`, `.section-title`, `.node`, tabs/cards/graph) with responsive stacking | `src/main/frontend/styles.css` |
+| 15 tests: route/title, layer/class/relation counts, per-layer filtering, from/to relations, empty state, inspector rendering | `src/test/java/com/sda/mapper/ui/OntologyViewTest.java` |
+
+### Key technical decisions
+
+- Data reconciled to the canonical TBox (`css-sda-unified.ttl`), which holds **24** owl:Class and **62** owl:ObjectProperty declarations — not the prompt's stated 25/52 — to keep the visualizer fully grounded; `@Route("visualizer", layout = MainLayout.class)` avoids the `@Route("")` owned by `SystemStatusView`.
+- Neighborhood graph rendered with plain `Div` + CSS flexbox (`.ontology-graph`/`.graph-side`/`.node`), no charting dependency; selected node uses `scale(1.1)` and layer pills use 13%-alpha tints (`colorHex + "22"`); core cards border `#3b82f6`, supporting `#94a3b8`.
+- Class items are `Div` click targets (Vaadin `Button` hides `add(Component...)`), and `Element.getText()` returns only direct text nodes — tests use a recursive text collector.
+
+---
+
+## Mapping Hub: Universal Semantic Mapping Hub
+
+**Status:** [x] Completed
+**Branch:** `main`
+**Completed:** 2026-08-03
+**Tests:** 414 passing (0 failures, 0 errors, 0 skipped)
+
+### Completion Evidence
+
+- `mvn clean test` — BUILD SUCCESS, 414 tests, 0 failures (was 343; +71 hub tests across 12 test classes)
+- Application context now loads in `@SpringBootTest` after injecting the session via `@Lazy` scoped proxy
+- `idea_build_project` — BUILD SUCCESS (deprecation warnings only, matching existing codebase usage)
+
+### What was built
+
+| Component | Files |
+|---|---|
+| Canonical model (interface + 25 records, model, formats, coverage/gap/recommendation types) | `src/main/java/com/sda/mapper/hub/model/*.java` |
+| Parsers (detector, registry, AAS/MTP/OPC UA, `ParsingException`) | `src/main/java/com/sda/mapper/hub/parser/*.java` |
+| Pipeline services (hub service, lift, inference, matching, recommendations, manifest export, session, result) | `src/main/java/com/sda/mapper/hub/service/*.java` |
+| Hub UI (view, stepper, console, dashboard, layer tabs, class list/detail, manual entry factory, dropzone, recommendation bar) | `src/main/java/com/sda/mapper/hub/ui/*.java` |
+| Dark-palette stylesheet | `src/main/frontend/hub-styles.css` |
+| Drawer nav ("Mapping Hub" + "Ontology Browser") | `src/main/java/com/sda/mapper/ui/MainLayout.java` |
+| 12 test classes (parsers, services, UI) | `src/test/java/com/sda/mapper/hub/**/*.java` |
+| Fixtures for parser/hub tests | `src/main/resources/device-descriptions/{aas,mtp,opcua}/` |
+
+### Key technical decisions
+
+- Route is `@Route("mapping-hub", layout = MainLayout.class)`; detail panel is `ClassDetailPanel` + static `ManualEntryFormFactory` with per-class field lists.
+- `MappingHubSession` stays `@VaadinSessionScope`; the singleton `MappingHubService` injects it via `@Lazy` (constructor parameter 7) so Spring creates a lazy proxy instead of resolving the Vaadin session scope at context startup — fixes the `ScopeNotActiveException` breaking all `@SpringBootTest` classes.
+- `InferenceService` marks derived entities `inferred=true` via the canonical record constructors (convenience `sourceFileName` constructors default to explicit entities).
+- `UploadDropzone` wraps the drop label in a `Div` (`setDropLabel` rejects a bare `Text` in Vaadin 25.2.1).
+- `MappingHubView.selectLayer`/`selectClass` made public for interaction tests; `CoverageDashboard.getCount` and `ConsolePanel.getLines` added as test accessors.
+- Weighted coverage is rounded to 1 decimal (`Math.round(x * 10) / 10.0`); tests assert the rounded value.
+
+---
+
 ## Summary
 
 | Phase | Status | Tests | Date |
@@ -549,6 +684,10 @@ Track completed work with validation evidence. Only the human engineer marks tas
 | Phase 11b: OPC UA Visualization | [x] Completed | 220 | 2026-07-16 |
 | Bug Fixes: Multi-Server, NodeSet, Pipeline | [x] Completed | 251 | 2026-07-17 |
 | Bug Fixes: Read Attribute, Browse, Grid | [x] Completed | 253 | 2026-07-17 |
+| Maintenance: Canonical Ontology Namespace Test Migration | [x] Completed | 327 | 2026-08-03 |
+| Maintenance: Requirement Form Mandatory Fields (PipelineView) | [x] Completed | 328 | 2026-08-03 |
+| Maintenance: Ontology Visualizer (OntologyView) | [x] Completed | 343 | 2026-08-03 |
+| Mapping Hub: Universal Semantic Mapping Hub | [x] Completed | 414 | 2026-08-03 |
 | Phase 12: Documentation | [ ] Not started | — | — |
 | Phase 13: EKA UI Polish | [ ] Not started | — | — |
 | Phase 14: Margo Sandbox | [ ] Not started | — | — |

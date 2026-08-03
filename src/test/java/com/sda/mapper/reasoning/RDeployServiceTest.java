@@ -1,6 +1,7 @@
 package com.sda.mapper.reasoning;
 
 import com.sda.mapper.ontology.OntologyModelLoader;
+import com.sda.mapper.support.DemoAboxBuilder;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
@@ -14,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class RDeployServiceTest {
 
     private static final String INST_NS = "http://www.example.org/instance#";
-    private static final String SDA_NS = "http://www.example.org/sda#";
+    private static final String SDA_NS = "https://example.org/ontology/sda#";
 
     private static OntologyModelLoader loader;
     private static RDeployService service;
@@ -22,8 +23,9 @@ class RDeployServiceTest {
     @BeforeAll
     static void setUp() {
         loader = new OntologyModelLoader();
-        loader.setFilePath("ontology/css-sda-small.ttl");
+        loader.setFilePath("ontology/css-sda-unified.ttl");
         loader.loadOntology();
+        DemoAboxBuilder.apply(loader.getModel());
         service = new RDeployService(loader);
     }
 

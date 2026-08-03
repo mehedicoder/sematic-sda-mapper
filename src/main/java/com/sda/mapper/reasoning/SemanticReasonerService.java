@@ -34,8 +34,7 @@ public class SemanticReasonerService {
     private static final Logger log = LoggerFactory.getLogger(SemanticReasonerService.class);
 
     private static final String INST_NS = "http://www.example.org/instance#";
-    private static final String SDA_NS = "http://www.example.org/sda#";
-    private static final String CSS_NS = "http://www.example.org/css#";
+    private static final String SDA_NS = "https://example.org/ontology/sda#";
 
     private static final Map<String, String> REQUIREMENT_QUERY_MAP = Map.of(
         "REQ-001", "queries/match-service.rq",
@@ -136,10 +135,6 @@ public class SemanticReasonerService {
         }
 
         Map<String, String> params = extractRequirementParams(model, reqResource);
-        if (params.isEmpty()) {
-            return ServiceMatchResult.noMatch(
-                "No matching parameters found for requirement " + requirementId);
-        }
 
         log.info("Dynamic matching for {}: params={}", requirementId, params);
         ServiceMatchResult result = matchInline(params);
@@ -224,8 +219,11 @@ public class SemanticReasonerService {
      * @return a {@link ServiceMatchResult} with matched service details
      */
     public ServiceMatchResult matchInline(Map<String, String> parameters) {
-        if (parameters == null || parameters.isEmpty()) {
-            return ServiceMatchResult.noMatch("No matching parameters provided");
+        if (parameters == null) {
+            parameters = Map.of();
+        }
+        if (parameters.isEmpty()) {
+            log.info("No explicit matching parameters provided - using defaults");
         }
 
         String protocol = parameters.getOrDefault("protocol", "OPC-UA");
@@ -276,8 +274,7 @@ public class SemanticReasonerService {
         sb.append("""
             PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-            PREFIX css:  <http://www.example.org/css#>
-            PREFIX sda:  <http://www.example.org/sda#>
+            PREFIX sda:  <https://example.org/ontology/sda#>
             PREFIX :     <http://www.example.org/instance#>
 
             SELECT ?capability ?skill ?service ?binding ?protocol ?accessMode
@@ -290,10 +287,11 @@ public class SemanticReasonerService {
                              sda:reportedRecall  ?recall ;
                              sda:reportedLatency ?latency .
 
-                ?service      sda:usesBinding    ?binding .
+                ?service      sda:hasBinding    ?binding .
                 ?binding      sda:protocol        ?protocol ;
-                              sda:accessMode      ?accessMode ;
-                              sda:usesConnector   ?connector .
+                              sda:accessMode      ?accessMode .
+
+                ?service      sda:hasConnector   ?connector .
 
                 ?connector    rdfs:label          ?connectorLabel .
 

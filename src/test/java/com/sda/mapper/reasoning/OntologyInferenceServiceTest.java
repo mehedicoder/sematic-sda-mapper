@@ -1,6 +1,7 @@
 package com.sda.mapper.reasoning;
 
 import com.sda.mapper.ontology.OntologyModelLoader;
+import com.sda.mapper.support.DemoAboxBuilder;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
@@ -21,8 +22,9 @@ class OntologyInferenceServiceTest {
     @BeforeAll
     static void setUp() {
         loader = new OntologyModelLoader();
-        loader.setFilePath("ontology/css-sda-small.ttl");
+        loader.setFilePath("ontology/css-sda-unified.ttl");
         loader.loadOntology();
+        DemoAboxBuilder.apply(loader.getModel());
         service = new OntologyInferenceService(loader);
         service.runInference();
     }
@@ -52,7 +54,7 @@ class OntologyInferenceServiceTest {
         Model inferredModel = service.getInferredModel();
 
         String instNs = "http://www.example.org/instance#";
-        String sdaNs = "http://www.example.org/sda#";
+        String sdaNs = "https://example.org/ontology/sda#";
 
         // OC-ACM-Flowmeter is an explicit OfferedCapability — must still exist
         assertTrue(inferredModel.contains(

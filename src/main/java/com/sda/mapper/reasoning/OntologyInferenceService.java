@@ -32,7 +32,7 @@ public class OntologyInferenceService {
 
     private static final Logger log = LoggerFactory.getLogger(OntologyInferenceService.class);
 
-    private static final String SDA_NS = "http://www.example.org/sda#";
+    private static final String SDA_NS = "https://example.org/ontology/sda#";
     private static final String INST_NS = "http://www.example.org/instance#";
 
     private final OntologyModelLoader ontologyModelLoader;
@@ -129,7 +129,7 @@ public class OntologyInferenceService {
 
         var skills = model.listSubjectsWithProperty(
             org.apache.jena.vocabulary.RDF.type,
-            model.createResource("http://www.example.org/css#Skill")).toList();
+            model.createResource(SDA_NS + "Skill")).toList();
 
         for (Resource skill : skills) {
             var engUnitStmt = skill.getProperty(model.createProperty(SDA_NS + "engineeringUnit"));

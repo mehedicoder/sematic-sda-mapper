@@ -27,7 +27,7 @@ public class UaServerDatasheetParser implements Parser {
     private static final Logger log = LoggerFactory.getLogger(UaServerDatasheetParser.class);
 
     private static final String INST_NS = "http://www.example.org/instance#";
-    private static final String SDA_NS = "http://www.example.org/sda#";
+    private static final String SDA_NS = "https://example.org/ontology/sda#";
     private static final String RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
     private static final String RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label";
 
@@ -65,7 +65,8 @@ public class UaServerDatasheetParser implements Parser {
             Property informationModel = model.createProperty(SDA_NS + "informationModel");
             Property semanticID = model.createProperty(SDA_NS + "semanticID");
             Property isGateway = model.createProperty(SDA_NS + "isGateway");
-            Property usesConnector = model.createProperty(SDA_NS + "usesConnector");
+            Property hasBinding = model.createProperty(SDA_NS + "hasBinding");
+            Property hasConnector = model.createProperty(SDA_NS + "hasConnector");
             Property image = model.createProperty(SDA_NS + "image");
 
             List<String> details = new ArrayList<>();
@@ -127,13 +128,8 @@ public class UaServerDatasheetParser implements Parser {
                 }
             }
 
-            // Wire binding → connector via usesConnector
-            for (int i = 0; i < Math.min(bindingResources.size(), connectorResources.size()); i++) {
-                bindingResources.get(i).addProperty(usesConnector, connectorResources.get(i));
-                tripleCount++;
-            }
-
             // Parse Identification into device metadata
+            Resource deviceRes = null;
             JsonNode identification = root.path("Identification");
             if (identification.isObject()) {
                 String productUri = identification.path("productUri").asText("");
@@ -143,7 +139,7 @@ public class UaServerDatasheetParser implements Parser {
                 if (!productUri.isBlank()) {
                     // Create a service resource representing the OPC UA server device
                     String deviceLocalName = "SVC-UA-Device";
-                    Resource deviceRes = model.createResource(INST_NS + deviceLocalName);
+                    deviceRes = model.createResource(INST_NS + deviceLocalName);
                     deviceRes.addProperty(rdfType, model.createResource(SDA_NS + "Service"));
                     deviceRes.addProperty(rdfsLabel, productUri);
                     if (!serialNumber.isBlank()) {
@@ -153,6 +149,18 @@ public class UaServerDatasheetParser implements Parser {
 
                     details.add("Identification: productUri=" + productUri
                         + ", softwareVersion=" + softwareVersion);
+                }
+            }
+
+            // Wire service → binding and service → connector via hasBinding/hasConnector
+            if (deviceRes != null) {
+                if (!bindingResources.isEmpty()) {
+                    deviceRes.addProperty(hasBinding, bindingResources.get(0));
+                    tripleCount++;
+                }
+                if (!connectorResources.isEmpty()) {
+                    deviceRes.addProperty(hasConnector, connectorResources.get(0));
+                    tripleCount++;
                 }
             }
 

@@ -21,8 +21,9 @@ import java.util.UUID;
  * into the base ontology model, runs inference, and matches requirements
  * against the enriched model.
  * <p>
- * Optionally creates a new {@code sda:Requirement} in the model from
- * form-provided parameters before matching.
+ * Requirements are never auto-created or auto-selected. The pipeline only
+ * matches the explicitly supplied requirement IDs and, optionally, a new
+ * {@code sda:Requirement} created from user-provided form parameters.
  */
 @Service
 public class EndToEndPipelineService {
@@ -30,36 +31,37 @@ public class EndToEndPipelineService {
     private static final Logger log = LoggerFactory.getLogger(EndToEndPipelineService.class);
 
     private static final String INST_NS = "http://www.example.org/instance#";
-    private static final String SDA_NS = "http://www.example.org/sda#";
+    private static final String SDA_NS = "https://example.org/ontology/sda#";
     private static final String RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
     private final com.sda.mapper.parser.UploadService uploadService;
     private final OntologyModelLoader ontologyModelLoader;
     private final OntologyInferenceService inferenceService;
     private final SemanticReasonerService reasonerService;
-    private final RequirementDiscoveryService requirementDiscoveryService;
 
     public EndToEndPipelineService(
             com.sda.mapper.parser.UploadService uploadService,
             OntologyModelLoader ontologyModelLoader,
             OntologyInferenceService inferenceService,
-            SemanticReasonerService reasonerService,
-            RequirementDiscoveryService requirementDiscoveryService) {
+            SemanticReasonerService reasonerService) {
         this.uploadService = uploadService;
         this.ontologyModelLoader = ontologyModelLoader;
         this.inferenceService = inferenceService;
         this.reasonerService = reasonerService;
-        this.requirementDiscoveryService = requirementDiscoveryService;
     }
 
     /**
      * Executes the full pipeline: parse → lift → infer → match.
      * Optionally creates a new requirement from form parameters before matching.
+     * <p>
+     * Only the explicitly supplied {@code requirementIds} are matched. A null or
+     * empty list matches none — requirements are never auto-discovered. A new
+     * requirement is created only from user-provided form parameters.
      *
      * @param filename            the original filename
      * @param input               the file content stream
-     * @param requirementIds      optional list of requirement IDs to match (null or empty = discover all)
-     * @param newRequirementParams optional form parameters for creating a new requirement (null = skip)
+     * @param requirementIds      list of requirement IDs to match (may be null/empty = no predefined matches)
+     * @param newRequirementParams form parameters for creating a new requirement (null = skip)
      * @return a {@link PipelineResult} containing parse info, match results, and warnings
      */
     public PipelineResult execute(String filename, InputStream input,
@@ -85,10 +87,9 @@ public class EndToEndPipelineService {
         }
 
         // 2.5 Create new requirement from form params if provided
-        List<String> targetRequirements = new ArrayList<>(
-            (requirementIds == null || requirementIds.isEmpty())
-                ? requirementDiscoveryService.discoverRequirementIds()
-                : requirementIds);
+        List<String> targetRequirements = (requirementIds == null)
+            ? new ArrayList<>()
+            : new ArrayList<>(requirementIds);
 
         if (newRequirementParams != null && !newRequirementParams.isEmpty()) {
             String newReqId = createRequirementInModel(newRequirementParams);
@@ -97,6 +98,11 @@ public class EndToEndPipelineService {
                 warnings.add("Created new requirement: " + newReqId);
                 log.info("Created new requirement {} with params: {}", newReqId, newRequirementParams);
             }
+        }
+
+        if (targetRequirements.isEmpty()) {
+            warnings.add("No requirements selected — input was parsed and lifted but no requirements were matched");
+            log.info("No requirements to match for: {}", filename);
         }
 
         // 3. Infer — rerun inference on the enriched model

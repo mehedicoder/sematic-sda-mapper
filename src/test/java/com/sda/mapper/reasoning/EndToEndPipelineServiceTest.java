@@ -1,13 +1,20 @@
 package com.sda.mapper.reasoning;
 
 import com.sda.mapper.ontology.OntologyModelLoader;
+import com.sda.mapper.parser.AasParser;
 import com.sda.mapper.parser.MTPAmlParser;
+import com.sda.mapper.parser.OpcUaNodeSetParser;
+import com.sda.mapper.parser.ParserFactory;
 import com.sda.mapper.parser.ParseResult;
 import com.sda.mapper.parser.UaServerDatasheetParser;
+import com.sda.mapper.parser.UploadService;
+import com.sda.mapper.support.DemoAboxBuilder;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -17,6 +24,84 @@ class EndToEndPipelineServiceTest {
 
     private final MTPAmlParser mtpParser = new MTPAmlParser();
     private final UaServerDatasheetParser uaParser = new UaServerDatasheetParser();
+
+    private EndToEndPipelineService createPipelineService() {
+        ParserFactory parserFactory = new ParserFactory(
+            new MTPAmlParser(), new UaServerDatasheetParser(),
+            new OpcUaNodeSetParser(), new AasParser());
+        UploadService uploadService = new UploadService(parserFactory);
+        OntologyModelLoader ontologyModelLoader = new OntologyModelLoader();
+        ontologyModelLoader.setFilePath("ontology/css-sda-unified.ttl");
+        ontologyModelLoader.loadOntology();
+        DemoAboxBuilder.apply(ontologyModelLoader.getModel());
+        OntologyInferenceService inferenceService = new OntologyInferenceService(ontologyModelLoader);
+        SparqlQueryLoader sparqlQueryLoader = new SparqlQueryLoader();
+        RDeployService rDeployService = new RDeployService(ontologyModelLoader);
+        SemanticReasonerService reasonerService = new SemanticReasonerService(
+            ontologyModelLoader, sparqlQueryLoader, rDeployService);
+        return new EndToEndPipelineService(
+            uploadService, ontologyModelLoader, inferenceService, reasonerService);
+    }
+
+    @Test
+    @DisplayName("Explicit empty requirement list should not auto-discover all requirements")
+    void shouldNotAutoDiscoverWithExplicitEmptyList() {
+        EndToEndPipelineService pipelineService = createPipelineService();
+        try (InputStream input = getClass().getClassLoader()
+                .getResourceAsStream("examples/req002-mtp-fermentation-skid.xml")) {
+            assertNotNull(input);
+            EndToEndPipelineService.PipelineResult result =
+                pipelineService.execute("req002-mtp-fermentation-skid.xml", input, List.of(), null);
+            assertTrue(result.matches().isEmpty(),
+                "Auto discovery must be disabled for an explicit empty list, got: " + result.matches().keySet());
+            assertTrue(result.warnings().stream().anyMatch(w -> w.contains("No requirements selected")),
+                "Should warn that no requirements were selected");
+        } catch (Exception e) {
+            fail("Should not throw: " + e.getMessage());
+        }
+    }
+
+    @Test
+    @DisplayName("Null requirement list should not auto-discover all requirements")
+    void shouldNotAutoDiscoverWithNullList() {
+        EndToEndPipelineService pipelineService = createPipelineService();
+        try (InputStream input = getClass().getClassLoader()
+                .getResourceAsStream("examples/req002-mtp-fermentation-skid.xml")) {
+            assertNotNull(input);
+            EndToEndPipelineService.PipelineResult result =
+                pipelineService.execute("req002-mtp-fermentation-skid.xml", input, null, null);
+            assertTrue(result.matches().isEmpty(),
+                "Auto discovery must be disabled for a null list, got: " + result.matches().keySet());
+            assertTrue(result.warnings().stream().anyMatch(w -> w.contains("No requirements selected")),
+                "Should warn that no requirements were selected");
+        } catch (Exception e) {
+            fail("Should not throw: " + e.getMessage());
+        }
+    }
+
+    @Test
+    @DisplayName("Requirement is created from form params even when no requirement list is selected")
+    void shouldCreateRequirementFromFormParams() {
+        EndToEndPipelineService pipelineService = createPipelineService();
+        Map<String, String> formParams = new HashMap<>();
+        formParams.put("title", "Test Flow Rate Requirement");
+        formParams.put("protocol", "OPC-UA");
+        formParams.put("accessMode", "read-only");
+        formParams.put("minRecall", "0.90");
+        formParams.put("maxLatency", "60");
+        try (InputStream input = getClass().getClassLoader()
+                .getResourceAsStream("examples/req002-mtp-fermentation-skid.xml")) {
+            assertNotNull(input);
+            EndToEndPipelineService.PipelineResult result =
+                pipelineService.execute("req002-mtp-fermentation-skid.xml", input, List.of(), formParams);
+            assertFalse(result.matches().isEmpty(),
+                "A form-created requirement should be matched");
+            assertTrue(result.warnings().stream().anyMatch(w -> w.contains("Created new requirement")),
+                "Should warn about the created requirement");
+        } catch (Exception e) {
+            fail("Should not throw: " + e.getMessage());
+        }
+    }
 
     @Test
     @DisplayName("MTP AML parse should produce Jena Model with Skills and Bindings")
@@ -30,7 +115,7 @@ class EndToEndPipelineServiceTest {
 
             long skillCount = result.model().listSubjectsWithProperty(
                 result.model().createProperty("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-                result.model().createResource("http://www.example.org/css#Skill")
+                result.model().createResource("https://example.org/ontology/sda#Skill")
             ).toList().size();
             assertTrue(skillCount > 0, "Model should contain Skill instances");
         } catch (Exception e) {
@@ -50,7 +135,7 @@ class EndToEndPipelineServiceTest {
 
             long connectorCount = result.model().listSubjectsWithProperty(
                 result.model().createProperty("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-                result.model().createResource("http://www.example.org/sda#DataConnector")
+                result.model().createResource("https://example.org/ontology/sda#DataConnector")
             ).toList().size();
             assertTrue(connectorCount > 0, "Model should contain DataConnector instances");
         } catch (Exception e) {
@@ -62,7 +147,7 @@ class EndToEndPipelineServiceTest {
     @DisplayName("Parsed Model can be merged into base ontology and queried")
     void shouldMergeParsedModelAndQuery() {
         var loader = new OntologyModelLoader();
-        loader.setFilePath("ontology/css-sda-small.ttl");
+        loader.setFilePath("ontology/css-sda-unified.ttl");
         loader.loadOntology();
 
         try (InputStream input = getClass().getClassLoader()
@@ -83,8 +168,9 @@ class EndToEndPipelineServiceTest {
     @DisplayName("Match result should include connector and deploymentContext labels")
     void shouldReturnConnectorAndDeploymentContext() {
         var loader = new OntologyModelLoader();
-        loader.setFilePath("ontology/css-sda-small.ttl");
+        loader.setFilePath("ontology/css-sda-unified.ttl");
         loader.loadOntology();
+        DemoAboxBuilder.apply(loader.getModel());
         var queryLoader = new SparqlQueryLoader();
         var rDeployService = new RDeployService(loader);
         var reasoner = new SemanticReasonerService(loader, queryLoader, rDeployService);

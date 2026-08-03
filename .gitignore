@@ -6,3 +6,4 @@ out/
 *.ipr
 *.iws
 src/main/frontend/generated/
+src/main/bundles/

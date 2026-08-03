@@ -95,14 +95,27 @@ class RequirementMatchingControllerTest {
     }
 
     @Test
-    @DisplayName("Should return 201 when persisting a valid requirement")
+    @DisplayName("Should return 201 when persisting a valid requirement with explicit ID")
     void shouldPersistRequirement() {
         var request = new MatchRequirementRequest(
-            null, "FlowRate", "OPC-UA", "read-only", "m³/h", "SIL-2", "Plant", "Hard", null, null, 0.0, 100.0
+            "REQ-FLOW-01", "FlowRate", "OPC-UA", "read-only", "m³/h", "SIL-2", "Plant", "Hard", null, null, 0.0, 100.0
         );
         var response = controller.persistRequirement(request);
         assertEquals(201, response.getStatusCode().value());
         assertNotNull(response.getBody());
-        assertTrue(response.getBody().containsKey("requirementId"));
+        @SuppressWarnings("unchecked")
+        var body = (java.util.Map<String, String>) response.getBody();
+        assertTrue(body.containsKey("requirementId"));
+        assertEquals("REQ-FLOW-01", body.get("requirementId"));
+    }
+
+    @Test
+    @DisplayName("Should return 400 when persisting a requirement without a requirement ID")
+    void shouldReturn400WhenRequirementIdMissing() {
+        var request = new MatchRequirementRequest(
+            null, "FlowRate", "OPC-UA", "read-only", "m³/h", "SIL-2", "Plant", "Hard", null, null, 0.0, 100.0
+        );
+        var response = controller.persistRequirement(request);
+        assertEquals(400, response.getStatusCode().value());
     }
 }

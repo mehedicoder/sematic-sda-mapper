@@ -828,6 +828,65 @@ Create a real-time Vaadin UI view that connects to all three OPC UA simulation s
 
 ---
 
+## Phase 11c: Semantic Mapping Hub
+
+**Goal**
+
+Add a universal mapping hub at `/mapping-hub` that runs the full PARSE → LIFT → INFER → MATCH → MANIFEST pipeline over vendor device descriptions (AAS JSON/XML, MTP AML, OPC UA Server Datasheet). Uploads enrich a session-scoped canonical model incrementally; gap analysis, supplementary-format recommendations and manual entry close coverage gaps; a complete JSON manifest is downloadable at any time.
+
+**Tasks**
+
+* [x] **Canonical model**
+  * [x] Define `CanonicalEntity` contract (`className`, `id`, `name`, `sourceFileName`, `inferred`, `attributes`)
+  * [x] Add 25 canonical entity records mapped to the 24-class TBox (Asset, Skill, SkillParameter, CommunicationBinding, SemanticConcept, InformationModel, ProcessVariable, Sensor, Observation, UseCase, Requirement, Stakeholder, Capability, Service, ServiceInstance, DeploymentContext, ClusterNode, DeploymentPolicy, NetworkZone, SafetyClass, DataConnector, VerificationCriterion, RequirementConstraint, RequirementParameter, + interface)
+  * [x] Add `CanonicalAssetModel` with typed lists, dedup merge, per-class queries and `allEntities()`
+  * [x] Add `AssetFileFormat` (AAS_XML, AAS_JSON, MTP_AML, OPCUA_JSON), `EntityOrigin`, `CoverageStatus`, `CoverageEntry`, `GapReport`, `BlockingGap`, `Recommendation`, `UploadedFileInfo`, `Provenance`, `Attributes`
+* [x] **Parsers**
+  * [x] `HubFileTypeDetector` — sniffs content (XML root, AAS JSON, OPC UA datasheet keys) with extension fallback
+  * [x] `CanonicalParserRegistry` — finds parsers by format, throws clear errors for unregistered formats
+  * [x] `AasModelParser`, `MtpModelParser`, `OpcUaModelParser` — parse fixtures into canonical entities with provenance
+  * [x] `ParsingException` with file name and clear message
+* [x] **Pipeline services**
+  * [x] `MappingHubService` orchestrating PARSE → LIFT → INFER → MATCH → MANIFEST with per-stage console logging
+  * [x] `LiftService` — semantic concepts per data node, information models per asset
+  * [x] `InferenceService` — sensor per process variable, capability per skill, ServiceInstance/ClusterNode/NetworkZone/DeploymentContext per binding, all marked inferred
+  * [x] `MatchingService` — coverage over all 24 TBox classes with weighted percentage (1 decimal), PRESENT/PARTIAL/INFERRED/MISSING statuses, missing-field detail, blocking gaps for core relations, source tracking
+  * [x] `RecommendationService` — recommends missing formats that can fill gaps, excludes already-uploaded formats, sorted by gap fill count
+  * [x] `ManifestExportService` — JSON manifest with metadata, coverage, entity groups, files, blocking gaps and recommendations
+  * [x] `MappingHubSession` (`@VaadinSessionScope`) — incremental model accumulation, manual entities, inferred entities, file history
+  * [x] `PipelineResult` — model, inferred entities, gap report, recommendations, console lines
+* [x] **Hub UI (`/mapping-hub`, `MainLayout` drawer)**
+  * [x] Header "Semantic Mapping Hub" + "Parse → Lift → Infer → Match → Manifest" subtitle
+  * [x] Pipeline stepper, monospace console, coverage dashboard (4 status cards + coverage % + segment progress bar)
+  * [x] Layer tabs with missing-count badges, class list with status dots, class detail panel
+  * [x] Class detail: status header, provenance lines, raw entity cards, gap actions
+  * [x] Gap actions: format-restricted supplementary upload dropzone + manual entry toggle with per-class field lists
+  * [x] Recommendations bar with inline upload buttons per recommended format
+  * [x] Action bar: Run Pipeline, Reset, Export Complete Manifest (JSON download via data URI)
+  * [x] Dark-palette stylesheet `src/main/frontend/hub-styles.css`
+* [x] **Session-scope integration fix**
+  * [x] Inject `MappingHubSession` into the singleton `MappingHubService` via `@Lazy` scoped proxy so the application context loads in `@SpringBootTest` (Vaadin session scope is only active during a UI request)
+* [x] **Tests (12 classes, 71 tests)**
+  * [x] Parser tests: `HubFileTypeDetectorTest`, `CanonicalParserRegistryTest`, `AasModelParserTest`, `MtpModelParserTest`, `OpcUaModelParserTest`
+  * [x] Service tests: `LiftServiceTest`, `InferenceServiceTest`, `MatchingServiceTest`, `RecommendationServiceTest`, `ManifestExportServiceTest`, `MappingHubServiceTest`
+  * [x] UI tests: `MappingHubViewTest` (route, title, stylesheet, dashboard, class list, layer tabs, console, detail refresh)
+
+**Acceptance Criteria**
+
+* [x] Uploading `pump-aas.json` runs the full pipeline: 62.5% coverage, 12 PRESENT, 6 INFERRED, 6 MISSING, 5 `[STAGE]` console lines
+* [x] Every layer shows its missing-class count; all 24 TBox classes appear in the class list
+* [x] Selecting a class shows status, provenance, raw entity data and gap actions
+* [x] Manual entry forms expose the exact per-class field lists (Stakeholder, UseCase, Requirement, DeploymentContext, ClusterNode, NetworkZone, Sensor, Capability, ServiceInstance)
+* [x] Recommendations exclude formats already uploaded and sort by gap fill count
+* [x] Supplementary OPC UA upload enriches the session model (2 files, 2 formats) without duplicating re-run state
+* [x] Export Complete Manifest produces a JSON manifest containing coverage and entity groups
+* [x] Reset clears all session state
+* [x] Inferred entities are marked `inferred` (detail panel "Inferred from" pills)
+* [x] Unsupported uploads fail with a clear `ParsingException`
+* [x] `mvn clean test` — BUILD SUCCESS, 414 tests, 0 failures (was 343; +71 hub tests)
+
+---
+
 ## Phase 12: Documentation and Thesis Support
 
 **Goal**

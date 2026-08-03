@@ -7,6 +7,8 @@ import com.sda.mapper.reasoning.EndToEndPipelineService.PipelineResult;
 import com.sda.mapper.reasoning.RequirementDiscoveryService;
 import com.sda.mapper.reasoning.ServiceMatchResult;
 import com.sda.mapper.error.ParserException;
+import com.vaadin.flow.component.HasValidation;
+import com.vaadin.flow.component.HasValue;
 import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.checkbox.CheckboxGroup;
 import com.vaadin.flow.component.combobox.ComboBox;
@@ -41,18 +43,32 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Vaadin view for executing the full end-to-end semantic mapping pipeline.
  * Users upload an input file (MTP AML, OPC UA Server Datasheet, or AAS),
  * optionally select which requirements to match, and view per-requirement
  * results including generated Docker Compose and Kubernetes manifests.
+ * <p>
+ * Predefined requirements (REQ-001, REQ-002, REQ-003) are hidden from the
+ * filter and auto discovery on upload is disabled. The pipeline only starts
+ * when the user supplies requirement data via the inline form; created
+ * requirements are matched and become selectable for later runs.
+ * <p>
+ * Per the paper's Requirement model (see {@code specs/roadmap.md}, "Islam,
+ * Maurer, Diedrich 2026"), a requirement is defined by its title and
+ * description. All functional parameters (Protocol, Access Mode, Min Recall,
+ * Max Latency, Network Zone, Determinism Class, Safety Integrity Level) are
+ * optional; when omitted the matching falls back to defaults.
  */
 @Route(value = "pipeline", layout = MainLayout.class)
 @PageTitle("Semantic Reasoner")
 public class PipelineView extends VerticalLayout {
 
     private static final Logger log = LoggerFactory.getLogger(PipelineView.class);
+
+    private static final Set<String> HIDDEN_REQUIREMENT_IDS = Set.of("REQ-001", "REQ-002", "REQ-003");
 
     private final EndToEndPipelineService pipelineService;
     private final DockerComposeManifestService dockerComposeService;
@@ -74,6 +90,7 @@ public class PipelineView extends VerticalLayout {
     private final ComboBox<String> newReqNetworkZone = new ComboBox<>("Network Zone");
     private final ComboBox<String> newReqDeterminism = new ComboBox<>("Determinism Class");
     private final ComboBox<String> newReqSil = new ComboBox<>("Safety Integrity Level");
+    private Details newRequirementDetails;
 
     public PipelineView(EndToEndPipelineService pipelineService,
                         DockerComposeManifestService dockerComposeService,
@@ -104,7 +121,8 @@ public class PipelineView extends VerticalLayout {
 
         requirementFilter = new CheckboxGroup<>();
         requirementFilter.setLabel("Requirements to match");
-        List<String> discovered = requirementDiscoveryService.discoverRequirementIds();
+        List<String> discovered = visibleRequirementIds(
+            requirementDiscoveryService.discoverRequirementIds());
         requirementFilter.setItems(discovered);
         requirementFilter.setValue(Set.copyOf(discovered));
         requirementFilter.setWidthFull();
@@ -126,16 +144,20 @@ public class PipelineView extends VerticalLayout {
     }
 
     private Details buildNewRequirementSection() {
+        newReqTitle.setRequiredIndicatorVisible(true);
+        newReqDescription.setRequiredIndicatorVisible(true);
+        newReqTitle.setPlaceholder("Title of the requirement");
+        newReqDescription.setPlaceholder("What the requirement asks for");
         newReqProtocol.setItems("OPC-UA", "PROFINET", "BACnet", "HTTP", "MQTT");
-        newReqProtocol.setPlaceholder("Select protocol");
+        newReqProtocol.setPlaceholder("Select protocol (optional)");
         newReqAccessMode.setItems("read-only", "read-write", "write-only");
-        newReqAccessMode.setPlaceholder("Select access mode");
+        newReqAccessMode.setPlaceholder("Select access mode (optional)");
         newReqNetworkZone.setItems("OT-Zone-1", "OT-Zone-2", "OT-Zone-3");
-        newReqNetworkZone.setPlaceholder("Select zone");
+        newReqNetworkZone.setPlaceholder("Select zone (optional)");
         newReqDeterminism.setItems("HardRealTime", "SoftRealTime", "NonRealTime");
-        newReqDeterminism.setPlaceholder("Select determinism");
+        newReqDeterminism.setPlaceholder("Select determinism (optional)");
         newReqSil.setItems("SIL-0", "SIL-1", "SIL-2", "SIL-3", "SIL-4");
-        newReqSil.setPlaceholder("Select SIL");
+        newReqSil.setPlaceholder("Select SIL (optional)");
 
         newReqMinRecall.setValue(0.90);
         newReqMaxLatency.setValue(60.0);
@@ -148,9 +170,17 @@ public class PipelineView extends VerticalLayout {
             new FormLayout.ResponsiveStep("400px", 2),
             new FormLayout.ResponsiveStep("800px", 3));
 
-        Details details = new Details("Create New Requirement (optional)", form);
-        details.setOpened(false);
-        return details;
+        for (HasValue<?, ?> field : List.of(newReqTitle, newReqDescription)) {
+            field.addValueChangeListener(event -> {
+                if (field instanceof HasValidation validation) {
+                    validation.setInvalid(false);
+                }
+            });
+        }
+
+        newRequirementDetails = new Details("Create New Requirement", form);
+        newRequirementDetails.setOpened(false);
+        return newRequirementDetails;
     }
 
     private Map<String, String> collectNewRequirementParams() {
@@ -188,14 +218,17 @@ public class PipelineView extends VerticalLayout {
     private void handleUpload(String filename, InputStream inputStream) {
         try {
             List<String> selectedReqs = List.copyOf(requirementFilter.getValue());
-            if (selectedReqs.isEmpty()) {
-                selectedReqs = requirementDiscoveryService.discoverRequirementIds();
-            }
-
             Map<String, String> newReqParams = collectNewRequirementParams();
-            if (newReqParams.containsKey("title") || newReqParams.containsKey("protocol")) {
-                log.info("Creating new requirement from form: {}", newReqParams);
+
+            if (!hasRequirementData(newReqParams)) {
+                applyRequirementFormValidation(newReqParams);
+                showError("No requirement data provided. The pipeline cannot start — "
+                    + "fill in the mandatory fields (Title, Description) before uploading.");
+                return;
             }
+            applyRequirementFormValidation(newReqParams);
+
+            log.info("Creating new requirement from form: {}", newReqParams);
 
             PipelineResult result = pipelineService.execute(filename, inputStream, selectedReqs, newReqParams);
             showResults(filename, result);
@@ -205,6 +238,54 @@ public class PipelineView extends VerticalLayout {
         } catch (Exception e) {
             log.error("Unexpected pipeline error for {}: {}", filename, e.getMessage(), e);
             showError("Unexpected error: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Determines whether the new-requirement form carries the mandatory data.
+     * Per the paper's Requirement model, a requirement is defined by its
+     * title and description; all functional parameters are optional and the
+     * matching falls back to defaults when they are not provided.
+     *
+     * @param params the collected form parameters
+     * @return true if title and description were provided by the user
+     */
+    boolean hasRequirementData(Map<String, String> params) {
+        return isPresent(params, "title") && isPresent(params, "description");
+    }
+
+    private static boolean isPresent(Map<String, String> params, String key) {
+        return params.get(key) != null && !params.get(key).isBlank();
+    }
+
+    /**
+     * Marks the new-requirement form fields as invalid when the mandatory
+     * fields were not provided, so the user sees validation errors. Only the
+     * mandatory fields (Title, Description) are validated; all functional
+     * parameters are optional. Opens the form so the errors are visible.
+     *
+     * @param params the collected form parameters
+     */
+    void applyRequirementFormValidation(Map<String, String> params) {
+        if (hasRequirementData(params)) {
+            clearRequirementFormErrors();
+            return;
+        }
+        newRequirementDetails.setOpened(true);
+        setRequiredIfEmpty(newReqTitle, "Title is required");
+        setRequiredIfEmpty(newReqDescription, "Description is required");
+    }
+
+    private void clearRequirementFormErrors() {
+        newReqTitle.setInvalid(false);
+        newReqDescription.setInvalid(false);
+    }
+
+    private void setRequiredIfEmpty(HasValue<?, String> field, String message) {
+        boolean empty = field.getValue() == null || field.getValue().isBlank();
+        if (field instanceof HasValidation validation) {
+            validation.setInvalid(empty);
+            validation.setErrorMessage(message);
         }
     }
 
@@ -249,6 +330,36 @@ public class PipelineView extends VerticalLayout {
         Notification.show("Pipeline completed: " + result.matches().size() + " requirements evaluated",
             3000, Notification.Position.BOTTOM_CENTER)
             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+
+        refreshRequirementFilter();
+    }
+
+    /**
+     * Re-discovers requirements from the ontology and repopulates the filter,
+     * excluding the hidden predefined requirement IDs. Keeps the current
+     * selection so newly created form requirements become selectable.
+     */
+    private void refreshRequirementFilter() {
+        List<String> visible = visibleRequirementIds(
+            requirementDiscoveryService.discoverRequirementIds());
+        Set<String> current = requirementFilter.getValue();
+        requirementFilter.setItems(visible);
+        requirementFilter.setValue(current.stream()
+            .filter(visible::contains)
+            .collect(Collectors.toSet()));
+    }
+
+    /**
+     * Filters the discovered requirement IDs down to those that should be
+     * visible in the UI, excluding the hidden predefined requirements.
+     *
+     * @param discovered all requirement IDs from the ontology
+     * @return the visible requirement IDs
+     */
+    private List<String> visibleRequirementIds(List<String> discovered) {
+        return discovered.stream()
+            .filter(id -> !HIDDEN_REQUIREMENT_IDS.contains(id))
+            .toList();
     }
 
     private VerticalLayout createMatchPanel(String reqId, ServiceMatchResult match,
@@ -313,9 +424,9 @@ public class PipelineView extends VerticalLayout {
         links.add(createChainNode(match.skillName(), "Skill"));
         links.add(createChainArrow("isImplementedBy"));
         links.add(createChainNode(match.serviceName(), "Service"));
-        links.add(createChainArrow("usesBinding"));
+        links.add(createChainArrow("hasBinding"));
         links.add(createChainNode(match.bindingLabel(), "CommunicationBinding"));
-        links.add(createChainArrow("usesConnector"));
+        links.add(createChainArrow("hasConnector"));
         links.add(createChainNode(match.connector(), "DataConnector"));
         links.add(createChainArrow("isDeployedBy"));
         links.add(createChainNode(match.deploymentContext(), "DeploymentContext"));

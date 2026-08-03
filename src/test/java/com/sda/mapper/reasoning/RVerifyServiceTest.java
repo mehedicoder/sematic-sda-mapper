@@ -1,6 +1,7 @@
 package com.sda.mapper.reasoning;
 
 import com.sda.mapper.ontology.OntologyModelLoader;
+import com.sda.mapper.support.DemoAboxBuilder;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -18,8 +19,9 @@ class RVerifyServiceTest {
     @BeforeAll
     static void setUp() {
         loader = new OntologyModelLoader();
-        loader.setFilePath("ontology/css-sda-small.ttl");
+        loader.setFilePath("ontology/css-sda-unified.ttl");
         loader.loadOntology();
+        DemoAboxBuilder.apply(loader.getModel());
         deployService = new RDeployService(loader);
         verifyService = new RVerifyService(loader);
     }
@@ -27,6 +29,7 @@ class RVerifyServiceTest {
     @BeforeEach
     void resetLifecycle() {
         loader.loadOntology();
+        DemoAboxBuilder.apply(loader.getModel());
     }
 
     @Test

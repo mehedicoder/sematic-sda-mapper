@@ -26,7 +26,7 @@ public class RDeployService {
     private static final Logger log = LoggerFactory.getLogger(RDeployService.class);
 
     private static final String INST_NS = "http://www.example.org/instance#";
-    private static final String SDA_NS = "http://www.example.org/sda#";
+    private static final String SDA_NS = "https://example.org/ontology/sda#";
 
     private final OntologyModelLoader ontologyModelLoader;
 

@@ -1,6 +1,7 @@
 package com.sda.mapper.reasoning;
 
 import com.sda.mapper.ontology.OntologyModelLoader;
+import com.sda.mapper.support.DemoAboxBuilder;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,9 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("Full lifecycle integration — Defined → Matched → Verified")
 class LifecycleIntegrationTest {
 
+    private static final String INST_NS = "http://www.example.org/instance#";
+    private static final String SDA_NS = "https://example.org/ontology/sda#";
+
     private static OntologyModelLoader loader;
     private static SemanticReasonerService reasoner;
     private static RDeployService deployService;
@@ -18,8 +22,9 @@ class LifecycleIntegrationTest {
     @BeforeAll
     static void setUp() {
         loader = new OntologyModelLoader();
-        loader.setFilePath("ontology/css-sda-small.ttl");
+        loader.setFilePath("ontology/css-sda-unified.ttl");
         loader.loadOntology();
+        DemoAboxBuilder.apply(loader.getModel());
         var queryLoader = new SparqlQueryLoader();
         deployService = new RDeployService(loader);
         verifyService = new RVerifyService(loader);
@@ -30,6 +35,7 @@ class LifecycleIntegrationTest {
     @DisplayName("REQ-001 lifecycle: Defined → SPARQL match → Matched → Verify → Verified")
     void shouldCompleteFullLifecycleForReq001() {
         loader.loadOntology();
+        DemoAboxBuilder.apply(loader.getModel());
 
         String initialStatus = deployService.getLifecycleStatus("REQ-001");
         assertEquals("Defined", initialStatus,
@@ -67,17 +73,17 @@ class LifecycleIntegrationTest {
         reasoner.matchByRequirementId("REQ-001");
 
         var model = loader.getModel();
-        var req = model.createResource("http://www.example.org/instance#REQ-001");
+        var req = model.createResource(INST_NS + "REQ-001");
 
-        assertTrue(req.hasProperty(model.createProperty("http://www.example.org/sda#boundService")),
+        assertTrue(req.hasProperty(model.createProperty(SDA_NS + "boundService")),
             "Should have boundService");
-        assertTrue(req.hasProperty(model.createProperty("http://www.example.org/sda#boundBinding")),
+        assertTrue(req.hasProperty(model.createProperty(SDA_NS + "boundBinding")),
             "Should have boundBinding");
-        assertTrue(req.hasProperty(model.createProperty("http://www.example.org/sda#boundConnector")),
+        assertTrue(req.hasProperty(model.createProperty(SDA_NS + "boundConnector")),
             "Should have boundConnector");
-        assertTrue(req.hasProperty(model.createProperty("http://www.example.org/sda#boundContext")),
+        assertTrue(req.hasProperty(model.createProperty(SDA_NS + "boundContext")),
             "Should have boundContext");
-        assertTrue(req.hasProperty(model.createProperty("http://www.example.org/sda#matchedCandidate")),
+        assertTrue(req.hasProperty(model.createProperty(SDA_NS + "matchedCandidate")),
             "Should have matchedCandidate");
     }
 
@@ -97,16 +103,16 @@ class LifecycleIntegrationTest {
         reasoner.matchByRequirementId("REQ-001");
 
         var model = loader.getModel();
-        var req = model.createResource("http://www.example.org/instance#REQ-001");
+        var req = model.createResource(INST_NS + "REQ-001");
 
         var boundService = req.getPropertyResourceValue(
-            model.createProperty("http://www.example.org/sda#boundService"));
+            model.createProperty(SDA_NS + "boundService"));
         assertNotNull(boundService, "boundService should not be null");
         assertEquals("SVC-FlowmeterDiagnostics", boundService.getLocalName(),
             "boundService should point to SVC-FlowmeterDiagnostics");
 
         var boundContext = req.getPropertyResourceValue(
-            model.createProperty("http://www.example.org/sda#boundContext"));
+            model.createProperty(SDA_NS + "boundContext"));
         assertNotNull(boundContext, "boundContext should not be null");
         assertEquals("DEPLOY-OnPrem", boundContext.getLocalName(),
             "boundContext should point to DEPLOY-OnPrem");
@@ -127,6 +133,6 @@ class LifecycleIntegrationTest {
     void shouldMatchWhenConceptIsProvided() {
         ServiceMatchResult result = reasoner.matchByRequirementId("REQ-001");
         assertTrue(result.matched(),
-            "REQ-001 should match because DC-Flowmeter-FT101 providesConcept :PA-DIM-FlowConcept which SK-FlowmeterDiagnostics requiresConcept");
+            "REQ-001 should match because DC-Flowmeter-FT101 maps a ProcessVariable described by :PA-DIM-FlowConcept which SK-FlowmeterDiagnostics requiresConcept");
     }
 }

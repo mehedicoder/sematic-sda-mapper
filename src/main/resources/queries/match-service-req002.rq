@@ -1,7 +1,6 @@
 PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX css:  <http://www.example.org/css#>
-PREFIX sda:  <http://www.example.org/sda#>
+PREFIX sda:  <https://example.org/ontology/sda#>
 PREFIX :     <http://www.example.org/instance#>
 
 SELECT ?requirement ?capability ?skill ?service ?binding ?protocol ?accessMode ?recall ?latency ?safetyIntegrityLevel ?determinismClass ?networkZone ?connector ?connectorLabel ?deploy ?deployLabel
@@ -18,11 +17,12 @@ WHERE {
     ?skill        sda:isImplementedBy  ?service .
 
     # R2b: Protocol match (PROFINET for critical process control)
-    ?service      sda:usesBinding     ?binding .
+    ?service      sda:hasBinding      ?binding .
 
     ?binding      sda:protocol        ?protocol ;
-                  sda:accessMode      ?accessMode ;
-                  sda:usesConnector   ?connector .
+                  sda:accessMode      ?accessMode .
+
+    ?service      sda:hasConnector    ?connector .
 
     ?connector    rdfs:label          ?connectorLabel .
 
@@ -55,9 +55,9 @@ WHERE {
     FILTER NOT EXISTS {
         ?skill sda:requiresConcept ?requiredConcept .
         FILTER NOT EXISTS {
-            ?service sda:usesBinding ?cb .
-            ?cb sda:usesConnector ?dc .
-            ?dc sda:providesConcept ?requiredConcept .
+            ?service sda:hasConnector ?dc .
+            ?dc sda:mapsVariable ?pv .
+            ?pv sda:describedBy ?requiredConcept .
         }
     }
 }

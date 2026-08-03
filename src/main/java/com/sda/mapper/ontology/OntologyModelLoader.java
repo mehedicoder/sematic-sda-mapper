@@ -24,7 +24,7 @@ public class OntologyModelLoader {
 
     private static final Logger log = LoggerFactory.getLogger(OntologyModelLoader.class);
 
-    private List<String> filePaths = List.of("ontology/css-sda-small.ttl");
+    private List<String> filePaths = List.of("ontology/css-sda-unified.ttl");
     private Model model;
     private boolean loaded = false;
 

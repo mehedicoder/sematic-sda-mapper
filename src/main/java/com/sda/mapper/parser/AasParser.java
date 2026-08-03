@@ -28,8 +28,7 @@ public class AasParser implements Parser {
     private static final Logger log = LoggerFactory.getLogger(AasParser.class);
 
     private static final String INST_NS = "http://www.example.org/instance#";
-    private static final String SDA_NS = "http://www.example.org/sda#";
-    private static final String CSS_NS = "http://www.example.org/css#";
+    private static final String SDA_NS = "https://example.org/ontology/sda#";
     private static final String RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
     private static final String RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label";
 
@@ -61,12 +60,11 @@ public class AasParser implements Parser {
 
             Model model = ModelFactory.createDefaultModel();
             model.setNsPrefix("sda", SDA_NS);
-            model.setNsPrefix("css", CSS_NS);
             model.setNsPrefix("inst", INST_NS);
 
             Property rdfType = model.createProperty(RDF_TYPE);
             Property rdfsLabel = model.createProperty(RDFS_LABEL);
-            Resource skillClass = model.createResource(CSS_NS + "Skill");
+            Resource skillClass = model.createResource(SDA_NS + "Skill");
             Resource bindingClass = model.createResource(SDA_NS + "CommunicationBinding");
             Resource connectorClass = model.createResource(SDA_NS + "DataConnector");
             Property protocol = model.createProperty(SDA_NS + "protocol");
@@ -77,8 +75,8 @@ public class AasParser implements Parser {
             Property nominalRangeMin = model.createProperty(SDA_NS + "nominalRange_min");
             Property nominalRangeMax = model.createProperty(SDA_NS + "nominalRange_max");
             Property isImplementedBy = model.createProperty(SDA_NS + "isImplementedBy");
-            Property usesBinding = model.createProperty(SDA_NS + "usesBinding");
-            Property usesConnector = model.createProperty(SDA_NS + "usesConnector");
+            Property hasBinding = model.createProperty(SDA_NS + "hasBinding");
+            Property hasConnector = model.createProperty(SDA_NS + "hasConnector");
             Property image = model.createProperty(SDA_NS + "image");
 
             List<String> details = new ArrayList<>();
@@ -126,17 +124,22 @@ public class AasParser implements Parser {
                 }
             }
 
-            // Wire binding → first connector via usesConnector
+            // Wire service → binding and service → connector via hasBinding/hasConnector
             Resource firstBinding = model.getResource(INST_NS + "CB-AAS-0");
             Resource firstConnector = model.getResource(INST_NS + "DC-AAS-0");
-            if (firstBinding != null && firstConnector != null
-                && model.containsResource(firstBinding) && model.containsResource(firstConnector)) {
-                firstBinding.addProperty(usesConnector, firstConnector);
-                tripleCount++;
+            Resource serviceRes = model.getResource(INST_NS + "SVC-AAS-0");
+            if (serviceRes != null && model.containsResource(serviceRes)) {
+                if (firstBinding != null && model.containsResource(firstBinding)) {
+                    serviceRes.addProperty(hasBinding, firstBinding);
+                    tripleCount++;
+                }
+                if (firstConnector != null && model.containsResource(firstConnector)) {
+                    serviceRes.addProperty(hasConnector, firstConnector);
+                    tripleCount++;
+                }
             }
 
             // Wire skill → service via isImplementedBy
-            Resource serviceRes = model.getResource(INST_NS + "SVC-AAS-0");
             if (serviceRes != null && model.containsResource(serviceRes)) {
                 for (int i = 0; i < 10; i++) {
                     Resource skillRes = model.getResource(INST_NS + "SK-AAS-" + i);

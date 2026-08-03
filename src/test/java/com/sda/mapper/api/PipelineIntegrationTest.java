@@ -47,7 +47,9 @@ class PipelineIntegrationTest {
         MockMultipartFile file = new MockMultipartFile(
             "file", "req002-mtp-fermentation-skid.xml", "application/xml", content);
 
-        MvcResult result = mockMvc.perform(multipart("/api/v1/pipeline/execute").file(file))
+        MvcResult result = mockMvc.perform(multipart("/api/v1/pipeline/execute")
+                .file(file)
+                .param("requirementIds", "REQ-002"))
             .andExpect(status().isOk())
             .andExpect(content().contentType("application/json"))
             .andReturn();
@@ -81,6 +83,27 @@ class PipelineIntegrationTest {
 
         assertEquals("OPC-UA-Datasheet", response.fileType());
         assertTrue(response.parsedTripleCount() > 0);
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/pipeline/execute without requirementIds should not auto-match requirements")
+    void shouldNotAutoMatchWithoutRequirementIds() throws Exception {
+        byte[] content = getClass().getClassLoader()
+            .getResourceAsStream("examples/req002-mtp-fermentation-skid.xml")
+            .readAllBytes();
+
+        MockMultipartFile file = new MockMultipartFile(
+            "file", "req002-mtp-fermentation-skid.xml", "application/xml", content);
+
+        MvcResult result = mockMvc.perform(multipart("/api/v1/pipeline/execute").file(file))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        PipelineResponse response = objectMapper.readValue(
+            result.getResponse().getContentAsString(), PipelineResponse.class);
+
+        assertTrue(response.matches().isEmpty(),
+            "No requirements should be auto-matched when requirementIds is omitted");
     }
 
     @Test
@@ -122,7 +145,9 @@ class PipelineIntegrationTest {
         MockMultipartFile file = new MockMultipartFile(
             "file", "req002-mtp-fermentation-skid.xml", "application/xml", content);
 
-        MvcResult result = mockMvc.perform(multipart("/api/v1/pipeline/execute").file(file))
+        MvcResult result = mockMvc.perform(multipart("/api/v1/pipeline/execute")
+                .file(file)
+                .param("requirementIds", "REQ-002"))
             .andExpect(status().isOk())
             .andReturn();
 
@@ -148,7 +173,7 @@ class PipelineIntegrationTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/pipeline/execute should return all 3 requirement matches")
+    @DisplayName("POST /api/v1/pipeline/execute should return all 3 explicitly requested requirement matches")
     void shouldReturnAllThreeRequirementMatches() throws Exception {
         byte[] content = getClass().getClassLoader()
             .getResourceAsStream("examples/req002-mtp-fermentation-skid.xml")
@@ -157,7 +182,9 @@ class PipelineIntegrationTest {
         MockMultipartFile file = new MockMultipartFile(
             "file", "req002-mtp-fermentation-skid.xml", "application/xml", content);
 
-        MvcResult result = mockMvc.perform(multipart("/api/v1/pipeline/execute").file(file))
+        MvcResult result = mockMvc.perform(multipart("/api/v1/pipeline/execute")
+                .file(file)
+                .param("requirementIds", "REQ-001,REQ-002,REQ-003"))
             .andExpect(status().isOk())
             .andReturn();
 

@@ -2,6 +2,7 @@ package com.sda.mapper.ui;
 
 import com.sda.mapper.ontology.OntologyModelLoader;
 import com.sda.mapper.reasoning.OntologyInferenceService;
+import com.sda.mapper.support.DemoAboxBuilder;
 import com.sda.mapper.ui.component.DashboardCard;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
@@ -23,8 +24,9 @@ class DashboardViewTest {
     @BeforeAll
     static void setUp() {
         loader = new OntologyModelLoader();
-        loader.setFilePath("ontology/css-sda-small.ttl");
+        loader.setFilePath("ontology/css-sda-unified.ttl");
         loader.loadOntology();
+        DemoAboxBuilder.apply(loader.getModel());
         inferenceService = new OntologyInferenceService(loader);
         inferenceService.runInference();
     }

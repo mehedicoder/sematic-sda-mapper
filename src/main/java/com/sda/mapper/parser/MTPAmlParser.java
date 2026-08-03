@@ -30,8 +30,7 @@ public class MTPAmlParser implements Parser {
     private static final Logger log = LoggerFactory.getLogger(MTPAmlParser.class);
 
     private static final String INST_NS = "http://www.example.org/instance#";
-    private static final String SDA_NS = "http://www.example.org/sda#";
-    private static final String CSS_NS = "http://www.example.org/css#";
+    private static final String SDA_NS = "https://example.org/ontology/sda#";
     private static final String RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
     private static final String RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label";
 
@@ -60,12 +59,11 @@ public class MTPAmlParser implements Parser {
 
             Model model = ModelFactory.createDefaultModel();
             model.setNsPrefix("sda", SDA_NS);
-            model.setNsPrefix("css", CSS_NS);
             model.setNsPrefix("inst", INST_NS);
 
             Property rdfType = model.createProperty(RDF_TYPE);
             Property rdfsLabel = model.createProperty(RDFS_LABEL);
-            Resource skillClass = model.createResource(CSS_NS + "Skill");
+            Resource skillClass = model.createResource(SDA_NS + "Skill");
             Resource bindingClass = model.createResource(SDA_NS + "CommunicationBinding");
             Resource connectorClass = model.createResource(SDA_NS + "DataConnector");
             Property engineeringUnit = model.createProperty(SDA_NS + "engineeringUnit");
@@ -75,8 +73,8 @@ public class MTPAmlParser implements Parser {
             Property accessMode = model.createProperty(SDA_NS + "accessMode");
             Property securityMode = model.createProperty(SDA_NS + "securityMode");
             Property isImplementedBy = model.createProperty(SDA_NS + "isImplementedBy");
-            Property usesBinding = model.createProperty(SDA_NS + "usesBinding");
-            Property usesConnector = model.createProperty(SDA_NS + "usesConnector");
+            Property hasBinding = model.createProperty(SDA_NS + "hasBinding");
+            Property hasConnector = model.createProperty(SDA_NS + "hasConnector");
             Property informationModel = model.createProperty(SDA_NS + "informationModel");
 
             List<String> details = new ArrayList<>();
@@ -136,7 +134,7 @@ public class MTPAmlParser implements Parser {
             }
 
             // Parse <Communication><OpcUaServer> into sda:CommunicationBinding triples
-            List<Resource> bindingResources = new ArrayList<>();
+            List<Resource> serviceResources = new ArrayList<>();
             NodeList opcUaServerNodes = doc.getElementsByTagName("OpcUaServer");
             for (int i = 0; i < opcUaServerNodes.getLength(); i++) {
                 Element opcUaServer = (Element) opcUaServerNodes.item(i);
@@ -160,13 +158,13 @@ public class MTPAmlParser implements Parser {
                 Resource serviceRes = model.createResource(INST_NS + serviceLocalName);
                 serviceRes.addProperty(rdfType, model.createResource(SDA_NS + "Service"));
                 serviceRes.addProperty(rdfsLabel, "MTP Service " + i);
-                serviceRes.addProperty(usesBinding, bindingRes);
+                serviceRes.addProperty(hasBinding, bindingRes);
                 if (i < skillResources.size()) {
                     skillResources.get(i).addProperty(isImplementedBy, serviceRes);
                 }
 
-                tripleCount += 5; // rdf:type + label + protocol + accessMode + usesBinding + isImplementedBy
-                bindingResources.add(bindingRes);
+                tripleCount += 5; // rdf:type + label + protocol + accessMode + hasBinding + isImplementedBy
+                serviceResources.add(serviceRes);
 
                 details.add("CommunicationBinding: " + INST_NS + bindingLocalName
                     + " (endpoint=" + endpoint
@@ -186,9 +184,9 @@ public class MTPAmlParser implements Parser {
                 connectorRes.addProperty(rdfsLabel, "MTP connector " + i);
                 connectorRes.addProperty(informationModel, "OPC-UA");
 
-                // Wire binding → connector via usesConnector
-                if (i < bindingResources.size()) {
-                    bindingResources.get(i).addProperty(usesConnector, connectorRes);
+                // Wire service → connector via hasConnector
+                if (i < serviceResources.size()) {
+                    serviceResources.get(i).addProperty(hasConnector, connectorRes);
                 }
 
                 tripleCount += 3; // rdf:type + label + informationModel

@@ -1,0 +1,518 @@
+@prefix sda:  <https://example.org/ontology/sda#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+#################################################################
+# Ontology declaration
+#################################################################
+
+sda: a owl:Ontology ;
+    rdfs:label "SDA Ontology"@en ;
+    rdfs:comment "Unified ontology reconstructed from the SDAOntology diagram. Layers: L1 Application & Requirements, L2 Capability/Skill/Service, L2b Platform Infrastructure (Margo-aligned), L3 Information & Connectivity, L4 Physical Plant (minimal)."@en ;
+    owl:versionInfo "1.0" .
+
+#################################################################
+# Named individuals for the four/five ontology layers (SKOS scheme
+# used to group classes, mirroring the graphviz clusters)
+#################################################################
+
+sda:LayerL1  a skos:Concept ; skos:prefLabel "L1 — Application & Requirements"@en .
+sda:LayerL2  a skos:Concept ; skos:prefLabel "L2 — Capability, Skill, Service"@en .
+sda:LayerL2b a skos:Concept ; skos:prefLabel "L2b — Platform Infrastructure (Margo-Aligned)"@en .
+sda:LayerL3  a skos:Concept ; skos:prefLabel "L3 — Information & Connectivity"@en .
+sda:LayerL4  a skos:Concept ; skos:prefLabel "L4 — Physical Plant (Minimal)"@en .
+
+#################################################################
+# Classes
+#################################################################
+
+### L1 — Application & Requirements ###
+
+sda:Stakeholder a owl:Class ;
+    rdfs:label "Stakeholder"@en ;
+    sda:code "1.1" ;
+    sda:layer sda:LayerL1 .
+
+sda:UseCase a owl:Class ;
+    rdfs:label "UseCase"@en ;
+    sda:code "1.2" ;
+    sda:layer sda:LayerL1 .
+
+sda:Requirement a owl:Class ;
+    rdfs:label "Requirement"@en ;
+    sda:code "1.3" ;
+    sda:layer sda:LayerL1 .
+
+sda:RequirementParameter a owl:Class ;
+    rdfs:label "RequirementParameter"@en ;
+    sda:code "1.4" ;
+    sda:layer sda:LayerL1 .
+
+sda:RequirementConstraint a owl:Class ;
+    rdfs:label "RequirementConstraint"@en ;
+    sda:code "1.5" ;
+    sda:layer sda:LayerL1 .
+
+sda:VerificationCriterion a owl:Class ;
+    rdfs:label "VerificationCriterion"@en ;
+    sda:code "1.6" ;
+    sda:layer sda:LayerL1 .
+
+### L2 — Capability, Skill, Service ###
+
+sda:Capability a owl:Class ;
+    rdfs:label "Capability"@en ;
+    sda:code "2.1" ;
+    sda:layer sda:LayerL2 .
+
+sda:Skill a owl:Class ;
+    rdfs:label "Skill"@en ;
+    sda:code "2.2" ;
+    sda:layer sda:LayerL2 .
+
+sda:SkillParameter a owl:Class ;
+    rdfs:label "SkillParameter"@en ;
+    sda:code "2.3" ;
+    sda:layer sda:LayerL2 .
+
+sda:Service a owl:Class ;
+    rdfs:label "Service"@en ;
+    sda:code "2.4" ;
+    sda:layer sda:LayerL2 .
+
+sda:ServiceInstance a owl:Class ;
+    rdfs:label "ServiceInstance"@en ;
+    sda:code "2.5" ;
+    sda:layer sda:LayerL2 .
+
+### L2b — Platform Infrastructure (Margo-Aligned) ###
+
+sda:DeploymentContext a owl:Class ;
+    rdfs:label "DeploymentContext"@en ;
+    sda:code "2b.1" ;
+    sda:layer sda:LayerL2b .
+
+sda:ClusterNode a owl:Class ;
+    rdfs:label "ClusterNode"@en ;
+    sda:code "2b.2" ;
+    sda:layer sda:LayerL2b .
+
+sda:DeploymentPolicy a owl:Class ;
+    rdfs:label "DeploymentPolicy"@en ;
+    sda:code "2b.3" ;
+    sda:layer sda:LayerL2b .
+
+sda:NetworkZone a owl:Class ;
+    rdfs:label "NetworkZone"@en ;
+    sda:code "2b.4" ;
+    sda:layer sda:LayerL2b .
+
+sda:SafetyClass a owl:Class ;
+    rdfs:label "SafetyClass"@en ;
+    sda:code "2b.5" ;
+    sda:layer sda:LayerL2b .
+
+### L3 — Information & Connectivity ###
+
+sda:InformationModel a owl:Class ;
+    rdfs:label "InformationModel"@en ;
+    sda:code "3.1" ;
+    sda:layer sda:LayerL3 .
+
+sda:SemanticConcept a owl:Class ;
+    rdfs:label "SemanticConcept"@en ;
+    sda:code "3.2" ;
+    sda:layer sda:LayerL3 .
+
+sda:CommunicationBinding a owl:Class ;
+    rdfs:label "CommunicationBinding"@en ;
+    sda:code "3.3" ;
+    sda:layer sda:LayerL3 .
+
+sda:DataConnector a owl:Class ;
+    rdfs:label "DataConnector"@en ;
+    sda:code "3.4" ;
+    sda:layer sda:LayerL3 .
+
+### L4 — Physical Plant (Minimal) ###
+
+sda:Asset a owl:Class ;
+    rdfs:label "Asset"@en ;
+    sda:code "4.1" ;
+    sda:layer sda:LayerL4 .
+
+sda:Sensor a owl:Class ;
+    rdfs:label "Sensor"@en ;
+    sda:code "4.2" ;
+    sda:layer sda:LayerL4 .
+
+sda:ProcessVariable a owl:Class ;
+    rdfs:label "ProcessVariable"@en ;
+    sda:code "4.3" ;
+    sda:layer sda:LayerL4 .
+
+sda:Observation a owl:Class ;
+    rdfs:label "Observation"@en ;
+    sda:code "4.4" ;
+    sda:layer sda:LayerL4 .
+
+#################################################################
+# Annotation property used for the diagram legend distinction
+# (solid blue = "R1-R3 / R-Deploy core matching chain",
+#  dashed grey = "Supporting / traceability relation")
+#################################################################
+
+sda:relationKind a owl:AnnotationProperty ;
+    rdfs:label "relation kind"@en ;
+    rdfs:comment "Legend classification of the edge: 'core' (solid blue, R1–R3 / R-Deploy core matching chain) or 'supporting' (dashed grey, supporting/traceability relation)."@en .
+
+sda:code a owl:AnnotationProperty ;
+    rdfs:label "diagram code"@en ;
+    rdfs:comment "Numbering shown on the node in the source diagram, e.g. 1.1, 2b.3."@en .
+
+sda:layer a owl:AnnotationProperty ;
+    rdfs:label "ontology layer"@en .
+
+#################################################################
+# Object properties (relations)
+#################################################################
+
+sda:definesUseCase a owl:ObjectProperty ;
+    rdfs:label "definesUseCase"@en ;
+    rdfs:domain sda:Stakeholder ; rdfs:range sda:UseCase ;
+    sda:relationKind "supporting" .
+
+sda:ownsRequirement a owl:ObjectProperty ;
+    rdfs:label "ownsRequirement"@en ;
+    rdfs:domain sda:Stakeholder ; rdfs:range sda:Requirement ;
+    sda:relationKind "supporting" .
+
+sda:validates a owl:ObjectProperty ;
+    rdfs:label "validates"@en ;
+    rdfs:domain sda:Stakeholder ; rdfs:range sda:VerificationCriterion ;
+    sda:relationKind "supporting" .
+
+sda:initiatedBy a owl:ObjectProperty ;
+    rdfs:label "initiatedBy"@en ;
+    rdfs:domain sda:UseCase ; rdfs:range sda:Stakeholder ;
+    owl:inverseOf sda:definesUseCase ;
+    sda:relationKind "supporting" .
+
+sda:hasRequirement a owl:ObjectProperty ;
+    rdfs:label "hasRequirement"@en ;
+    rdfs:domain sda:UseCase ; rdfs:range sda:Requirement ;
+    sda:relationKind "supporting" .
+
+sda:targetsAsset a owl:ObjectProperty ;
+    rdfs:label "targetsAsset"@en ;
+    rdfs:domain sda:UseCase ; rdfs:range sda:Asset ;
+    sda:relationKind "supporting" .
+
+sda:determines a owl:ObjectProperty ;
+    rdfs:label "determines"@en ;
+    rdfs:domain sda:UseCase ; rdfs:range sda:Requirement ;
+    sda:relationKind "supporting" .
+
+sda:hasParameter a owl:ObjectProperty ;
+    rdfs:label "hasParameter"@en ;
+    rdfs:comment "Used both as Requirement→RequirementParameter and Skill→SkillParameter."@en ;
+    rdfs:domain [ a owl:Class ; owl:unionOf ( sda:Requirement sda:Skill ) ] ;
+    rdfs:range  [ a owl:Class ; owl:unionOf ( sda:RequirementParameter sda:SkillParameter ) ] ;
+    sda:relationKind "core" .
+
+sda:hasConstraint a owl:ObjectProperty ;
+    rdfs:label "hasConstraint"@en ;
+    rdfs:domain sda:Requirement ; rdfs:range sda:RequirementConstraint ;
+    sda:relationKind "core" .
+
+sda:verifiedBy a owl:ObjectProperty ;
+    rdfs:label "verifiedBy"@en ;
+    rdfs:domain sda:Requirement ; rdfs:range sda:VerificationCriterion ;
+    sda:relationKind "core" .
+
+sda:mapsToCapability a owl:ObjectProperty ;
+    rdfs:label "mapsToCapability"@en ;
+    rdfs:domain sda:Requirement ; rdfs:range sda:Capability ;
+    sda:relationKind "core" .
+
+sda:mapsToInformationModel a owl:ObjectProperty ;
+    rdfs:label "mapsToInformationModel"@en ;
+    rdfs:comment "Used both as Requirement→InformationModel and DataConnector→InformationModel."@en ;
+    rdfs:domain [ a owl:Class ; owl:unionOf ( sda:Requirement sda:DataConnector ) ] ;
+    rdfs:range sda:InformationModel ;
+    sda:relationKind "supporting" .
+
+sda:mapsToDeploymentContext a owl:ObjectProperty ;
+    rdfs:label "mapsToDeploymentContext"@en ;
+    rdfs:domain sda:Requirement ; rdfs:range sda:DeploymentContext ;
+    sda:relationKind "supporting" .
+
+sda:belongsToRequirement a owl:ObjectProperty ;
+    rdfs:label "belongsToRequirement"@en ;
+    rdfs:domain sda:RequirementParameter ; rdfs:range sda:Requirement ;
+    owl:inverseOf sda:hasParameter ;
+    sda:relationKind "supporting" .
+
+sda:constrains a owl:ObjectProperty ;
+    rdfs:label "constrains"@en ;
+    rdfs:domain sda:RequirementConstraint ; rdfs:range sda:Requirement ;
+    owl:inverseOf sda:hasConstraint ;
+    sda:relationKind "supporting" .
+
+sda:verifies a owl:ObjectProperty ;
+    rdfs:label "verifies"@en ;
+    rdfs:domain sda:VerificationCriterion ; rdfs:range sda:Requirement ;
+    owl:inverseOf sda:verifiedBy ;
+    sda:relationKind "supporting" .
+
+sda:validatedBy a owl:ObjectProperty ;
+    rdfs:label "validatedBy"@en ;
+    rdfs:domain sda:VerificationCriterion ; rdfs:range sda:Stakeholder ;
+    owl:inverseOf sda:validates ;
+    sda:relationKind "supporting" .
+
+sda:operatesOn a owl:ObjectProperty ;
+    rdfs:label "operatesOn"@en ;
+    rdfs:domain sda:Capability ; rdfs:range sda:Asset ;
+    sda:relationKind "supporting" .
+
+sda:realisedBy a owl:ObjectProperty ;
+    rdfs:label "realisedBy"@en ;
+    rdfs:domain sda:Capability ; rdfs:range sda:Skill ;
+    sda:relationKind "core" .
+
+sda:exposedAs a owl:ObjectProperty ;
+    rdfs:label "exposedAs"@en ;
+    rdfs:domain sda:Capability ; rdfs:range sda:Service ;
+    sda:relationKind "core" .
+
+sda:mapsTo a owl:ObjectProperty ;
+    rdfs:label "mapsTo"@en ;
+    rdfs:domain sda:Capability ; rdfs:range sda:Requirement ;
+    sda:relationKind "core" .
+
+sda:realises a owl:ObjectProperty ;
+    rdfs:label "realises"@en ;
+    rdfs:domain sda:Skill ; rdfs:range sda:Capability ;
+    owl:inverseOf sda:realisedBy ;
+    sda:relationKind "supporting" .
+
+sda:isImplementedBy a owl:ObjectProperty ;
+    rdfs:label "isImplementedBy"@en ;
+    rdfs:domain sda:Skill ; rdfs:range sda:Service ;
+    sda:relationKind "core" .
+
+sda:requiresConcept a owl:ObjectProperty ;
+    rdfs:label "requiresConcept"@en ;
+    rdfs:domain sda:Skill ; rdfs:range sda:SemanticConcept ;
+    sda:relationKind "core" .
+
+sda:uses a owl:ObjectProperty ;
+    rdfs:label "uses"@en ;
+    rdfs:comment "Used both as Skill→CommunicationBinding and Skill→DataConnector."@en ;
+    rdfs:domain sda:Skill ;
+    rdfs:range [ a owl:Class ; owl:unionOf ( sda:CommunicationBinding sda:DataConnector ) ] ;
+    sda:relationKind "core" .
+
+sda:parameterisesSkill a owl:ObjectProperty ;
+    rdfs:label "parameterisesSkill"@en ;
+    rdfs:domain sda:SkillParameter ; rdfs:range sda:Skill ;
+    owl:inverseOf sda:hasParameter ;
+    sda:relationKind "supporting" .
+
+sda:implementsSkill a owl:ObjectProperty ;
+    rdfs:label "implementsSkill"@en ;
+    rdfs:domain sda:Service ; rdfs:range sda:Skill ;
+    owl:inverseOf sda:isImplementedBy ;
+    sda:relationKind "supporting" .
+
+sda:hasBinding a owl:ObjectProperty ;
+    rdfs:label "hasBinding"@en ;
+    rdfs:domain sda:Service ; rdfs:range sda:CommunicationBinding ;
+    sda:relationKind "core" .
+
+sda:hasConnector a owl:ObjectProperty ;
+    rdfs:label "hasConnector"@en ;
+    rdfs:domain sda:Service ; rdfs:range sda:DataConnector ;
+    sda:relationKind "core" .
+
+sda:isDeployedBy a owl:ObjectProperty ;
+    rdfs:label "isDeployedBy"@en ;
+    rdfs:domain sda:Service ; rdfs:range sda:DeploymentContext ;
+    sda:relationKind "core" .
+
+sda:satisfies a owl:ObjectProperty ;
+    rdfs:label "satisfies"@en ;
+    rdfs:domain sda:Service ; rdfs:range sda:Requirement ;
+    sda:relationKind "core" .
+
+sda:instantiatedAs a owl:ObjectProperty ;
+    rdfs:label "instantiatedAs"@en ;
+    rdfs:domain sda:Service ; rdfs:range sda:ServiceInstance ;
+    sda:relationKind "core" .
+
+sda:instantiates a owl:ObjectProperty ;
+    rdfs:label "instantiates"@en ;
+    rdfs:domain sda:ServiceInstance ; rdfs:range sda:Service ;
+    owl:inverseOf sda:instantiatedAs ;
+    sda:relationKind "supporting" .
+
+sda:resolves a owl:ObjectProperty ;
+    rdfs:label "resolves"@en ;
+    rdfs:domain sda:ServiceInstance ; rdfs:range sda:Capability ;
+    sda:relationKind "supporting" .
+
+sda:deployedOn a owl:ObjectProperty ;
+    rdfs:label "deployedOn"@en ;
+    rdfs:domain sda:ServiceInstance ; rdfs:range sda:ClusterNode ;
+    sda:relationKind "supporting" .
+
+sda:hostsService a owl:ObjectProperty ;
+    rdfs:label "hostsService"@en ;
+    rdfs:domain sda:DeploymentContext ; rdfs:range sda:ServiceInstance ;
+    sda:relationKind "supporting" .
+
+sda:containsNode a owl:ObjectProperty ;
+    rdfs:label "containsNode"@en ;
+    rdfs:domain sda:DeploymentContext ; rdfs:range sda:ClusterNode ;
+    sda:relationKind "supporting" .
+
+sda:hasPolicy a owl:ObjectProperty ;
+    rdfs:label "hasPolicy"@en ;
+    rdfs:domain sda:DeploymentContext ; rdfs:range sda:DeploymentPolicy ;
+    sda:relationKind "supporting" .
+
+sda:locatedInZone a owl:ObjectProperty ;
+    rdfs:label "locatedInZone"@en ;
+    rdfs:domain sda:DeploymentContext ; rdfs:range sda:NetworkZone ;
+    sda:relationKind "supporting" .
+
+sda:constrainedBy a owl:ObjectProperty ;
+    rdfs:label "constrainedBy"@en ;
+    rdfs:comment "Used both as DeploymentContext→SafetyClass and DeploymentPolicy→SafetyClass."@en ;
+    rdfs:domain [ a owl:Class ; owl:unionOf ( sda:DeploymentContext sda:DeploymentPolicy ) ] ;
+    rdfs:range sda:SafetyClass ;
+    sda:relationKind "supporting" .
+
+sda:partOf a owl:ObjectProperty ;
+    rdfs:label "partOf"@en ;
+    rdfs:domain sda:ClusterNode ; rdfs:range sda:DeploymentContext ;
+    owl:inverseOf sda:containsNode ;
+    sda:relationKind "supporting" .
+
+sda:hosts a owl:ObjectProperty ;
+    rdfs:label "hosts"@en ;
+    rdfs:domain sda:ClusterNode ; rdfs:range sda:ServiceInstance ;
+    owl:inverseOf sda:deployedOn ;
+    sda:relationKind "supporting" .
+
+sda:locatedIn a owl:ObjectProperty ;
+    rdfs:label "locatedIn"@en ;
+    rdfs:domain sda:ClusterNode ; rdfs:range sda:NetworkZone ;
+    sda:relationKind "supporting" .
+
+sda:appliesTo a owl:ObjectProperty ;
+    rdfs:label "appliesTo"@en ;
+    rdfs:domain sda:DeploymentPolicy ; rdfs:range sda:Service ;
+    sda:relationKind "supporting" .
+
+sda:scheduledOn a owl:ObjectProperty ;
+    rdfs:label "scheduledOn"@en ;
+    rdfs:domain sda:DeploymentPolicy ; rdfs:range sda:ClusterNode ;
+    sda:relationKind "supporting" .
+
+sda:contains a owl:ObjectProperty ;
+    rdfs:label "contains"@en ;
+    rdfs:domain sda:NetworkZone ; rdfs:range sda:ClusterNode ;
+    owl:inverseOf sda:locatedIn ;
+    sda:relationKind "supporting" .
+
+sda:hostedIn a owl:ObjectProperty ;
+    rdfs:label "hostedIn"@en ;
+    rdfs:domain sda:NetworkZone ; rdfs:range sda:DeploymentContext ;
+    owl:inverseOf sda:locatedInZone ;
+    sda:relationKind "supporting" .
+
+sda:constrainsDeployment a owl:ObjectProperty ;
+    rdfs:label "constrainsDeployment"@en ;
+    rdfs:domain sda:SafetyClass ; rdfs:range sda:DeploymentContext ;
+    owl:inverseOf sda:constrainedBy ;
+    sda:relationKind "supporting" .
+
+sda:mappedTo a owl:ObjectProperty ;
+    rdfs:label "mappedTo"@en ;
+    rdfs:domain sda:InformationModel ; rdfs:range sda:SemanticConcept ;
+    sda:relationKind "supporting" .
+
+sda:usedBy a owl:ObjectProperty ;
+    rdfs:label "usedBy"@en ;
+    rdfs:domain sda:InformationModel ; rdfs:range sda:Service ;
+    sda:relationKind "supporting" .
+
+sda:describesConcept a owl:ObjectProperty ;
+    rdfs:label "describesConcept"@en ;
+    rdfs:domain sda:SemanticConcept ; rdfs:range sda:ProcessVariable ;
+    sda:relationKind "supporting" .
+
+sda:bindsService a owl:ObjectProperty ;
+    rdfs:label "bindsService"@en ;
+    rdfs:domain sda:CommunicationBinding ; rdfs:range sda:Service ;
+    sda:relationKind "supporting" .
+
+sda:usesBinding a owl:ObjectProperty ;
+    rdfs:label "usesBinding"@en ;
+    rdfs:domain sda:DataConnector ; rdfs:range sda:CommunicationBinding ;
+    sda:relationKind "supporting" .
+
+sda:mapsVariable a owl:ObjectProperty ;
+    rdfs:label "mapsVariable"@en ;
+    rdfs:domain sda:DataConnector ; rdfs:range sda:ProcessVariable ;
+    sda:relationKind "supporting" .
+
+sda:hasSensor a owl:ObjectProperty ;
+    rdfs:label "hasSensor"@en ;
+    rdfs:domain sda:Asset ; rdfs:range sda:Sensor ;
+    sda:relationKind "supporting" .
+
+sda:hasContext a owl:ObjectProperty ;
+    rdfs:label "hasContext"@en ;
+    rdfs:domain sda:Asset ; rdfs:range sda:DeploymentContext ;
+    sda:relationKind "supporting" .
+
+sda:measures a owl:ObjectProperty ;
+    rdfs:label "measures"@en ;
+    rdfs:domain sda:Sensor ; rdfs:range sda:ProcessVariable ;
+    sda:relationKind "supporting" .
+
+sda:locatedOn a owl:ObjectProperty ;
+    rdfs:label "locatedOn"@en ;
+    rdfs:domain sda:Sensor ; rdfs:range sda:Asset ;
+    owl:inverseOf sda:hasSensor ;
+    sda:relationKind "supporting" .
+
+sda:describedBy a owl:ObjectProperty ;
+    rdfs:label "describedBy"@en ;
+    rdfs:domain sda:ProcessVariable ; rdfs:range sda:SemanticConcept ;
+    owl:inverseOf sda:describesConcept ;
+    sda:relationKind "supporting" .
+
+sda:measuredBy a owl:ObjectProperty ;
+    rdfs:label "measuredBy"@en ;
+    rdfs:domain sda:ProcessVariable ; rdfs:range sda:Sensor ;
+    owl:inverseOf sda:measures ;
+    sda:relationKind "supporting" .
+
+sda:observes a owl:ObjectProperty ;
+    rdfs:label "observes"@en ;
+    rdfs:domain sda:Observation ; rdfs:range sda:ProcessVariable ;
+    sda:relationKind "supporting" .
+
+sda:producedBy a owl:ObjectProperty ;
+    rdfs:label "producedBy"@en ;
+    rdfs:domain sda:Observation ; rdfs:range sda:Sensor ;
+    sda:relationKind "supporting" .
+
+### END OF FILE ###

@@ -24,8 +24,7 @@ import org.apache.jena.vocabulary.RDF;
 @PageTitle("Dashboard")
 public class DashboardView extends VerticalLayout {
 
-    private static final String SDA_NS = "http://www.example.org/sda#";
-    private static final String CSS_NS = "http://www.example.org/css#";
+    private static final String SDA_NS = "https://example.org/ontology/sda#";
 
     private final OntologyModelLoader ontologyModelLoader;
     private final OntologyInferenceService inferenceService;
@@ -58,7 +57,7 @@ public class DashboardView extends VerticalLayout {
         int serviceCount = countByType(model, SDA_NS + "Service");
         int capabilityCount = countByType(model, SDA_NS + "OfferedCapability")
             + countByType(model, SDA_NS + "RequiredCapability");
-        int skillCount = countByType(model, CSS_NS + "Skill");
+        int skillCount = countByType(model, SDA_NS + "Skill");
         int mappingCount = countByProperty(model, SDA_NS + "mapsToCapability");
         int inferredCount = inferenceService != null
             ? inferenceService.getInferredCapabilities().size() : 0;

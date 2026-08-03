@@ -35,7 +35,6 @@ import com.sda.mapper.ontology.OntologyModelLoader;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -50,7 +49,7 @@ public class RequirementMatchingController {
     private static final Logger log = LoggerFactory.getLogger(RequirementMatchingController.class);
 
     private static final String INST_NS = "http://www.example.org/instance#";
-    private static final String SDA_NS = "http://www.example.org/sda#";
+    private static final String SDA_NS = "https://example.org/ontology/sda#";
     private static final String RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
     private final SemanticReasonerService reasonerService;
@@ -163,16 +162,24 @@ public class RequirementMatchingController {
 
     /**
      * Persists a new requirement into the ontology model as RDF triples.
+     * The {@code requirementId} is mandatory — the system never auto-generates
+     * requirement IDs; requirements must be defined by the user.
      *
      * @param request the requirement fields
-     * @return 201 with the created requirement ID
+     * @return 201 with the created requirement ID, or 400 if requirementId is missing
      */
     @PostMapping
-    public ResponseEntity<Map<String, String>> persistRequirement(
+    public ResponseEntity<?> persistRequirement(
             @RequestBody MatchRequirementRequest request) {
-        String requirementId = request.requirementId() != null
-            ? request.requirementId()
-            : "REQ-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        if (request.requirementId() == null || request.requirementId().isBlank()) {
+            return ResponseEntity.badRequest().body(
+                new ValidationErrorResponse(java.util.List.of(
+                    new FieldError("requirementId",
+                        "requirementId is required — the system does not auto-generate requirement IDs")
+                ))
+            );
+        }
+        String requirementId = request.requirementId();
 
         Model model = ontologyModelLoader.getModel();
         String resourceUri = INST_NS + requirementId;

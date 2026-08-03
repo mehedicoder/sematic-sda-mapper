@@ -1,0 +1,124 @@
+package com.sda.mapper.hub.service;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.sda.mapper.hub.error.MappingException;
+import com.sda.mapper.hub.model.AssetFileFormat;
+import com.sda.mapper.hub.model.BlockingGap;
+import com.sda.mapper.hub.model.CanonicalAssetModel;
+import com.sda.mapper.hub.model.CanonicalEntity;
+import com.sda.mapper.hub.model.CoverageEntry;
+import com.sda.mapper.hub.model.GapReport;
+import com.sda.mapper.hub.model.Recommendation;
+import com.sda.mapper.hub.model.UploadedFileInfo;
+import org.springframework.stereotype.Service;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * MANIFEST stage: exports the complete mapping state as a JSON manifest with
+ * metadata, uploaded files, per-class coverage, gaps, entities and
+ * recommendations.
+ */
+@Service
+public class ManifestExportService {
+
+    private final MatchingService matchingService;
+    private final RecommendationService recommendationService;
+    private final ObjectMapper mapper = new ObjectMapper();
+
+    /**
+     * Creates the manifest service with the stages it depends on.
+     *
+     * @param matchingService        the matching service
+     * @param recommendationService  the recommendation service
+     */
+    public ManifestExportService(MatchingService matchingService,
+                                 RecommendationService recommendationService) {
+        this.matchingService = matchingService;
+        this.recommendationService = recommendationService;
+    }
+
+    /**
+     * Builds the JSON manifest for the current mapping state.
+     *
+     * @param model       the canonical model
+     * @param inferred    the inferred entities
+     * @param files       the uploaded files
+     * @param uploaded    the uploaded formats
+     * @return the pretty-printed JSON manifest
+     * @throws MappingException when the manifest cannot be serialized
+     */
+    public String build(CanonicalAssetModel model, List<CanonicalEntity> inferred,
+                        List<UploadedFileInfo> files, Set<AssetFileFormat> uploaded) {
+        GapReport report = matchingService.compute(model, inferred);
+        List<Recommendation> recommendations = recommendationService.recommend(report, uploaded);
+        try {
+            ObjectNode root = mapper.createObjectNode();
+            root.put("manifestVersion", "1.0");
+            root.put("generatedAt", Instant.now().toString());
+            root.put("coveragePercent", report.coveragePercent());
+            root.putArray("files");
+            for (UploadedFileInfo file : files) {
+                root.withArray("files").add(file.describe());
+            }
+
+            ObjectNode coverage = root.putObject("coverage");
+            for (CoverageEntry entry : report.entries()) {
+                ObjectNode node = coverage.putObject(entry.className());
+                node.put("layer", entry.layerId());
+                node.put("status", entry.status().name());
+                putStrings(node, "sources", entry.sources());
+                putStrings(node, "missingFields", entry.missingFields());
+            }
+
+            ArrayNode gaps = root.putArray("blockingGaps");
+            for (BlockingGap gap : report.blockingGaps()) {
+                ObjectNode node = gaps.addObject();
+                node.put("className", gap.className());
+                node.put("layer", gap.layerId());
+                putStrings(node, "reasons", gap.reasons());
+            }
+
+            ObjectNode entities = root.putObject("entities");
+            groupEntities(entities, model.allEntities());
+            groupEntities(entities, inferred);
+
+            ArrayNode recs = root.putArray("recommendations");
+            for (Recommendation recommendation : recommendations) {
+                ObjectNode node = recs.addObject();
+                node.put("format", recommendation.format().label());
+                node.put("reason", recommendation.reason());
+                putStrings(node, "fills", recommendation.fills());
+            }
+
+            return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(root);
+        } catch (JsonProcessingException e) {
+            throw new MappingException("Failed to serialize mapping manifest", e);
+        }
+    }
+
+    private void groupEntities(ObjectNode target, List<CanonicalEntity> entities) {
+        for (CanonicalEntity entity : entities) {
+            ArrayNode classArray = (ArrayNode) target.withArray(entity.className());
+            ObjectNode node = classArray.addObject();
+            node.put("id", entity.id());
+            node.put("name", entity.name());
+            entity.sourceFileName().ifPresent(source -> node.put("source", source));
+            node.put("inferred", entity.inferred());
+            for (Map.Entry<String, Object> attribute : entity.attributes().entrySet()) {
+                node.set(attribute.getKey(), mapper.valueToTree(attribute.getValue()));
+            }
+        }
+    }
+
+    private static void putStrings(ObjectNode parent, String field, List<String> values) {
+        ArrayNode array = parent.putArray(field);
+        values.forEach(array::add);
+    }
+}

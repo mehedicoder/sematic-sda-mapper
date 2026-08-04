@@ -9,7 +9,7 @@ import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H3;
-import com.vaadin.flow.component.html.Paragraph;
+
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -30,7 +30,7 @@ import java.util.Optional;
  * browser, a class inspector with a CSS-driven neighborhood graph and
  * outgoing/incoming relation cards.
  */
-@Route(value = "visualizer", layout = MainLayout.class)
+@Route(value = "", layout = MainLayout.class)
 @PageTitle("Ontology Visualizer")
 @CssImport("./styles.css")
 public class OntologyView extends VerticalLayout {
@@ -92,12 +92,7 @@ public class OntologyView extends VerticalLayout {
         title.addClassNames(LumoUtility.Margin.Bottom.NONE, "section-title");
         title.getStyle().set("margin-top", "0");
 
-        var subtitle = new Paragraph("Browse the CSS-SDA hierarchy and inspect class relations "
-            + "grounded in css-sda-unified.ttl");
-        subtitle.addClassName("section-subtitle");
-        subtitle.addClassNames(LumoUtility.Margin.Top.NONE, LumoUtility.Margin.Bottom.SMALL);
-
-        var header = new VerticalLayout(title, subtitle);
+        var header = new VerticalLayout(title);
         header.setPadding(false);
         header.setSpacing(false);
         return header;

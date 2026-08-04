@@ -14,5 +14,19 @@ public enum CoverageStatus {
     /** Explicit entities exist but required fields are missing or blank. */
     PARTIAL,
     /** No entity of this class is known. */
-    MISSING
+    MISSING;
+
+    /**
+     * Returns a human-readable label for this status.
+     *
+     * @return descriptive display text
+     */
+    public String label() {
+        return switch (this) {
+            case PRESENT -> "Present";
+            case INFERRED -> "Inferred";
+            case PARTIAL -> "Partial";
+            case MISSING -> "Not Present";
+        };
+    }
 }

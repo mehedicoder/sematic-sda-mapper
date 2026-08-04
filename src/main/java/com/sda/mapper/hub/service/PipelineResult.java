@@ -2,6 +2,7 @@ package com.sda.mapper.hub.service;
 
 import com.sda.mapper.hub.model.CanonicalAssetModel;
 import com.sda.mapper.hub.model.CanonicalEntity;
+import com.sda.mapper.hub.model.CapabilityMatch;
 import com.sda.mapper.hub.model.CoverageEntry;
 import com.sda.mapper.hub.model.GapReport;
 import com.sda.mapper.hub.model.Recommendation;
@@ -12,12 +13,14 @@ import java.util.Optional;
 
 /**
  * Result of a mapping hub pipeline run: the final model, the inferred entities,
- * the coverage report, the recommendations and the console log lines.
+ * the coverage report, the semantic matches, the recommendations and the
+ * console log lines.
  *
  * @param file            the uploaded file that triggered the run, or {@code null} for re-runs
  * @param model           the canonical model after the run
  * @param inferred        the inferred entities
  * @param gapReport       the coverage report
+ * @param matches         the semantic capability matches from the SPARQL match stage
  * @param recommendations the context-aware recommendations
  * @param consoleLines    console log lines for the pipeline stages
  */
@@ -26,6 +29,7 @@ public record PipelineResult(
     CanonicalAssetModel model,
     List<CanonicalEntity> inferred,
     GapReport gapReport,
+    List<CapabilityMatch> matches,
     List<Recommendation> recommendations,
     List<String> consoleLines
 ) {

@@ -33,7 +33,7 @@ class OntologyViewTest {
     void shouldHaveRouteAnnotation() {
         Route route = OntologyView.class.getAnnotation(Route.class);
         assertNotNull(route, "OntologyView must have @Route annotation");
-        assertEquals("visualizer", route.value());
+        assertEquals("", route.value());
     }
 
     @Test

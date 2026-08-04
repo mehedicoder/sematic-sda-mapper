@@ -47,6 +47,7 @@ class MtpModelParserTest {
         SkillParameter flow = model.skillParameters().stream()
             .filter(p -> p.name().equals("FlowRate")).findFirst().orElseThrow();
         assertEquals("l/min", flow.engineeringUnit());
+        assertEquals("FlowControl", flow.functionClass());
         assertEquals(1, model.communicationBindings().size());
         CommunicationBinding binding = model.communicationBindings().get(0);
         assertEquals("opc.tcp://pump01:4840", binding.endpointUrl());

@@ -8,6 +8,7 @@ import com.sda.mapper.hub.parser.HubFileTypeDetector;
 import com.sda.mapper.hub.parser.MtpModelParser;
 import com.sda.mapper.hub.parser.OpcUaModelParser;
 import com.sda.mapper.hub.parser.ParsingException;
+import com.sda.mapper.reasoning.SparqlQueryLoader;
 import com.sda.mapper.service.OntologyDataService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,7 @@ class MappingHubServiceTest {
             new LiftService(),
             new InferenceService(),
             matchingService,
+            new SemanticMatchService(new SparqlQueryLoader()),
             recommendationService,
             new ManifestExportService(matchingService, recommendationService),
             new MappingHubSession());

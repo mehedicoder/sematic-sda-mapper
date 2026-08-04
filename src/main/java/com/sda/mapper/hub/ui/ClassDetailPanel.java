@@ -7,7 +7,6 @@ import com.sda.mapper.hub.model.CoverageEntry;
 import com.sda.mapper.hub.model.CoverageStatus;
 import com.sda.mapper.hub.model.GapReport;
 import com.sda.mapper.hub.model.UploadedFileInfo;
-import com.sda.mapper.hub.service.RecommendationService;
 import com.sda.mapper.model.OntologyClass;
 import com.sda.mapper.model.OntologyLayer;
 import com.sda.mapper.service.OntologyDataService;
@@ -19,6 +18,7 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -35,23 +35,22 @@ import java.util.stream.Collectors;
 public class ClassDetailPanel extends VerticalLayout {
 
     private final OntologyDataService ontologyDataService;
-    private final RecommendationService recommendationService;
     private final BiConsumer<String, byte[]> onSupplementaryUpload;
     private final Consumer<String> onError;
     private final Consumer<CanonicalEntity> onManualSave;
 
     private boolean manualFormVisible;
+    private CanonicalAssetModel currentModel;
+    private List<CanonicalEntity> currentInferred;
 
     /**
      * Creates the detail panel.
      */
     public ClassDetailPanel(OntologyDataService ontologyDataService,
-                            RecommendationService recommendationService,
                             BiConsumer<String, byte[]> onSupplementaryUpload,
                             Consumer<String> onError,
                             Consumer<CanonicalEntity> onManualSave) {
         this.ontologyDataService = ontologyDataService;
-        this.recommendationService = recommendationService;
         this.onSupplementaryUpload = onSupplementaryUpload;
         this.onError = onError;
         this.onManualSave = onManualSave;
@@ -73,6 +72,8 @@ public class ClassDetailPanel extends VerticalLayout {
                        List<CanonicalEntity> inferred, List<UploadedFileInfo> files) {
         removeAll();
         manualFormVisible = false;
+        currentModel = model;
+        currentInferred = inferred;
         if (className == null) {
             add(createEmptyState());
             return;
@@ -90,6 +91,7 @@ public class ClassDetailPanel extends VerticalLayout {
         add(createHeader(clazz.get(), entry, layer));
         add(createProvenance(entry, files, model, inferred));
         add(createRawData(clazz.get().name(), model, inferred));
+        add(createGapAnalysis(className, entry));
         add(createGapActions(clazz.get().name(), entry));
     }
 
@@ -105,7 +107,7 @@ public class ClassDetailPanel extends VerticalLayout {
         title.addClassName("hub-detail-title");
         title.getStyle().set("margin", "0");
 
-        Span status = new Span(entry.status().name());
+        Span status = new Span(entry.status().label());
         status.addClassName("hub-status-pill");
         status.addClassName("hub-status--" + entry.status().name().toLowerCase());
 
@@ -176,7 +178,7 @@ public class ClassDetailPanel extends VerticalLayout {
         VerticalLayout section = new VerticalLayout();
         section.setPadding(false);
         section.setSpacing(true);
-        section.add(createSectionLabel("AAS / raw data"));
+        section.add(createSectionLabel("AAS Data Mapping"));
 
         List<CanonicalEntity> entities = new ArrayList<>(model.getEntitiesForClass(className));
         entities.addAll(inferred.stream()
@@ -223,6 +225,38 @@ public class ClassDetailPanel extends VerticalLayout {
         return card;
     }
 
+    private VerticalLayout createGapAnalysis(String className, CoverageEntry entry) {
+        VerticalLayout analysis = new VerticalLayout();
+        analysis.setPadding(false);
+        analysis.setSpacing(true);
+        analysis.add(createSectionLabel("Gap analysis"));
+
+        if (entry.status() == CoverageStatus.PRESENT) {
+            Span ok = new Span("No gaps \u2014 all required data for " + className + " is present.");
+            ok.addClassName("hub-gap-hint");
+            analysis.add(ok);
+            return analysis;
+        }
+
+        List<String> sources = entry.sources();
+        Span source = new Span("AAS source: "
+            + (sources.isEmpty() ? "Not found" : String.join(", ", sources)));
+        source.addClassName("hub-provenance-line");
+        analysis.add(source);
+
+        if (!entry.missingFields().isEmpty()) {
+            Span missing = new Span("Missing fields: " + String.join(", ", entry.missingFields()));
+            missing.addClassName("hub-gap-hint");
+            analysis.add(missing);
+        }
+
+        Span note = new Span("Upload a supplementary file of a matching format or enter the "
+            + "data manually to close this gap.");
+        note.addClassName("hub-gap-hint");
+        analysis.add(note);
+        return analysis;
+    }
+
     private VerticalLayout createGapActions(String className, CoverageEntry entry) {
         VerticalLayout actions = new VerticalLayout();
         actions.setPadding(false);
@@ -230,12 +264,11 @@ public class ClassDetailPanel extends VerticalLayout {
         actions.add(createSectionLabel("Gap actions"));
 
         if (entry.status() != CoverageStatus.PRESENT) {
-            List<AssetFileFormat> formats = recommendationService.formatsThatCanFill(className);
             Span hint = new Span("Upload a supplementary file to fill this gap");
             hint.addClassName("hub-gap-hint");
             actions.add(hint);
-            UploadDropzone mini = new UploadDropzone(
-                "Upload supplementary file", formats, onSupplementaryUpload, onError);
+            UploadDropzone mini = new UploadDropzone("Upload supplementary file",
+                List.of(AssetFileFormat.values()), onSupplementaryUpload, onError);
             actions.add(mini.get());
         }
 
@@ -249,7 +282,7 @@ public class ClassDetailPanel extends VerticalLayout {
             actions.add(toggle);
         } else {
             Span hint = new Span("Manual entry is not available for " + className
-                + " — upload a supplementary file instead.");
+                + " \u2014 upload a supplementary file instead.");
             hint.addClassName("hub-gap-hint");
             actions.add(hint);
         }
@@ -258,10 +291,11 @@ public class ClassDetailPanel extends VerticalLayout {
 
     private void toggleManualForm(String className, Button toggle) {
         if (manualFormVisible) {
-            VerticalLayout form = ManualEntryFormFactory.create(className, entity -> {
-                manualFormVisible = false;
-                onManualSave.accept(entity);
-            });
+            VerticalLayout form = ManualEntryFormFactory.create(className,
+                dropdownOptions(className), entity -> {
+                    manualFormVisible = false;
+                    onManualSave.accept(entity);
+                });
             if (form != null) {
                 add(form);
                 toggle.setText("Close manual entry");
@@ -272,6 +306,34 @@ public class ClassDetailPanel extends VerticalLayout {
                 .forEach(this::remove);
             toggle.setText("Enter manually");
         }
+    }
+
+    private Map<String, List<String>> dropdownOptions(String className) {
+        Map<String, List<String>> options = new LinkedHashMap<>();
+        switch (className) {
+            case "UseCase" -> options.put("targetAsset", namesOf("Asset"));
+            case "Sensor" -> options.put("measuredVariable", namesOf("ProcessVariable"));
+            case "Capability" -> options.put("mapsToRequirement", namesOf("Requirement"));
+            case "ServiceInstance" -> options.put("deployedOn", namesOf("ClusterNode"));
+            default -> {
+                // no dropdowns
+            }
+        }
+        return options;
+    }
+
+    private List<String> namesOf(String entityClass) {
+        List<String> names = new ArrayList<>();
+        if (currentModel != null) {
+            currentModel.getEntitiesForClass(entityClass)
+                .forEach(entity -> names.add(entity.name()));
+        }
+        if (currentInferred != null) {
+            currentInferred.stream()
+                .filter(entity -> entity.className().equals(entityClass))
+                .forEach(entity -> names.add(entity.name()));
+        }
+        return names.stream().distinct().toList();
     }
 
     private static Span createSectionLabel(String text) {

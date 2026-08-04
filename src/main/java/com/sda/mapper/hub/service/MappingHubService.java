@@ -3,6 +3,7 @@ package com.sda.mapper.hub.service;
 import com.sda.mapper.hub.model.AssetFileFormat;
 import com.sda.mapper.hub.model.CanonicalAssetModel;
 import com.sda.mapper.hub.model.CanonicalEntity;
+import com.sda.mapper.hub.model.CapabilityMatch;
 import com.sda.mapper.hub.model.CoverageStatus;
 import com.sda.mapper.hub.model.GapReport;
 import com.sda.mapper.hub.model.Recommendation;
@@ -33,6 +34,7 @@ public class MappingHubService {
     private final LiftService liftService;
     private final InferenceService inferenceService;
     private final MatchingService matchingService;
+    private final SemanticMatchService semanticMatchService;
     private final RecommendationService recommendationService;
     private final ManifestExportService manifestExportService;
     private final MappingHubSession session;
@@ -45,6 +47,7 @@ public class MappingHubService {
                              LiftService liftService,
                              InferenceService inferenceService,
                              MatchingService matchingService,
+                             SemanticMatchService semanticMatchService,
                              RecommendationService recommendationService,
                              ManifestExportService manifestExportService,
                              @Lazy MappingHubSession session) {
@@ -53,6 +56,7 @@ public class MappingHubService {
         this.liftService = liftService;
         this.inferenceService = inferenceService;
         this.matchingService = matchingService;
+        this.semanticMatchService = semanticMatchService;
         this.recommendationService = recommendationService;
         this.manifestExportService = manifestExportService;
         this.session = session;
@@ -155,10 +159,17 @@ public class MappingHubService {
             logs.add("[MATCH] " + report.blockingGaps().size() + " blocking gap(s) detected");
         }
 
+        List<CapabilityMatch> matches = semanticMatchService.match(model, inferred);
+        logs.add("[MATCH] SPARQL match: " + matches.size() + " semantic capability match(es)");
+        for (CapabilityMatch match : matches) {
+            logs.add("[MATCH] " + match.requiredCapabilityId() + " \u2192 " + match.offeredCapabilityId()
+                + " via " + match.skillId() + " \u2014 " + match.endpointUrl());
+        }
+
         List<Recommendation> recommendations = recommendationService.recommend(
             report, session.getUploadedFormats());
         logs.add("[MANIFEST] " + recommendations.size() + " recommendation(s) for supplementary uploads");
 
-        return new PipelineResult(file, model, inferred, report, recommendations, List.copyOf(logs));
+        return new PipelineResult(file, model, inferred, report, matches, recommendations, List.copyOf(logs));
     }
 }

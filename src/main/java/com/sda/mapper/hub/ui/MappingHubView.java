@@ -4,9 +4,6 @@ import com.sda.mapper.hub.error.MappingException;
 import com.sda.mapper.hub.model.AssetFileFormat;
 import com.sda.mapper.hub.model.CanonicalEntity;
 import com.sda.mapper.hub.model.CoverageStatus;
-import com.sda.mapper.hub.model.GapReport;
-import com.sda.mapper.hub.model.PipelineStage;
-import com.sda.mapper.hub.model.Recommendation;
 import com.sda.mapper.hub.model.UploadedFileInfo;
 import com.sda.mapper.hub.parser.ParsingException;
 import com.sda.mapper.hub.service.MappingHubService;
@@ -18,7 +15,7 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.html.H2;
-import com.vaadin.flow.component.html.Paragraph;
+
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
@@ -48,8 +45,6 @@ public class MappingHubView extends VerticalLayout {
 
     private final PipelineStepper stepper;
     private final ConsolePanel console;
-    private final CoverageDashboard dashboard;
-    private final RecommendationBar recommendationBar;
     private final LayerTabs layerTabs;
     private final ClassListPanel classListPanel;
     private final ClassDetailPanel detailPanel;
@@ -77,23 +72,24 @@ public class MappingHubView extends VerticalLayout {
         add(createHeader());
         stepper = new PipelineStepper();
         add(stepper);
-        add(createUploadSection());
+
         console = new ConsolePanel();
-        add(console);
-        dashboard = new CoverageDashboard();
-        add(dashboard);
-        recommendationBar = new RecommendationBar();
-        add(recommendationBar);
+        var uploadAndConsole = new HorizontalLayout(createUploadSection(), console);
+        uploadAndConsole.addClassName("hub-upload-row");
+        uploadAndConsole.setWidthFull();
+        uploadAndConsole.setSpacing(true);
+        uploadAndConsole.setAlignItems(FlexComponent.Alignment.STRETCH);
+        add(uploadAndConsole);
 
         layerTabs = new LayerTabs(this::selectLayer);
         add(layerTabs);
 
         classListPanel = new ClassListPanel(this::selectClass);
         detailPanel = new ClassDetailPanel(ontologyDataService,
-            hubService.getRecommendationService(),
             this::onSupplementaryUpload,
             this::showError,
             this::onManualSave);
+        detailPanel.setWidthFull();
 
         var body = new HorizontalLayout(classListPanel, detailPanel);
         body.addClassName("hub-body");
@@ -113,11 +109,7 @@ public class MappingHubView extends VerticalLayout {
         title.addClassNames(LumoUtility.Margin.Bottom.NONE, "section-title");
         title.getStyle().set("margin-top", "0");
 
-        Paragraph subtitle = new Paragraph("Parse \u2192 Lift \u2192 Infer \u2192 Match \u2192 Manifest");
-        subtitle.addClassName("section-subtitle");
-        subtitle.addClassNames(LumoUtility.Margin.Top.NONE, LumoUtility.Margin.Bottom.SMALL);
-
-        var header = new VerticalLayout(title, subtitle);
+        var header = new VerticalLayout(title);
         header.setPadding(false);
         header.setSpacing(false);
         return header;
@@ -159,7 +151,7 @@ public class MappingHubView extends VerticalLayout {
         runButton.addClassName("hub-action-button");
         runButton.addClickListener(e -> {
             lastResult = hubService.reRunPipeline();
-            refresh();
+            stepper.runStages(this::refresh);
         });
 
         Button resetButton = new Button("Reset");
@@ -241,11 +233,6 @@ public class MappingHubView extends VerticalLayout {
     private void refresh() {
         stepper.setCompleted();
         console.logLines(lastResult.consoleLines());
-        dashboard.update(lastResult.gapReport());
-        recommendationBar.update(lastResult.recommendations(),
-            hubService.getSession().getUploadedFormats(),
-            this::onUpload,
-            this::showError);
         layerTabs.update(ontologyDataService.getLayers(), lastResult.gapReport(), selectedLayerId);
         renderClassList();
         renderDetail();

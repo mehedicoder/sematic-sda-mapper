@@ -22,6 +22,9 @@ public final class CanonicalAssetModel {
     private final List<RequirementConstraint> requirementConstraints = new ArrayList<>();
     private final List<VerificationCriterion> verificationCriteria = new ArrayList<>();
     private final List<Capability> capabilities = new ArrayList<>();
+    private final List<OfferedCapability> offeredCapabilities = new ArrayList<>();
+    private final List<RequiredCapability> requiredCapabilities = new ArrayList<>();
+    private final List<CapabilityMatch> capabilityMatches = new ArrayList<>();
     private final List<Skill> skills = new ArrayList<>();
     private final List<SkillParameter> skillParameters = new ArrayList<>();
     private final List<Service> services = new ArrayList<>();
@@ -55,6 +58,9 @@ public final class CanonicalAssetModel {
             case "RequirementConstraint" -> addUnique(requirementConstraints, (RequirementConstraint) entity);
             case "VerificationCriterion" -> addUnique(verificationCriteria, (VerificationCriterion) entity);
             case "Capability" -> addUnique(capabilities, (Capability) entity);
+            case "OfferedCapability" -> addUnique(offeredCapabilities, (OfferedCapability) entity);
+            case "RequiredCapability" -> addUnique(requiredCapabilities, (RequiredCapability) entity);
+            case "CapabilityMatch" -> addUnique(capabilityMatches, (CapabilityMatch) entity);
             case "Skill" -> addUnique(skills, (Skill) entity);
             case "SkillParameter" -> addUnique(skillParameters, (SkillParameter) entity);
             case "Service" -> addUnique(services, (Service) entity);
@@ -90,6 +96,9 @@ public final class CanonicalAssetModel {
         mergeUnique(requirementConstraints, other.requirementConstraints);
         mergeUnique(verificationCriteria, other.verificationCriteria);
         mergeUnique(capabilities, other.capabilities);
+        mergeUnique(offeredCapabilities, other.offeredCapabilities);
+        mergeUnique(requiredCapabilities, other.requiredCapabilities);
+        mergeUnique(capabilityMatches, other.capabilityMatches);
         mergeUnique(skills, other.skills);
         mergeUnique(skillParameters, other.skillParameters);
         mergeUnique(services, other.services);
@@ -124,6 +133,9 @@ public final class CanonicalAssetModel {
             case "RequirementConstraint" -> List.copyOf(requirementConstraints);
             case "VerificationCriterion" -> List.copyOf(verificationCriteria);
             case "Capability" -> List.copyOf(capabilities);
+            case "OfferedCapability" -> List.copyOf(offeredCapabilities);
+            case "RequiredCapability" -> List.copyOf(requiredCapabilities);
+            case "CapabilityMatch" -> List.copyOf(capabilityMatches);
             case "Skill" -> List.copyOf(skills);
             case "SkillParameter" -> List.copyOf(skillParameters);
             case "Service" -> List.copyOf(services);
@@ -206,6 +218,33 @@ public final class CanonicalAssetModel {
      */
     public List<Capability> capabilities() {
         return List.copyOf(capabilities);
+    }
+
+    /**
+     * Returns the offered capabilities.
+     *
+     * @return an immutable list of offered capabilities
+     */
+    public List<OfferedCapability> offeredCapabilities() {
+        return List.copyOf(offeredCapabilities);
+    }
+
+    /**
+     * Returns the required capabilities.
+     *
+     * @return an immutable list of required capabilities
+     */
+    public List<RequiredCapability> requiredCapabilities() {
+        return List.copyOf(requiredCapabilities);
+    }
+
+    /**
+     * Returns the semantic capability matches.
+     *
+     * @return an immutable list of capability matches
+     */
+    public List<CapabilityMatch> capabilityMatches() {
+        return List.copyOf(capabilityMatches);
     }
 
     /**
@@ -385,6 +424,9 @@ public final class CanonicalAssetModel {
         result.addAll(requirementConstraints);
         result.addAll(verificationCriteria);
         result.addAll(capabilities);
+        result.addAll(offeredCapabilities);
+        result.addAll(requiredCapabilities);
+        result.addAll(capabilityMatches);
         result.addAll(skills);
         result.addAll(skillParameters);
         result.addAll(services);
@@ -425,6 +467,9 @@ public final class CanonicalAssetModel {
         requirementConstraints.clear();
         verificationCriteria.clear();
         capabilities.clear();
+        offeredCapabilities.clear();
+        requiredCapabilities.clear();
+        capabilityMatches.clear();
         skills.clear();
         skillParameters.clear();
         services.clear();

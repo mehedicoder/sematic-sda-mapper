@@ -11,16 +11,27 @@ public record DeploymentContext(
     String name,
     String description,
     String clusterType,
+    String networkZone,
     Optional<String> sourceFileName,
     boolean inferred
 ) implements CanonicalEntity {
 
     public DeploymentContext(String id, String name, String description, String clusterType) {
-        this(id, name, description, clusterType, Optional.empty(), false);
+        this(id, name, description, clusterType, "", Optional.empty(), false);
     }
 
     public DeploymentContext(String id, String name, String description, String clusterType, String sourceFileName) {
-        this(id, name, description, clusterType, Optional.of(sourceFileName), false);
+        this(id, name, description, clusterType, "", Optional.of(sourceFileName), false);
+    }
+
+    public DeploymentContext(String id, String name, String description, String clusterType,
+                             String networkZone, String sourceFileName) {
+        this(id, name, description, clusterType, networkZone, Optional.of(sourceFileName), false);
+    }
+
+    public DeploymentContext(String id, String name, String description, String clusterType,
+                             Optional<String> sourceFileName, boolean inferred) {
+        this(id, name, description, clusterType, "", sourceFileName, inferred);
     }
 
     @Override
@@ -34,7 +45,8 @@ public record DeploymentContext(
             "id", id,
             "name", name,
             "description", description,
-            "clusterType", clusterType
+            "clusterType", clusterType,
+            "networkZone", networkZone
         );
     }
 }

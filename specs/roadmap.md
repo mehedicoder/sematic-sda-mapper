@@ -887,6 +887,32 @@ Add a universal mapping hub at `/mapping-hub` that runs the full PARSE → LIFT 
 
 ---
 
+## Phase 11c-2: Semantic Infer and Match Alignment (paper Steps 4–5)
+
+**Goal**
+
+Align the hub's INFER and MATCH stages with the paper: the INFER stage derives `sda:OfferedCapability` from `SkillParameter` semantics (Axiom A4 — functionClass, engineeringUnit, nominalRange, SIL), and the MATCH stage runs a SPARQL query that compares each inferred `OfferedCapability` against each `RequiredCapability` across the capability, communication and deployment CSS-SDA dimensions simultaneously, projecting the matched skill, endpoint, protocol, network zone and SIL.
+
+**Tasks**
+
+* [x] Ontology `css-sda-unified.ttl`: add `OfferedCapability` and `RequiredCapability` classes (sub-classes of `Capability`) plus datatype properties `functionClass`, `engineeringUnit`, `nominalRange_min`, `nominalRange_max`, `accuracy`, `safetyIntegrityLevel`, `networkZone`, `protocol`, `accessMode`, `endpointUrl`
+* [x] `SkillParameter` gains `functionClass`; MTP and AAS parsers read it and the `pump-module-mtp.xml` / `pump-aas.json` fixtures carry `FunctionClass`
+* [x] Canonical records `OfferedCapability`, `RequiredCapability`, `CapabilityMatch`; `CanonicalAssetModel` supports all three; `DeploymentContext` gains `networkZone`
+* [x] `InferenceService` derives an `OfferedCapability` per skill from its primary parameter (functionClass-bearing first) while keeping the generic `Capability` for the coverage ledger
+* [x] SPARQL asset `queries/hub-match-offered-required.rq` matching offered vs required across all three dimensions
+* [x] `SemanticMatchService` instantiates the canonical model + inferred entities into an in-memory Jena ABox and executes the match query
+* [x] `MappingHubService` wires the semantic match stage into `runStages`; `PipelineResult` carries `matches` and logs each match
+* [x] Tests: `SemanticMatchServiceTest` (positive + negative scenarios: functionClass, range containment, unit, SIL, protocol, zone), `InferenceServiceTest` offered-capability derivation, `MtpModelParserTest` functionClass, `OntologyAndQueryLoadingTest` vocabulary + query parse
+
+**Acceptance Criteria**
+
+* [x] A `RequiredCapability` matches an `OfferedCapability` with equal functionClass, compatible unit, contained nominal range, sufficient SIL, matching protocol and matching network zone
+* [x] Negative scenarios (different functionClass / non-contained range / unit / insufficient SIL / protocol / zone) produce no match
+* [x] Required capabilities omitting optional dimensions still match on the capability dimension alone
+* [x] `mvn clean test` — BUILD SUCCESS, 430 tests, 0 failures (was 414)
+
+---
+
 ## Phase 12: Documentation and Thesis Support
 
 **Goal**

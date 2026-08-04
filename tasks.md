@@ -666,6 +666,44 @@ Interactive dark-themed ontology visualizer at `/visualizer` grounded in the can
 
 ---
 
+## Semantic Infer and Match Alignment (paper Steps 4–5)
+
+**Status:** [x] Completed
+**Branch:** `main`
+**Completed:** 2026-08-04
+**Tests:** 430 passing (0 failures, 0 errors, 0 skipped)
+
+### Completion Evidence
+
+- `mvn clean test` — BUILD SUCCESS, 430 tests, 0 failures (was 414; +16 tests across 4 extended/new test classes)
+- INFER now derives an `sda:OfferedCapability` per skill from `SkillParameter` semantics (Axiom A4: functionClass, engineeringUnit, nominalRange, SIL)
+- MATCH now runs the SPARQL query `queries/hub-match-offered-required.rq` comparing each inferred `OfferedCapability` against each `RequiredCapability` across the capability, communication and deployment dimensions; matched skill, endpoint, protocol, network zone and SIL are projected
+- Positive and negative semantic scenarios covered (functionClass, range containment, unit, SIL, protocol, network zone)
+
+### What was built
+
+| Component | Files |
+|---|---|
+| `OfferedCapability`, `RequiredCapability`, `CapabilityMatch` canonical records; `DeploymentContext.networkZone`; model support for all three | `src/main/java/com/sda/mapper/hub/model/*.java` |
+| `SkillParameter.functionClass`; MTP/AAS parsers read `FunctionClass`; fixtures updated | `src/main/java/com/sda/mapper/hub/model/SkillParameter.java`, `src/main/java/com/sda/mapper/hub/parser/{Mtp,Aas}ModelParser.java`, `src/main/resources/device-descriptions/{mtp/pump-module-mtp.xml,aas/pump-aas.json}` |
+| Ontology: `OfferedCapability`/`RequiredCapability` classes + 9 datatype properties (functionClass, engineeringUnit, nominalRange_min/max, accuracy, safetyIntegrityLevel, networkZone, protocol, accessMode, endpointUrl) | `src/main/resources/ontology/css-sda-unified.ttl` |
+| INFER rework — OfferedCapability per skill from primary parameter (functionClass-bearing preferred) | `src/main/java/com/sda/mapper/hub/service/InferenceService.java` |
+| SPARQL match asset (offered vs required across three dimensions) | `src/main/resources/queries/hub-match-offered-required.rq` |
+| Semantic MATCH service — instantiates canonical model + inferred entities into a Jena ABox, executes the query | `src/main/java/com/sda/mapper/hub/service/SemanticMatchService.java` |
+| Pipeline wiring — `MappingHubService.runStages` runs the semantic match and logs each match; `PipelineResult` carries `matches` | `src/main/java/com/sda/mapper/hub/service/{MappingHubService,PipelineResult}.java` |
+| Tests: `SemanticMatchServiceTest` (9), `InferenceServiceTest` (+3), `MtpModelParserTest` (+1), `OntologyAndQueryLoadingTest` (+2 vocabulary/query tests, +1 query in parse-all) | `src/test/java/com/sda/mapper/hub/service/*.java`, `src/test/java/com/sda/mapper/hub/parser/*.java`, `src/test/java/com/sda/mapper/ontology/*.java` |
+| Test wiring updated for the new `MappingHubService` constructor argument | `src/test/java/com/sda/mapper/hub/{service/MappingHubServiceTest,ui/MappingHubViewTest}.java` |
+
+### Key technical decisions
+
+- The hub keeps its generic `Capability` inference so the 24-class coverage ledger and its 62.5%/24-class assertions stay stable; `OfferedCapability` is the paper's inferred capability sub-type consumed by the SPARQL match.
+- `SemanticMatchService` builds an ABox-only in-memory Jena model (no `OntologyModelLoader` dependency) so the SPARQL path is testable without a Spring context; entity ids round-trip through a `uri → canonical id` map because sanitized URIs are not reversible.
+- Until a dedicated Instantiate stage lands, the ABox builder uses documented MVP heuristics: every skill is implemented by every service, every service uses every binding and is deployed in every deployment context — exact for single-service/single-binding demo models.
+- The match query treats the deployment `networkZone` and binding `endpointUrl` as OPTIONAL evidence (projected, filtered only when the requirement specifies them) so matches still resolve for models without deployment data; `functionClass` equality, unit compatibility, nominal-range containment and SIL sufficiency are hard filters.
+- `DeploymentContext` gained a `networkZone` component (domain of `sda:networkZone` in the TTL); only `InferenceService` constructs it, so no other call sites were affected.
+
+---
+
 ## Summary
 
 | Phase | Status | Tests | Date |
@@ -688,6 +726,7 @@ Interactive dark-themed ontology visualizer at `/visualizer` grounded in the can
 | Maintenance: Requirement Form Mandatory Fields (PipelineView) | [x] Completed | 328 | 2026-08-03 |
 | Maintenance: Ontology Visualizer (OntologyView) | [x] Completed | 343 | 2026-08-03 |
 | Mapping Hub: Universal Semantic Mapping Hub | [x] Completed | 414 | 2026-08-03 |
+| Semantic Infer and Match Alignment | [x] Completed | 430 | 2026-08-04 |
 | Phase 12: Documentation | [ ] Not started | — | — |
 | Phase 13: EKA UI Polish | [ ] Not started | — | — |
 | Phase 14: Margo Sandbox | [ ] Not started | — | — |

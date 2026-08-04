@@ -4,6 +4,7 @@ import com.sda.mapper.hub.model.CoverageStatus;
 import com.sda.mapper.hub.model.GapReport;
 import com.sda.mapper.model.OntologyLayer;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 
 import java.util.ArrayList;
@@ -48,14 +49,18 @@ public class LayerTabs extends HorizontalLayout {
     private Button createTab(String id, String label, String cssKey,
                              GapReport report, String selected) {
         int missing = countMissing(report, id);
-        String text = missing > 0 ? label + " (" + missing + ")" : label;
-        Button button = new Button(text);
+        Button button = new Button(label);
         button.addClassName("hub-tab");
         if (cssKey != null) {
             button.addClassName("hub-tab--" + cssKey);
         }
         if (id.equals(selected)) {
             button.addClassName("hub-tab--active");
+        }
+        if (missing > 0) {
+            Span badge = new Span(String.valueOf(missing));
+            badge.addClassName("hub-tab-badge");
+            button.getElement().appendChild(badge.getElement());
         }
         button.addClickListener(e -> onSelect.accept(id));
         return button;

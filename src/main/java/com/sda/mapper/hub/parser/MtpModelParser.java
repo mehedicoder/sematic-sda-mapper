@@ -106,8 +106,9 @@ public class MtpModelParser implements CanonicalModelParser {
                 String min = attribute(parameter, "NominalRangeMin", "");
                 String max = attribute(parameter, "NominalRangeMax", "");
                 String dataType = attribute(parameter, "DataType", "");
+                String functionClass = attribute(parameter, "FunctionClass", "");
                 model.addEntity(new SkillParameter(skillId + "." + paramName, skillId, paramName,
-                    unit, min, max, dataType, fileName));
+                    functionClass, unit, min, max, dataType, fileName));
                 parameterUnits.put(paramName, unit);
             }
         }

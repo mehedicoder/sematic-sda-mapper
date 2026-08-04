@@ -6,16 +6,19 @@
         <Service Name="Pumping">
             <Description>Primary pumping operation for liquid transport with flow monitoring</Description>
             <Parameter Name="FlowRate"
+                       FunctionClass="FlowControl"
                        EngineeringUnit="l/min"
                        NominalRangeMin="0"
                        NominalRangeMax="100"
                        DataType="Double" />
             <Parameter Name="Pressure"
+                       FunctionClass="PressureControl"
                        EngineeringUnit="bar"
                        NominalRangeMin="0.5"
                        NominalRangeMax="10.0"
                        DataType="Double" />
             <Parameter Name="Temperature"
+                       FunctionClass="TemperatureControl"
                        EngineeringUnit="&#176;C"
                        NominalRangeMin="-40"
                        NominalRangeMax="150"
@@ -25,6 +28,7 @@
         <Service Name="FlowMonitoring">
             <Description>Continuous flow rate monitoring with NE 107 diagnostics</Description>
             <Parameter Name="FlowRate"
+                       FunctionClass="FlowControl"
                        EngineeringUnit="l/min"
                        NominalRangeMin="0"
                        NominalRangeMax="100"

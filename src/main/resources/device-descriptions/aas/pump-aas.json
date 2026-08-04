@@ -108,6 +108,7 @@
                 { "idShort": "SkillId", "value": "PUMP-001", "valueType": "xs:string" },
                 { "idShort": "SkillName", "value": "Pumping", "valueType": "xs:string" },
                 { "idShort": "Description", "value": "Primary pumping operation for liquid transport", "valueType": "xs:string" },
+                { "idShort": "FunctionClass", "value": "FlowControl", "valueType": "xs:string" },
                 { "idShort": "EngineeringUnit", "value": "l/min", "valueType": "xs:string" },
                 { "idShort": "NominalRangeMin", "value": "0", "valueType": "xs:double" },
                 { "idShort": "NominalRangeMax", "value": "100", "valueType": "xs:double" }

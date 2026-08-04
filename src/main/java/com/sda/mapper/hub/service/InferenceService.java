@@ -7,10 +7,12 @@ import com.sda.mapper.hub.model.ClusterNode;
 import com.sda.mapper.hub.model.CommunicationBinding;
 import com.sda.mapper.hub.model.DeploymentContext;
 import com.sda.mapper.hub.model.NetworkZone;
+import com.sda.mapper.hub.model.OfferedCapability;
 import com.sda.mapper.hub.model.ProcessVariable;
 import com.sda.mapper.hub.model.Sensor;
 import com.sda.mapper.hub.model.ServiceInstance;
 import com.sda.mapper.hub.model.Skill;
+import com.sda.mapper.hub.model.SkillParameter;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -21,6 +23,12 @@ import java.util.List;
  * marking them as inferred. Sensors are derived per measured process variable,
  * capabilities per skill, and service instances, cluster nodes, network zones
  * and deployment contexts per communication binding.
+ *
+ * <p>Per the semantic mapping pipeline (paper, Step 4) every skill also yields
+ * an inferred {@link OfferedCapability} whose functionClass, engineering unit
+ * and nominal range are lifted from the skill's primary parameter (Axiom A4).
+ * The capability is inferred - not parsed - and is consumed by the SPARQL
+ * match stage.
  */
 @Service
 public class InferenceService {
@@ -49,6 +57,20 @@ public class InferenceService {
                 "Realised by skill " + skill.name(),
                 skill.sourceFileName(),
                 true));
+            SkillParameter primary = primaryParameter(model, skill.id());
+            if (primary != null) {
+                inferred.add(new OfferedCapability("OC-" + skill.id(),
+                    skill.id(),
+                    skill.name(),
+                    primary.functionClass(),
+                    primary.engineeringUnit(),
+                    primary.nominalRangeMin(),
+                    primary.nominalRangeMax(),
+                    "",
+                    "",
+                    skill.sourceFileName(),
+                    true));
+            }
         }
 
         for (CommunicationBinding binding : model.communicationBindings()) {
@@ -73,6 +95,31 @@ public class InferenceService {
         }
 
         return inferred;
+    }
+
+    /**
+     * Picks the primary parameter of a skill for capability inference: the
+     * first parameter carrying a functionClass, else the first one carrying an
+     * engineering unit, else the first parameter of the skill.
+     *
+     * @param model   the canonical model
+     * @param skillId the skill id
+     * @return the primary parameter, or {@code null} when the skill has none
+     */
+    private static SkillParameter primaryParameter(CanonicalAssetModel model, String skillId) {
+        List<SkillParameter> parameters = model.skillParameters().stream()
+            .filter(p -> skillId.equals(p.skillId()))
+            .toList();
+        if (parameters.isEmpty()) {
+            return null;
+        }
+        return parameters.stream()
+            .filter(p -> p.functionClass() != null && !p.functionClass().isBlank())
+            .findFirst()
+            .or(() -> parameters.stream()
+                .filter(p -> p.engineeringUnit() != null && !p.engineeringUnit().isBlank())
+                .findFirst())
+            .orElse(parameters.get(0));
     }
 
     /**

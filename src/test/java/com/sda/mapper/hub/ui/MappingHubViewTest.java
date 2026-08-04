@@ -1,6 +1,5 @@
 package com.sda.mapper.hub.ui;
 
-import com.sda.mapper.hub.model.CoverageStatus;
 import com.sda.mapper.hub.service.InferenceService;
 import com.sda.mapper.hub.service.LiftService;
 import com.sda.mapper.hub.service.ManifestExportService;
@@ -8,11 +7,13 @@ import com.sda.mapper.hub.service.MappingHubService;
 import com.sda.mapper.hub.service.MappingHubSession;
 import com.sda.mapper.hub.service.MatchingService;
 import com.sda.mapper.hub.service.RecommendationService;
+import com.sda.mapper.hub.service.SemanticMatchService;
 import com.sda.mapper.hub.parser.AasModelParser;
 import com.sda.mapper.hub.parser.CanonicalParserRegistry;
 import com.sda.mapper.hub.parser.HubFileTypeDetector;
 import com.sda.mapper.hub.parser.MtpModelParser;
 import com.sda.mapper.hub.parser.OpcUaModelParser;
+import com.sda.mapper.reasoning.SparqlQueryLoader;
 import com.sda.mapper.service.OntologyDataService;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
@@ -47,6 +48,7 @@ class MappingHubViewTest {
             new LiftService(),
             new InferenceService(),
             matchingService,
+            new SemanticMatchService(new SparqlQueryLoader()),
             recommendationService,
             new ManifestExportService(matchingService, recommendationService),
             new MappingHubSession());
@@ -92,15 +94,6 @@ class MappingHubViewTest {
         assertTrue(text.contains("Semantic Mapping Hub"));
         assertTrue(text.contains("Parse"));
         assertTrue(text.contains("Manifest"));
-    }
-
-    @Test
-    @DisplayName("Should show an empty coverage dashboard initially")
-    void shouldShowEmptyCoverageInitially() throws Exception {
-        MappingHubView view = createView();
-        CoverageDashboard dashboard = getField(view, "dashboard", CoverageDashboard.class);
-        assertEquals(24, dashboard.getCount(CoverageStatus.MISSING));
-        assertEquals(0, dashboard.getCount(CoverageStatus.PRESENT));
     }
 
     @Test
@@ -180,8 +173,6 @@ class MappingHubViewTest {
             ConsolePanel console = getField(view, "console", ConsolePanel.class);
             assertTrue(console.getLines().stream().anyMatch(line -> line.startsWith("[PARSE]")));
             assertTrue(console.getLines().stream().anyMatch(line -> line.startsWith("[MATCH]")));
-            CoverageDashboard dashboard = getField(view, "dashboard", CoverageDashboard.class);
-            assertEquals(12, dashboard.getCount(CoverageStatus.PRESENT));
             Button exportButton = getField(view, "exportButton", Button.class);
             assertTrue(exportButton.isEnabled());
         } finally {

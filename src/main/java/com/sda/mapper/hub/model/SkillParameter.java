@@ -10,6 +10,7 @@ public record SkillParameter(
     String id,
     String skillId,
     String name,
+    String functionClass,
     String engineeringUnit,
     String nominalRangeMin,
     String nominalRangeMax,
@@ -20,12 +21,17 @@ public record SkillParameter(
 
     public SkillParameter(String id, String skillId, String name, String engineeringUnit,
                           String nominalRangeMin, String nominalRangeMax, String dataType) {
-        this(id, skillId, name, engineeringUnit, nominalRangeMin, nominalRangeMax, dataType, Optional.empty(), false);
+        this(id, skillId, name, null, engineeringUnit, nominalRangeMin, nominalRangeMax, dataType, Optional.empty(), false);
     }
 
     public SkillParameter(String id, String skillId, String name, String engineeringUnit,
                           String nominalRangeMin, String nominalRangeMax, String dataType, String sourceFileName) {
-        this(id, skillId, name, engineeringUnit, nominalRangeMin, nominalRangeMax, dataType, Optional.of(sourceFileName), false);
+        this(id, skillId, name, null, engineeringUnit, nominalRangeMin, nominalRangeMax, dataType, Optional.of(sourceFileName), false);
+    }
+
+    public SkillParameter(String id, String skillId, String name, String functionClass,
+                          String engineeringUnit, String nominalRangeMin, String nominalRangeMax, String dataType, String sourceFileName) {
+        this(id, skillId, name, functionClass, engineeringUnit, nominalRangeMin, nominalRangeMax, dataType, Optional.of(sourceFileName), false);
     }
 
     @Override
@@ -39,6 +45,7 @@ public record SkillParameter(
             "id", id,
             "skillId", skillId,
             "name", name,
+            "functionClass", functionClass,
             "engineeringUnit", engineeringUnit,
             "nominalRangeMin", nominalRangeMin,
             "nominalRangeMax", nominalRangeMax,

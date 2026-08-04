@@ -21,7 +21,7 @@ import java.util.Map;
 /**
  * Landing page showing system health overview and quick navigation.
  */
-@Route(value = "", layout = MainLayout.class)
+@Route(value = "system-status", layout = MainLayout.class)
 @PageTitle("System Status")
 public class SystemStatusView extends VerticalLayout {
 

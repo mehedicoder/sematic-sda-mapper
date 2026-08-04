@@ -50,7 +50,7 @@ public class MatchingService {
         Map.entry("Skill", List.of("name")),
         Map.entry("SkillParameter", List.of("name", "engineeringUnit")),
         Map.entry("Service", List.of("name")),
-        Map.entry("ServiceInstance", List.of("endpointUrl")),
+        Map.entry("ServiceInstance", List.of("name")),
         Map.entry("DeploymentContext", List.of("name")),
         Map.entry("ClusterNode", List.of("name")),
         Map.entry("DeploymentPolicy", List.of("name")),
@@ -61,7 +61,7 @@ public class MatchingService {
         Map.entry("CommunicationBinding", List.of("endpointUrl", "protocol")),
         Map.entry("DataConnector", List.of("name", "nodeId")),
         Map.entry("Asset", List.of("name")),
-        Map.entry("Sensor", List.of("name", "unit")),
+        Map.entry("Sensor", List.of("name")),
         Map.entry("ProcessVariable", List.of("name", "nodeId")),
         Map.entry("Observation", List.of("processVariableId", "value"))
     );

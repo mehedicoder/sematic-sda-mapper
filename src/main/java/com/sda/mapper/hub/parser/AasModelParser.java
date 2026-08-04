@@ -230,12 +230,13 @@ public class AasModelParser implements CanonicalModelParser {
             String unit = propertyValue(element, "EngineeringUnit");
             String min = propertyValue(element, "NominalRangeMin");
             String max = propertyValue(element, "NominalRangeMax");
+            String functionClass = propertyValue(element, "FunctionClass");
 
             model.addEntity(new Skill(skillId, name, description, null, fileName));
             if (!unit.isBlank()) {
                 skillUnits.put(name, unit);
                 model.addEntity(new SkillParameter(skillId + ".Range", skillId, "NominalRange",
-                    unit, min, max, "", fileName));
+                    functionClass, unit, min, max, "", fileName));
             }
             addSemanticConcept(firstSemanticId(element), fileName, model);
         }

@@ -210,13 +210,46 @@ class OntologyAndQueryLoadingTest {
     }
 
     @Test
+    @DisplayName("Should contain capability matching classes and datatype properties")
+    void shouldContainCapabilityMatchingVocabulary() throws IOException {
+        Model model = loadOntology();
+
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "OfferedCapability")),
+            "Ontology must contain sda:OfferedCapability class");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "RequiredCapability")),
+            "Ontology must contain sda:RequiredCapability class");
+        assertTrue(model.getResource(SDA_NS + "OfferedCapability")
+                .hasProperty(org.apache.jena.vocabulary.RDFS.subClassOf,
+                    model.createResource(SDA_NS + "Capability")),
+            "sda:OfferedCapability must be a sub-class of sda:Capability");
+
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "functionClass")),
+            "Ontology must contain sda:functionClass property");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "engineeringUnit")),
+            "Ontology must contain sda:engineeringUnit property");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "nominalRange_min")),
+            "Ontology must contain sda:nominalRange_min property");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "nominalRange_max")),
+            "Ontology must contain sda:nominalRange_max property");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "safetyIntegrityLevel")),
+            "Ontology must contain sda:safetyIntegrityLevel property");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "networkZone")),
+            "Ontology must contain sda:networkZone property");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "protocol")),
+            "Ontology must contain sda:protocol property");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "endpointUrl")),
+            "Ontology must contain sda:endpointUrl property");
+    }
+
+    @Test
     @DisplayName("Should parse SPARQL query file with Jena QueryFactory")
     void shouldParseAllSparqlQueries() throws IOException {
         String[] queryFiles = {
             "queries/match-service.rq",
             "queries/match-service-req002.rq",
             "queries/match-service-req003.rq",
-            "queries/cross-plant-temperature.rq"
+            "queries/cross-plant-temperature.rq",
+            "queries/hub-match-offered-required.rq"
         };
 
         for (String queryFile : queryFiles) {

@@ -15,8 +15,8 @@ import java.util.function.Consumer;
 
 /**
  * Class browser rows for the selected layer: one row per class with a status
- * dot, an explicit entity count and an "inferred" pill when the class is only
- * covered by inference.
+ * dot, a diagram code, an explicit entity count and an "inferred" pill when
+ * the class is only covered by inference.
  */
 public class ClassListPanel extends VerticalLayout {
 
@@ -31,6 +31,8 @@ public class ClassListPanel extends VerticalLayout {
         this.onSelectClass = onSelectClass;
         setPadding(false);
         setSpacing(true);
+        setWidth("320px");
+        setMinWidth("320px");
         addClassName("hub-class-list");
     }
 
@@ -67,10 +69,13 @@ public class ClassListPanel extends VerticalLayout {
         dot.addClassName("hub-status-dot");
         dot.addClassName("hub-status--" + status.name().toLowerCase());
 
+        Span code = new Span(clazz.code());
+        code.addClassName("hub-class-code");
+
         Span name = new Span(clazz.name());
         name.addClassName("hub-class-name");
 
-        row.add(dot, name);
+        row.add(dot, code, name);
 
         int explicitCount = model.countForClass(clazz.name());
         if (explicitCount > 0) {

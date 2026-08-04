@@ -33,7 +33,7 @@ public class ConsolePanel extends VerticalLayout {
 
         Scroller scroller = new Scroller(output);
         scroller.setWidthFull();
-        scroller.setHeight("150px");
+        scroller.setHeight("100px");
         scroller.setScrollDirection(Scroller.ScrollDirection.VERTICAL);
         add(scroller);
     }

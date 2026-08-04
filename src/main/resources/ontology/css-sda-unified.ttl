@@ -68,6 +68,21 @@ sda:Capability a owl:Class ;
     sda:code "2.1" ;
     sda:layer sda:LayerL2 .
 
+# Paper Step 4/5 capability sub-classes: the OWL reasoner infers
+# OfferedCapability from SkillParameter semantics, and the SPARQL match
+# compares OfferedCapability against RequiredCapability (Axiom A4).
+sda:OfferedCapability a owl:Class ;
+    rdfs:subClassOf sda:Capability ;
+    rdfs:label "OfferedCapability"@en ;
+    sda:code "2.1.1" ;
+    sda:layer sda:LayerL2 .
+
+sda:RequiredCapability a owl:Class ;
+    rdfs:subClassOf sda:Capability ;
+    rdfs:label "RequiredCapability"@en ;
+    sda:code "2.1.2" ;
+    sda:layer sda:LayerL2 .
+
 sda:Skill a owl:Class ;
     rdfs:label "Skill"@en ;
     sda:code "2.2" ;
@@ -175,6 +190,67 @@ sda:code a owl:AnnotationProperty ;
 
 sda:layer a owl:AnnotationProperty ;
     rdfs:label "ontology layer"@en .
+
+#################################################################
+# Datatype properties (capability / communication / deployment
+# dimensions evaluated by the SPARQL matching queries, Axiom A4)
+#################################################################
+
+sda:functionClass a owl:DatatypeProperty ;
+    rdfs:label "functionClass"@en ;
+    rdfs:comment "Semantic function class of a capability, e.g. FlowControl or TemperatureControl (paper Axiom A4)."@en ;
+    rdfs:domain sda:Capability ;
+    rdfs:range xsd:string .
+
+sda:engineeringUnit a owl:DatatypeProperty ;
+    rdfs:label "engineeringUnit"@en ;
+    rdfs:comment "UCUM engineering unit of a capability or of its skill parameter, e.g. l/min."@en ;
+    rdfs:range xsd:string .
+
+sda:nominalRange_min a owl:DatatypeProperty ;
+    rdfs:label "nominalRange_min"@en ;
+    rdfs:comment "Lower bound of the nominal operating range."@en ;
+    rdfs:range xsd:double .
+
+sda:nominalRange_max a owl:DatatypeProperty ;
+    rdfs:label "nominalRange_max"@en ;
+    rdfs:comment "Upper bound of the nominal operating range."@en ;
+    rdfs:range xsd:double .
+
+sda:accuracy a owl:DatatypeProperty ;
+    rdfs:label "accuracy"@en ;
+    rdfs:comment "Accuracy of a capability in its engineering unit."@en ;
+    rdfs:domain sda:Capability ;
+    rdfs:range xsd:double .
+
+sda:safetyIntegrityLevel a owl:DatatypeProperty ;
+    rdfs:label "safetyIntegrityLevel"@en ;
+    rdfs:comment "Safety integrity level (SIL) required by a required capability or offered by a deployed capability."@en ;
+    rdfs:range xsd:string .
+
+sda:networkZone a owl:DatatypeProperty ;
+    rdfs:label "networkZone"@en ;
+    rdfs:comment "Network zone of the deployment context, e.g. OT or IT."@en ;
+    rdfs:domain sda:DeploymentContext ;
+    rdfs:range xsd:string .
+
+sda:protocol a owl:DatatypeProperty ;
+    rdfs:label "protocol"@en ;
+    rdfs:comment "Communication protocol of a binding, e.g. OPC-UA."@en ;
+    rdfs:domain sda:CommunicationBinding ;
+    rdfs:range xsd:string .
+
+sda:accessMode a owl:DatatypeProperty ;
+    rdfs:label "accessMode"@en ;
+    rdfs:comment "Access mode of a binding, e.g. read-only."@en ;
+    rdfs:domain sda:CommunicationBinding ;
+    rdfs:range xsd:string .
+
+sda:endpointUrl a owl:DatatypeProperty ;
+    rdfs:label "endpointUrl"@en ;
+    rdfs:comment "Endpoint address of a communication binding."@en ;
+    rdfs:domain sda:CommunicationBinding ;
+    rdfs:range xsd:string .
 
 #################################################################
 # Object properties (relations)

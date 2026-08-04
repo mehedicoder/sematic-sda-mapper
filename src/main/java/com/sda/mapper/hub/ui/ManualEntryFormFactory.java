@@ -1,16 +1,9 @@
 package com.sda.mapper.hub.ui;
 
 import com.sda.mapper.hub.model.CanonicalEntity;
-import com.sda.mapper.hub.model.Capability;
-import com.sda.mapper.hub.model.ClusterNode;
-import com.sda.mapper.hub.model.DeploymentContext;
-import com.sda.mapper.hub.model.NetworkZone;
-import com.sda.mapper.hub.model.Requirement;
-import com.sda.mapper.hub.model.Sensor;
-import com.sda.mapper.hub.model.ServiceInstance;
-import com.sda.mapper.hub.model.Stakeholder;
-import com.sda.mapper.hub.model.UseCase;
+import com.sda.mapper.hub.model.ManualEntity;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
@@ -22,23 +15,71 @@ import java.util.function.Consumer;
 
 /**
  * Builds the manual-entry form for ontology classes that support it, with the
- * exact field lists specified for gap filling.
+ * exact per-class field lists from the UI spec. Dropdown fields are rendered
+ * as ComboBoxes populated from the current canonical model.
  */
 public final class ManualEntryFormFactory {
 
-    private static final Map<String, List<String>> FIELD_LISTS = Map.ofEntries(
-        Map.entry("Stakeholder", List.of("name", "role", "organization", "contact")),
-        Map.entry("UseCase", List.of("name", "description", "priority")),
-        Map.entry("Requirement", List.of("name", "description", "priority")),
-        Map.entry("DeploymentContext", List.of("name", "description", "clusterType")),
-        Map.entry("ClusterNode", List.of("name", "address", "role")),
-        Map.entry("NetworkZone", List.of("name", "description", "cidr")),
-        Map.entry("Sensor", List.of("name", "assetId", "unit")),
-        Map.entry("Capability", List.of("name", "description")),
-        Map.entry("ServiceInstance", List.of("serviceId", "endpointUrl"))
-    );
+    /**
+     * A single manual-entry field: the attribute key, the label shown to the
+     * user and whether it is offered as a dropdown.
+     */
+    private record Field(String key, String label, boolean dropdown) {
+    }
+
+    /**
+     * The manual-entry form specification for one ontology class.
+     *
+     * @param nameAttribute the field whose value also becomes the entity name
+     * @param fields        the fields of the form
+     */
+    private record ClassSpec(String nameAttribute, List<Field> fields) {
+    }
+
+    private static final Map<String, ClassSpec> SPECS = buildSpecs();
 
     private ManualEntryFormFactory() {
+    }
+
+    private static Map<String, ClassSpec> buildSpecs() {
+        Map<String, ClassSpec> specs = new LinkedHashMap<>();
+        specs.put("Stakeholder", new ClassSpec("role", List.of(
+            new Field("role", "Role", false),
+            new Field("organization", "Organization", false),
+            new Field("contact", "Contact", false))));
+        specs.put("UseCase", new ClassSpec("name", List.of(
+            new Field("name", "Name", false),
+            new Field("description", "Description", false),
+            new Field("targetAsset", "Target Asset", true))));
+        specs.put("Requirement", new ClassSpec("text", List.of(
+            new Field("text", "Text", false),
+            new Field("priority", "Priority", false),
+            new Field("category", "Category", false))));
+        specs.put("DeploymentContext", new ClassSpec("name", List.of(
+            new Field("name", "Name", false),
+            new Field("runtime", "Runtime", false),
+            new Field("zone", "Zone", false))));
+        specs.put("ClusterNode", new ClassSpec("hostname", List.of(
+            new Field("hostname", "Hostname", false),
+            new Field("ipAddress", "IP Address", false),
+            new Field("role", "Role", false))));
+        specs.put("NetworkZone", new ClassSpec("name", List.of(
+            new Field("name", "Name", false),
+            new Field("subnet", "Subnet", false),
+            new Field("securityLevel", "Security Level", false))));
+        specs.put("Sensor", new ClassSpec("type", List.of(
+            new Field("type", "Type", false),
+            new Field("location", "Location", false),
+            new Field("measuredVariable", "Measured Variable", true))));
+        specs.put("Capability", new ClassSpec("name", List.of(
+            new Field("name", "Name", false),
+            new Field("description", "Description", false),
+            new Field("mapsToRequirement", "Maps-To Requirement", true))));
+        specs.put("ServiceInstance", new ClassSpec("instanceId", List.of(
+            new Field("instanceId", "Instance ID", false),
+            new Field("deployedOn", "Deployed On", true),
+            new Field("status", "Status", false))));
+        return specs;
     }
 
     /**
@@ -48,19 +89,21 @@ public final class ManualEntryFormFactory {
      * @return {@code true} when a manual form exists
      */
     public static boolean supports(String className) {
-        return FIELD_LISTS.containsKey(className);
+        return SPECS.containsKey(className);
     }
 
     /**
      * Creates the manual-entry form for the given class.
      *
-     * @param className the ontology class name
-     * @param onSave    callback with the built entity
+     * @param className       the ontology class name
+     * @param dropdownOptions options per dropdown field key, derived from the model
+     * @param onSave          callback with the built entity
      * @return the form, or {@code null} when manual entry is not supported
      */
-    public static VerticalLayout create(String className, Consumer<CanonicalEntity> onSave) {
-        List<String> fields = FIELD_LISTS.get(className);
-        if (fields == null) {
+    public static VerticalLayout create(String className, Map<String, List<String>> dropdownOptions,
+                                        Consumer<CanonicalEntity> onSave) {
+        ClassSpec spec = SPECS.get(className);
+        if (spec == null) {
             return null;
         }
         VerticalLayout form = new VerticalLayout();
@@ -72,63 +115,50 @@ public final class ManualEntryFormFactory {
         heading.addClassName("hub-manual-heading");
         form.add(heading);
 
-        Map<String, TextField> inputs = new LinkedHashMap<>();
-        for (String field : fields) {
-            TextField input = new TextField(displayLabel(field));
-            input.setId("hub-field-" + className.toLowerCase() + "-" + field);
-            inputs.put(field, input);
-            form.add(input);
+        Map<String, TextField> textInputs = new LinkedHashMap<>();
+        Map<String, ComboBox<String>> selectInputs = new LinkedHashMap<>();
+        for (Field field : spec.fields()) {
+            if (field.dropdown()) {
+                ComboBox<String> combo = new ComboBox<>(field.label());
+                combo.setId("hub-field-" + className.toLowerCase() + "-" + field.key());
+                combo.setItems(dropdownOptions.getOrDefault(field.key(), List.of()));
+                combo.setAllowCustomValue(true);
+                combo.addCustomValueSetListener(e -> combo.setValue(e.getDetail()));
+                selectInputs.put(field.key(), combo);
+                form.add(combo);
+            } else {
+                TextField input = new TextField(field.label());
+                input.setId("hub-field-" + className.toLowerCase() + "-" + field.key());
+                textInputs.put(field.key(), input);
+                form.add(input);
+            }
         }
 
         Button save = new Button("Save " + className);
         save.addClassName("hub-manual-save");
         save.addClickListener(e -> {
             Map<String, String> values = new LinkedHashMap<>();
-            inputs.forEach((field, input) -> values.put(field, input.getValue().trim()));
-            onSave.accept(buildEntity(className, values));
+            textInputs.forEach((key, input) -> values.put(key, input.getValue().trim()));
+            selectInputs.forEach((key, combo) ->
+                values.put(key, combo.getValue() == null ? "" : combo.getValue().trim()));
+            onSave.accept(buildEntity(className, spec, values));
         });
         form.add(save);
         return form;
     }
 
-    private static String displayLabel(String field) {
-        StringBuilder label = new StringBuilder();
-        for (int i = 0; i < field.length(); i++) {
-            char c = field.charAt(i);
-            if (Character.isUpperCase(c)) {
-                label.append(' ');
-            }
-            label.append(c);
-        }
-        return label.toString().trim();
-    }
-
-    private static CanonicalEntity buildEntity(String className, Map<String, String> values) {
+    private static CanonicalEntity buildEntity(String className, ClassSpec spec,
+                                               Map<String, String> values) {
         String id = "manual-" + className.toLowerCase() + "-" + System.currentTimeMillis();
-        return switch (className) {
-            case "Stakeholder" -> new Stakeholder(id, value(values, "name"), value(values, "role"),
-                value(values, "organization"), value(values, "contact"), "manual-entry");
-            case "UseCase" -> new UseCase(id, value(values, "name"), value(values, "description"),
-                value(values, "priority"), "manual-entry");
-            case "Requirement" -> new Requirement(id, value(values, "name"), value(values, "description"),
-                value(values, "priority"), "manual-entry");
-            case "DeploymentContext" -> new DeploymentContext(id, value(values, "name"),
-                value(values, "description"), value(values, "clusterType"), "manual-entry");
-            case "ClusterNode" -> new ClusterNode(id, value(values, "name"), value(values, "address"),
-                value(values, "role"), "manual-entry");
-            case "NetworkZone" -> new NetworkZone(id, value(values, "name"), value(values, "description"),
-                value(values, "cidr"), "manual-entry");
-            case "Sensor" -> new Sensor(id, value(values, "name"), value(values, "assetId"),
-                value(values, "unit"), "manual-entry");
-            case "Capability" -> new Capability(id, value(values, "name"), value(values, "description"),
-                "manual-entry");
-            case "ServiceInstance" -> new ServiceInstance(id, value(values, "serviceId"),
-                value(values, "endpointUrl"), "manual-entry");
-            default -> throw new IllegalArgumentException("Manual entry not supported for " + className);
-        };
-    }
+        String nameValue = values.getOrDefault(spec.nameAttribute(), "").trim();
+        String name = nameValue.isBlank() ? className : nameValue;
 
-    private static String value(Map<String, String> values, String field) {
-        return values.getOrDefault(field, "");
+        Map<String, Object> attributes = new LinkedHashMap<>();
+        attributes.put("id", id);
+        attributes.put("name", name);
+        for (Field field : spec.fields()) {
+            attributes.put(field.key(), values.getOrDefault(field.key(), ""));
+        }
+        return new ManualEntity(className, id, name, attributes);
     }
 }

@@ -58,9 +58,9 @@ public class SemanticReasonerService {
      * Matches a requirement against the ontology.
      * <p>
      * For predefined requirements (REQ-001, REQ-002, REQ-003), uses dedicated
-     * SPARQL queries (Mode A). For dynamically-created requirements (e.g. from
-     * RequirementFormView), extracts parameters from the ontology model and
-     * falls back to inline matching (Mode B).
+     * SPARQL queries (Mode A). For dynamically-created requirements, extracts
+     * parameters from the ontology model and falls back to inline matching
+     * (Mode B).
      *
      * @param requirementId the requirement ID (e.g. "REQ-001" or "REQ-a1b2c3d4")
      * @return a {@link ServiceMatchResult} with all matched service details

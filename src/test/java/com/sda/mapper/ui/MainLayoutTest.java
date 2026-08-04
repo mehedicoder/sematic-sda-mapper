@@ -30,27 +30,10 @@ class MainLayoutTest {
     void testAllViewClassesExist() {
         assertDoesNotThrow(() -> {
             var loader = new com.sda.mapper.ontology.OntologyModelLoader();
-            var meterRegistry = new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
-            var metricsService = new com.sda.mapper.monitoring.MetricsService(loader, meterRegistry);
-            new SystemStatusView(loader, metricsService);
-        });
-        assertDoesNotThrow(() -> {
-            var loader = new com.sda.mapper.ontology.OntologyModelLoader();
             loader.loadOntology();
             var queryLoader = new com.sda.mapper.reasoning.SparqlQueryLoader();
             var catalogService = new com.sda.mapper.ui.catalog.ServiceCatalogService(loader, queryLoader);
             new com.sda.mapper.ui.catalog.ServiceCatalogView(catalogService);
-        });
-        assertDoesNotThrow(() -> {
-            var loader = new com.sda.mapper.ontology.OntologyModelLoader();
-            var inferenceService = new com.sda.mapper.reasoning.OntologyInferenceService(loader);
-            new DashboardView(loader, inferenceService);
-        });
-        assertDoesNotThrow(() -> {
-            var loader = new com.sda.mapper.ontology.OntologyModelLoader();
-            var meterRegistry = new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
-            var metricsService = new com.sda.mapper.monitoring.MetricsService(loader, meterRegistry);
-            new MonitoringView(metricsService);
         });
         assertDoesNotThrow(() -> new SettingsView());
     }

@@ -37,7 +37,7 @@ public class MainLayout extends AppLayout {
         banner.getStyle()
             .set("cursor", "pointer")
             .set("object-fit", "contain");
-        banner.addClickListener(e -> UI.getCurrent().navigate(SystemStatusView.class));
+        banner.addClickListener(e -> UI.getCurrent().navigate(OntologyView.class));
 
         var notificationCenter = new NotificationCenter();
         var notificationPanel = new NotificationPanel(notificationCenter);

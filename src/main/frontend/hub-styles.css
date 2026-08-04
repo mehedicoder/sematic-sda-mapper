@@ -21,8 +21,8 @@
 
 .hub-root .section-title {
   color: var(--hub-text-1);
-  font-size: 1.75rem;
-  font-weight: 700;
+  font-size: var(--lumo-font-size-l);
+  font-weight: 600;
 }
 
 .hub-root .section-subtitle {
@@ -78,66 +78,6 @@
 .hub-dropzone:hover {
   border-color: var(--hub-accent);
   color: var(--hub-text-1);
-}
-
-.hub-stepper {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 12px 0;
-}
-
-.hub-step {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--hub-text-3);
-  background: var(--hub-panel);
-  border: 1px solid var(--hub-border);
-}
-
-.hub-step-number {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--hub-border);
-  color: var(--hub-text-2);
-  font-size: 0.72rem;
-  flex-shrink: 0;
-}
-
-.hub-step--done {
-  color: var(--hub-ok);
-  border-color: rgba(16, 185, 129, 0.4);
-}
-
-.hub-step--done .hub-step-number {
-  background: var(--hub-ok);
-  color: #ffffff;
-}
-
-.hub-step--active {
-  color: var(--hub-accent);
-  border-color: rgba(59, 130, 246, 0.5);
-}
-
-.hub-step--active .hub-step-number {
-  background: var(--hub-accent);
-  color: #ffffff;
-  animation: hub-pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes hub-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
 }
 
 .hub-console {

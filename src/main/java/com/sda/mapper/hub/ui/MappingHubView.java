@@ -43,7 +43,6 @@ public class MappingHubView extends VerticalLayout {
     private final MappingHubService hubService;
     private final OntologyDataService ontologyDataService;
 
-    private final PipelineStepper stepper;
     private final ConsolePanel console;
     private final LayerTabs layerTabs;
     private final ClassListPanel classListPanel;
@@ -70,8 +69,6 @@ public class MappingHubView extends VerticalLayout {
         addClassName("hub-root");
 
         add(createHeader());
-        stepper = new PipelineStepper();
-        add(stepper);
 
         console = new ConsolePanel();
         var uploadAndConsole = new HorizontalLayout(createUploadSection(), console);
@@ -151,7 +148,7 @@ public class MappingHubView extends VerticalLayout {
         runButton.addThemeName("primary");
         runButton.addClickListener(e -> {
             lastResult = hubService.reRunPipeline();
-            stepper.runStages(this::refresh);
+            refresh();
         });
 
         Button resetButton = new Button("Reset");
@@ -159,7 +156,6 @@ public class MappingHubView extends VerticalLayout {
             hubService.reset();
             selectedClassName = null;
             lastResult = hubService.reRunPipeline();
-            stepper.reset();
             refresh();
         });
 
@@ -231,7 +227,6 @@ public class MappingHubView extends VerticalLayout {
     }
 
     private void refresh() {
-        stepper.setCompleted();
         console.logLines(lastResult.consoleLines());
         layerTabs.update(ontologyDataService.getLayers(), lastResult.gapReport(), selectedLayerId);
         renderClassList();

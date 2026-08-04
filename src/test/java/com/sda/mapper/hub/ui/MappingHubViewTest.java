@@ -87,13 +87,12 @@ class MappingHubViewTest {
     }
 
     @Test
-    @DisplayName("Should render the header, stepper and console on construction")
+    @DisplayName("Should render the header and console on construction")
     void shouldRenderCoreComponents() throws Exception {
         MappingHubView view = createView();
         String text = fullText(view.getElement());
         assertTrue(text.contains("Semantic Mapping Hub"));
-        assertTrue(text.contains("Parse"));
-        assertTrue(text.contains("Manifest"));
+        assertTrue(text.contains("Re-running pipeline"));
     }
 
     @Test

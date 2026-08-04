@@ -148,7 +148,7 @@ public class MappingHubView extends VerticalLayout {
 
     private HorizontalLayout createActionBar() {
         Button runButton = new Button("Run Pipeline");
-        runButton.addClassName("hub-action-button");
+        runButton.addThemeName("primary");
         runButton.addClickListener(e -> {
             lastResult = hubService.reRunPipeline();
             stepper.runStages(this::refresh);
@@ -164,7 +164,7 @@ public class MappingHubView extends VerticalLayout {
         });
 
         exportButton = new Button("Export Complete Manifest");
-        exportButton.addClassName("hub-action-button");
+        exportButton.addThemeName("primary");
         exportButton.addClickListener(e -> exportManifest());
 
         var actions = new HorizontalLayout(runButton, resetButton, exportButton);

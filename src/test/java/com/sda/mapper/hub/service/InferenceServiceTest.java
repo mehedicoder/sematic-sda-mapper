@@ -4,6 +4,8 @@ import com.sda.mapper.hub.model.CanonicalAssetModel;
 import com.sda.mapper.hub.model.CanonicalEntity;
 import com.sda.mapper.hub.model.CommunicationBinding;
 import com.sda.mapper.hub.model.ProcessVariable;
+import com.sda.mapper.hub.model.RequiredCapability;
+import com.sda.mapper.hub.model.SafetyClass;
 import com.sda.mapper.hub.model.Skill;
 import com.sda.mapper.hub.model.SkillParameter;
 import org.junit.jupiter.api.DisplayName;
@@ -139,5 +141,35 @@ class InferenceServiceTest {
         assertEquals("pump01", InferenceService.endpointHost("opc.tcp://pump01"));
         assertEquals("unknown", InferenceService.endpointHost(""));
         assertEquals("unknown", InferenceService.endpointHost(null));
+    }
+
+    @Test
+    @DisplayName("Should infer a safety class when safety properties exist without an explicit one")
+    void shouldInferSafetyClassFromSafetyProperties() {
+        CanonicalAssetModel model = new CanonicalAssetModel();
+        model.addEntity(new RequiredCapability("req-1", "Pumping on demand", "FlowControl",
+            "l/min", "0", "100", "SIL2", "OPC-UA", "Cell1"));
+
+        List<CanonicalEntity> inferred = service.infer(model);
+
+        List<CanonicalEntity> safetyClasses = inferred.stream()
+            .filter(e -> e.className().equals("SafetyClass")).toList();
+        assertEquals(1, safetyClasses.size());
+        assertEquals("SIL2", safetyClasses.get(0).attributes().get("level"));
+        assertTrue(safetyClasses.get(0).inferred());
+    }
+
+    @Test
+    @DisplayName("Should not infer a safety class when one is explicit")
+    void shouldNotInferSafetyClassWhenExplicit() {
+        CanonicalAssetModel model = new CanonicalAssetModel();
+        model.addEntity(new SafetyClass("SCL-pump", "Pump Safety Class", "Explicit", "NE107"));
+        model.addEntity(new RequiredCapability("req-1", "Pumping on demand", "FlowControl",
+            "l/min", "0", "100", "SIL2", "OPC-UA", "Cell1"));
+
+        List<CanonicalEntity> inferred = service.infer(model);
+
+        assertEquals(0, inferred.stream()
+            .filter(e -> e.className().equals("SafetyClass")).count());
     }
 }

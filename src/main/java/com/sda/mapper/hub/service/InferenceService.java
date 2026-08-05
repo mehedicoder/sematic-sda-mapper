@@ -9,6 +9,7 @@ import com.sda.mapper.hub.model.DeploymentContext;
 import com.sda.mapper.hub.model.NetworkZone;
 import com.sda.mapper.hub.model.OfferedCapability;
 import com.sda.mapper.hub.model.ProcessVariable;
+import com.sda.mapper.hub.model.SafetyClass;
 import com.sda.mapper.hub.model.Sensor;
 import com.sda.mapper.hub.model.ServiceInstance;
 import com.sda.mapper.hub.model.Skill;
@@ -17,6 +18,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * INFER stage: derives implicit canonical entities from the lifted model,
@@ -29,9 +32,21 @@ import java.util.List;
  * and nominal range are lifted from the skill's primary parameter (Axiom A4).
  * The capability is inferred - not parsed - and is consumed by the SPARQL
  * match stage.
+ *
+ * <p>Safety properties carried by other entities (for example a safety
+ * integrity level or NE107 support) that are not covered by an explicit
+ * {@link SafetyClass} yield an inferred safety class.
  */
 @Service
 public class InferenceService {
+
+    /**
+     * Attribute keys that carry safety-relevant values and may ground an
+     * inferred {@link SafetyClass}.
+     */
+    private static final List<String> SAFETY_ATTRIBUTE_KEYS = List.of(
+        "safetyIntegrityLevel", "safetyLevel", "safetyClass", "sil",
+        "ne107", "NE107Support");
 
     /**
      * Derives inferred entities for the given model without mutating it.
@@ -94,7 +109,52 @@ public class InferenceService {
                 true));
         }
 
+        inferred.addAll(inferSafetyClass(model));
+
         return inferred;
+    }
+
+    /**
+     * Derives an inferred {@link SafetyClass} when safety properties are
+     * present in the mapped data but no explicit safety class was parsed or
+     * entered manually.
+     *
+     * @param model the canonical model
+     * @return the inferred safety class entities, or an empty list
+     */
+    private static List<CanonicalEntity> inferSafetyClass(CanonicalAssetModel model) {
+        if (!model.safetyClasses().isEmpty()) {
+            return List.of();
+        }
+        return findSafetyLevel(model)
+            .map(level -> new SafetyClass("SCL-inferred", "Inferred Safety Class",
+                "Inferred from safety properties present in the mapped data",
+                level, Optional.empty(), true))
+            .map(List::<CanonicalEntity>of)
+            .orElseGet(List::of);
+    }
+
+    /**
+     * Searches every canonical entity attribute for a non-blank safety value,
+     * normalising a bare {@code "true"} NE107 flag to {@code "NE107"}.
+     *
+     * @param model the canonical model
+     * @return the first non-blank safety level, or empty when none exists
+     */
+    private static Optional<String> findSafetyLevel(CanonicalAssetModel model) {
+        for (CanonicalEntity entity : model.allEntities()) {
+            for (Map.Entry<String, Object> attribute : entity.attributes().entrySet()) {
+                if (!SAFETY_ATTRIBUTE_KEYS.contains(attribute.getKey())) {
+                    continue;
+                }
+                String value = attribute.getValue() == null ? "" : String.valueOf(attribute.getValue());
+                if (value.isBlank() || "false".equalsIgnoreCase(value)) {
+                    continue;
+                }
+                return Optional.of("true".equalsIgnoreCase(value) ? "NE107" : value);
+            }
+        }
+        return Optional.empty();
     }
 
     /**

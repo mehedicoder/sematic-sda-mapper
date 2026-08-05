@@ -1,5 +1,6 @@
 package com.sda.mapper.hub.model;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,5 +35,22 @@ public record GapReport(
      */
     public int count(CoverageStatus status) {
         return (int) entries.stream().filter(e -> e.status() == status).count();
+    }
+
+    /**
+     * Aggregates the coverage entries per CSS-SDA layer in first-seen layer
+     * order (L1, L2, L2b, L3, L4).
+     *
+     * @return one aggregated coverage per layer
+     */
+    public List<LayerCoverage> layerCoverage() {
+        List<LayerCoverage> result = new ArrayList<>();
+        for (CoverageEntry entry : entries) {
+            String layerId = entry.layerId();
+            if (result.stream().noneMatch(l -> l.layerId().equals(layerId))) {
+                result.add(LayerCoverage.aggregate(layerId, entries));
+            }
+        }
+        return List.copyOf(result);
     }
 }

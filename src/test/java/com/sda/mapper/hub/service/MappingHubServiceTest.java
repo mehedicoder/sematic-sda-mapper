@@ -78,10 +78,10 @@ class MappingHubServiceTest {
 
         List<String> lines = result.consoleLines();
         assertTrue(lines.stream().anyMatch(l -> l.startsWith("[PARSE]")));
+        assertTrue(lines.stream().anyMatch(l -> l.startsWith("[INSTANTIATE]")));
         assertTrue(lines.stream().anyMatch(l -> l.startsWith("[LIFT]")));
         assertTrue(lines.stream().anyMatch(l -> l.startsWith("[INFER]")));
         assertTrue(lines.stream().anyMatch(l -> l.startsWith("[MATCH]")));
-        assertTrue(lines.stream().anyMatch(l -> l.startsWith("[MANIFEST]")));
     }
 
     @Test

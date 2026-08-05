@@ -2,6 +2,7 @@ package com.sda.mapper.hub.ui;
 
 import com.sda.mapper.hub.model.CoverageStatus;
 import com.sda.mapper.hub.model.GapReport;
+import com.sda.mapper.hub.model.LayerCoverage;
 import com.sda.mapper.model.OntologyLayer;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.Span;
@@ -12,8 +13,9 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * Layer navigation tabs with a missing-count badge per layer, following the
- * CSS-SDA hierarchy. The badge is hidden when the layer has no missing class.
+ * Layer navigation tabs with a per-layer coverage percentage badge, following
+ * the CSS-SDA hierarchy. The badge shows the aggregated coverage percentage of
+ * each layer (or the overall percentage for the All Layers tab).
  */
 public class LayerTabs extends HorizontalLayout {
 
@@ -57,13 +59,36 @@ public class LayerTabs extends HorizontalLayout {
         if (id.equals(selected)) {
             button.addClassName("hub-tab--active");
         }
+        Span badge = createBadge(report, id);
+        button.getElement().appendChild(badge.getElement());
         if (missing > 0) {
-            Span badge = new Span(String.valueOf(missing));
-            badge.addClassName("hub-tab-badge");
-            button.getElement().appendChild(badge.getElement());
+            Span gapBadge = new Span(String.valueOf(missing));
+            gapBadge.addClassName("hub-tab-gap-badge");
+            gapBadge.getElement().setAttribute("title", "Missing classes in this layer");
+            button.getElement().appendChild(gapBadge.getElement());
         }
         button.addClickListener(e -> onSelect.accept(id));
         return button;
+    }
+
+    private Span createBadge(GapReport report, String layerId) {
+        Span badge = new Span(coverageLabel(report, layerId));
+        badge.addClassName("hub-tab-badge");
+        badge.addClassName("hub-tab-badge--coverage");
+        badge.getElement().setAttribute("title", "Layer coverage percentage");
+        return badge;
+    }
+
+    private static String coverageLabel(GapReport report, String layerId) {
+        if ("ALL".equals(layerId)) {
+            return Math.round(report.coveragePercent()) + "%";
+        }
+        return report.layerCoverage().stream()
+            .filter(l -> l.layerId().equals(layerId))
+            .map(LayerCoverage::coveragePercent)
+            .findFirst()
+            .map(pct -> Math.round(pct) + "%")
+            .orElse("0%");
     }
 
     private static int countMissing(GapReport report, String layerId) {

@@ -77,6 +77,18 @@ public class ManifestExportService {
                 putStrings(node, "missingFields", entry.missingFields());
             }
 
+            ArrayNode layerCoverage = root.putArray("layerCoverage");
+            for (com.sda.mapper.hub.model.LayerCoverage layer : report.layerCoverage()) {
+                ObjectNode node = layerCoverage.addObject();
+                node.put("layer", layer.layerId());
+                node.put("total", layer.total());
+                node.put("present", layer.present());
+                node.put("inferred", layer.inferred());
+                node.put("partial", layer.partial());
+                node.put("missing", layer.missing());
+                node.put("coveragePercent", layer.coveragePercent());
+            }
+
             ArrayNode gaps = root.putArray("blockingGaps");
             for (BlockingGap gap : report.blockingGaps()) {
                 ObjectNode node = gaps.addObject();

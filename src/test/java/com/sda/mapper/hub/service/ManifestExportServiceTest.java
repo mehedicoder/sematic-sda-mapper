@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("Manifest export service")
@@ -73,5 +74,29 @@ class ManifestExportServiceTest {
         JsonNode root = mapper.readTree(json);
         assertTrue(root.path("blockingGaps").isArray());
         assertTrue(root.path("recommendations").isArray());
+    }
+
+    @Test
+    @DisplayName("Should include per-layer coverage in the manifest")
+    void shouldIncludeLayerCoverage() throws Exception {
+        CanonicalAssetModel model = new CanonicalAssetModel();
+        model.addEntity(new Asset("urn:pump", "Pump FT101", "Siemens", "FT101-2025", "Instance"));
+
+        String json = createService().build(model, List.of(), List.of(), Set.of());
+
+        JsonNode root = mapper.readTree(json);
+        JsonNode layerCoverage = root.path("layerCoverage");
+        assertTrue(layerCoverage.isArray());
+        assertEquals(5, layerCoverage.size());
+        JsonNode l4 = null;
+        for (JsonNode node : layerCoverage) {
+            if ("L4".equals(node.path("layer").asText())) {
+                l4 = node;
+            }
+        }
+        assertNotNull(l4, "Manifest must contain L4 layer coverage");
+        assertEquals(25.0, l4.path("coveragePercent").asDouble());
+        assertEquals(1, l4.path("present").asInt());
+        assertEquals(3, l4.path("missing").asInt());
     }
 }

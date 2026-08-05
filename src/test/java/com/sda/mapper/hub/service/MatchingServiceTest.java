@@ -9,6 +9,7 @@ import com.sda.mapper.hub.model.CommunicationBinding;
 import com.sda.mapper.hub.model.CoverageEntry;
 import com.sda.mapper.hub.model.CoverageStatus;
 import com.sda.mapper.hub.model.GapReport;
+import com.sda.mapper.hub.model.LayerCoverage;
 import com.sda.mapper.hub.model.Sensor;
 import com.sda.mapper.service.OntologyDataService;
 import org.junit.jupiter.api.DisplayName;
@@ -112,5 +113,28 @@ class MatchingServiceTest {
 
         CoverageEntry entry = report.forClass("Asset").orElseThrow();
         assertEquals(List.of("pump-aas.json"), entry.sources());
+    }
+
+    @Test
+    @DisplayName("Should aggregate coverage percentages per layer")
+    void shouldAggregatePerLayerCoverage() {
+        CanonicalAssetModel model = new CanonicalAssetModel();
+        model.addEntity(new Asset("urn:pump", "Pump FT101", "Siemens", "FT101-2025", "Instance"));
+
+        GapReport report = service.compute(model, List.of());
+
+        assertEquals(List.of("L1", "L2", "L2b", "L3", "L4"),
+            report.layerCoverage().stream().map(LayerCoverage::layerId).toList());
+        LayerCoverage l4 = report.layerCoverage().stream()
+            .filter(l -> l.layerId().equals("L4")).findFirst().orElseThrow();
+        assertEquals(4, l4.total());
+        assertEquals(1, l4.present());
+        assertEquals(3, l4.missing());
+        assertEquals(25.0, l4.coveragePercent());
+        LayerCoverage l1 = report.layerCoverage().stream()
+            .filter(l -> l.layerId().equals("L1")).findFirst().orElseThrow();
+        assertEquals(6, l1.total());
+        assertEquals(0.0, l1.coveragePercent());
+        assertEquals(6, l1.missing());
     }
 }

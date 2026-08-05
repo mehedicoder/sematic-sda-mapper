@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * Session-scoped state of the mapping hub: the accumulated canonical model,
@@ -22,6 +23,7 @@ import java.util.Set;
 @Component
 public class MappingHubSession {
 
+    private final UUID id = UUID.randomUUID();
     private final CanonicalAssetModel model = new CanonicalAssetModel();
     private final List<UploadedFileInfo> files = new ArrayList<>();
     private final Set<AssetFileFormat> uploadedFormats = new LinkedHashSet<>();
@@ -74,6 +76,15 @@ public class MappingHubSession {
      */
     public CanonicalAssetModel getModel() {
         return model;
+    }
+
+    /**
+     * Returns the durable session identifier shared with database storage.
+     *
+     * @return the session id
+     */
+    public UUID getId() {
+        return id;
     }
 
     /**

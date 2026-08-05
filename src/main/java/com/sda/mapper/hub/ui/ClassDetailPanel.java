@@ -250,8 +250,10 @@ public class ClassDetailPanel extends VerticalLayout {
             analysis.add(missing);
         }
 
-        Span note = new Span("Upload a supplementary file of a matching format or enter the "
-            + "data manually to close this gap.");
+        Span note = new Span(layerOne(entry.layerId())
+            ? "Enter the missing data manually to close this gap."
+            : "Upload a supplementary file of a matching format or enter the "
+                + "data manually to close this gap.");
         note.addClassName("hub-gap-hint");
         analysis.add(note);
         return analysis;
@@ -263,7 +265,10 @@ public class ClassDetailPanel extends VerticalLayout {
         actions.setSpacing(true);
         actions.add(createSectionLabel("Gap actions"));
 
-        if (entry.status() != CoverageStatus.PRESENT) {
+        boolean layerOne = layerOne(entry.layerId());
+        boolean manualSupported = ManualEntryFormFactory.supports(className);
+
+        if (entry.status() != CoverageStatus.PRESENT && !layerOne) {
             Span hint = new Span("Upload a supplementary file to fill this gap");
             hint.addClassName("hub-gap-hint");
             actions.add(hint);
@@ -272,7 +277,13 @@ public class ClassDetailPanel extends VerticalLayout {
             actions.add(mini.get());
         }
 
-        if (ManualEntryFormFactory.supports(className)) {
+        if (manualSupported) {
+            if (entry.status() != CoverageStatus.PRESENT && layerOne) {
+                Span hint = new Span("L1 gaps are filled by manual entry \u2014 "
+                    + "file upload is not available for this layer.");
+                hint.addClassName("hub-gap-hint");
+                actions.add(hint);
+            }
             Button toggle = new Button("Enter manually");
             toggle.addClassName("hub-manual-toggle");
             toggle.addClickListener(e -> {
@@ -281,12 +292,18 @@ public class ClassDetailPanel extends VerticalLayout {
             });
             actions.add(toggle);
         } else {
-            Span hint = new Span("Manual entry is not available for " + className
-                + " \u2014 upload a supplementary file instead.");
+            Span hint = new Span(layerOne
+                ? "Manual entry is not available for " + className + "."
+                : "Manual entry is not available for " + className
+                    + " \u2014 upload a supplementary file instead.");
             hint.addClassName("hub-gap-hint");
             actions.add(hint);
         }
         return actions;
+    }
+
+    private static boolean layerOne(String layerId) {
+        return "L1".equals(layerId);
     }
 
     private void toggleManualForm(String className, Button toggle) {
@@ -315,6 +332,7 @@ public class ClassDetailPanel extends VerticalLayout {
             case "Sensor" -> options.put("measuredVariable", namesOf("ProcessVariable"));
             case "Capability" -> options.put("mapsToRequirement", namesOf("Requirement"));
             case "ServiceInstance" -> options.put("deployedOn", namesOf("ClusterNode"));
+            case "VerificationCriterion" -> options.put("verifiesRequirement", namesOf("Requirement"));
             default -> {
                 // no dropdowns
             }

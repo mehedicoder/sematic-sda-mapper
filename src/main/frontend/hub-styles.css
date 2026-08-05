@@ -39,6 +39,60 @@
   flex: none;
 }
 
+.hub-file-queue {
+  width: 100%;
+}
+
+.hub-file-row {
+  width: 100%;
+  justify-content: space-between;
+  background: var(--hub-panel);
+  border: 1px solid var(--hub-border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+}
+
+.hub-file-name {
+  color: var(--hub-text-2);
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hub-stepper {
+  flex-wrap: wrap;
+}
+
+.hub-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+  border-radius: 999px;
+  border: 1px solid var(--hub-border);
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--hub-text-3);
+  background: var(--hub-panel);
+}
+
+.hub-step--complete {
+  border-color: rgba(16, 185, 129, 0.55);
+  color: var(--hub-ok);
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.hub-step--pending {
+  color: var(--hub-text-3);
+}
+
+.hub-dashboard-panel {
+  width: 100%;
+}
+
 .hub-format-badge {
   display: inline-flex;
   padding: 4px 12px;
@@ -287,6 +341,54 @@
   font-weight: 700;
 }
 
+.hub-tab-badge--coverage {
+  background: rgba(59, 130, 246, 0.25);
+  border: 1px solid rgba(59, 130, 246, 0.6);
+  color: #93c5fd;
+}
+
+.hub-tab-gap-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: 4px;
+  border-radius: 999px;
+  background: var(--hub-error);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.hub-layer-coverage {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.hub-layer-coverage-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--hub-panel);
+  border: 1px solid var(--hub-border);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+
+.hub-layer-coverage-name {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--hub-text-2);
+}
+
+.hub-layer-coverage-value {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--hub-accent);
+}
+
 .hub-body {
   flex: 1;
 }
@@ -527,6 +629,33 @@
   background: var(--hub-drop-bg);
   border: 1px solid var(--hub-border);
   border-radius: 6px;
+  padding: 12px 16px;
+}
+
+.hub-manual-form vaadin-text-field,
+.hub-manual-form vaadin-combo-box {
+  width: 100%;
+}
+
+.hub-manual-form vaadin-text-field::part(input-field),
+.hub-manual-form vaadin-combo-box::part(input-field) {
+  background: #0f172a;
+  color: var(--hub-text-1);
+}
+
+.hub-manual-form vaadin-text-field::part(label),
+.hub-manual-form vaadin-combo-box::part(label) {
+  color: var(--hub-text-2);
+}
+
+.hub-manual-form vaadin-text-field::part(input-field):focus,
+.hub-manual-form vaadin-combo-box::part(input-field):focus {
+  background: #0f172a;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.45);
+}
+
+.hub-manual-form .hub-manual-save {
+  width: 100%;
 }
 
 .hub-manual-heading {
@@ -538,6 +667,19 @@
   background: var(--hub-ok);
   color: #ffffff;
   font-weight: 600;
+}
+
+/* Lumo inputs inside the hub always use the dark hub palette, matching the
+   ontology visualizer, so labels and typed text stay readable in light mode. */
+.hub-root vaadin-text-field::part(input-field),
+.hub-root vaadin-combo-box::part(input-field) {
+  background: var(--hub-drop-bg);
+  color: var(--hub-text-1);
+}
+
+.hub-root vaadin-text-field::part(label),
+.hub-root vaadin-combo-box::part(label) {
+  color: var(--hub-text-2);
 }
 
 .hub-manual-toggle {

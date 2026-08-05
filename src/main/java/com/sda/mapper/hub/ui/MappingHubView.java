@@ -14,6 +14,7 @@ import com.sda.mapper.ui.MainLayout;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dependency.CssImport;
+import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
 
 import com.vaadin.flow.component.html.Span;
@@ -47,6 +48,10 @@ public class MappingHubView extends VerticalLayout {
     private final LayerTabs layerTabs;
     private final ClassListPanel classListPanel;
     private final ClassDetailPanel detailPanel;
+    private final VerticalLayout fileQueue;
+    private final HorizontalLayout stepper;
+    private final VerticalLayout dashboard;
+    private final RecommendationBar recommendationBar;
     private Button exportButton;
 
     private String selectedLayerId = "ALL";
@@ -67,16 +72,35 @@ public class MappingHubView extends VerticalLayout {
         setPadding(true);
         setSpacing(true);
         addClassName("hub-root");
+        getElement().setAttribute("theme", "dark");
 
         add(createHeader());
 
         console = new ConsolePanel();
-        var uploadAndConsole = new HorizontalLayout(createUploadSection(), console);
+        fileQueue = new VerticalLayout();
+        fileQueue.addClassName("hub-file-queue");
+        fileQueue.setPadding(false);
+        fileQueue.setSpacing(false);
+        stepper = new HorizontalLayout();
+        stepper.addClassName("hub-stepper");
+        stepper.setWidthFull();
+
+        var uploadPanel = createUploadSection();
+        uploadPanel.add(fileQueue, stepper);
+
+        var uploadAndConsole = new HorizontalLayout(uploadPanel, console);
         uploadAndConsole.addClassName("hub-upload-row");
         uploadAndConsole.setWidthFull();
         uploadAndConsole.setSpacing(true);
         uploadAndConsole.setAlignItems(FlexComponent.Alignment.STRETCH);
         add(uploadAndConsole);
+
+        dashboard = new VerticalLayout();
+        dashboard.addClassName("hub-dashboard-panel");
+        dashboard.setPadding(false);
+        dashboard.setSpacing(true);
+        recommendationBar = new RecommendationBar();
+        add(dashboard);
 
         layerTabs = new LayerTabs(this::selectLayer);
         add(layerTabs);
@@ -197,8 +221,7 @@ public class MappingHubView extends VerticalLayout {
     }
 
     private void onManualSave(CanonicalEntity entity) {
-        hubService.getSession().addManualEntity(entity);
-        lastResult = hubService.reRunPipeline();
+        lastResult = hubService.addManualEntity(entity);
         refresh();
         Notification.show("Added " + entity.className() + " manually", 3000,
             Notification.Position.TOP_CENTER);
@@ -228,6 +251,9 @@ public class MappingHubView extends VerticalLayout {
 
     private void refresh() {
         console.logLines(lastResult.consoleLines());
+        renderFileQueue();
+        renderStepper();
+        renderDashboard();
         layerTabs.update(ontologyDataService.getLayers(), lastResult.gapReport(), selectedLayerId);
         renderClassList();
         renderDetail();
@@ -247,10 +273,125 @@ public class MappingHubView extends VerticalLayout {
             lastResult.inferred(), hubService.getSession().getFiles());
     }
 
+    private void renderFileQueue() {
+        fileQueue.removeAll();
+        Span title = new Span("Uploaded files");
+        title.addClassName("hub-section-label");
+        fileQueue.add(title);
+        if (hubService.getSession().getFiles().isEmpty()) {
+            Span empty = new Span("No files uploaded");
+            empty.addClassName("hub-recommendations-empty");
+            fileQueue.add(empty);
+            return;
+        }
+        for (UploadedFileInfo file : hubService.getSession().getFiles()) {
+            HorizontalLayout row = new HorizontalLayout();
+            row.addClassName("hub-file-row");
+            row.setAlignItems(FlexComponent.Alignment.CENTER);
+            Span name = new Span(file.fileName());
+            name.addClassName("hub-file-name");
+            Span format = formatBadge(file.format().label(), "hub-format--" + formatClass(file.format()));
+            Button remove = new Button("Remove");
+            remove.setEnabled(false);
+            remove.setTooltipText("Reset clears the current session file queue");
+            row.add(name, format, remove);
+            fileQueue.add(row);
+        }
+    }
+
+    private void renderStepper() {
+        stepper.removeAll();
+        for (String stage : List.of("Parse", "Instantiate", "Lift", "Infer", "Match")) {
+            Span pill = new Span(stage);
+            pill.addClassName("hub-step");
+            boolean completed = lastResult.consoleLines().stream()
+                .anyMatch(line -> line.startsWith("[" + stage.toUpperCase() + "]"));
+            pill.addClassName(completed ? "hub-step--complete" : "hub-step--pending");
+            stepper.add(pill);
+        }
+    }
+
+    private void renderDashboard() {
+        dashboard.removeAll();
+        HorizontalLayout cards = new HorizontalLayout(
+            dashboardCard("Present", lastResult.gapReport().count(CoverageStatus.PRESENT), "present"),
+            dashboardCard("Inferred", lastResult.gapReport().count(CoverageStatus.INFERRED), "inferred"),
+            dashboardCard("Partial", lastResult.gapReport().count(CoverageStatus.PARTIAL), "partial"),
+            dashboardCard("Missing", lastResult.gapReport().count(CoverageStatus.MISSING), "missing"),
+            dashboardCard("Coverage %", lastResult.gapReport().coveragePercent(), "coverage")
+        );
+        cards.addClassName("hub-dashboard-cards");
+        cards.setWidthFull();
+        dashboard.add(cards, progressBar(), renderLayerCoverage());
+        recommendationBar.update(lastResult.recommendations(), hubService.getSession().getUploadedFormats(),
+            this::onSupplementaryUpload, this::showError);
+        dashboard.add(recommendationBar);
+    }
+
+    private HorizontalLayout renderLayerCoverage() {
+        HorizontalLayout strip = new HorizontalLayout();
+        strip.addClassName("hub-layer-coverage");
+        strip.setWidthFull();
+        strip.setSpacing(true);
+        Span label = new Span("Layer coverage");
+        label.addClassName("hub-section-label");
+        strip.add(label);
+        for (com.sda.mapper.hub.model.LayerCoverage coverage : lastResult.gapReport().layerCoverage()) {
+            Div pill = new Div();
+            pill.addClassName("hub-layer-coverage-pill");
+            Span name = new Span(coverage.layerId());
+            name.addClassName("hub-layer-coverage-name");
+            Span percent = new Span(Math.round(coverage.coveragePercent()) + "%");
+            percent.addClassName("hub-layer-coverage-value");
+            pill.add(name, percent);
+            pill.getElement().setAttribute("title", coverage.layerId() + " coverage: " + coverage.present()
+                + " present, " + coverage.inferred() + " inferred, "
+                + coverage.partial() + " partial, " + coverage.missing() + " missing");
+            strip.add(pill);
+        }
+        return strip;
+    }
+
+    private Div dashboardCard(String label, Object value, String status) {
+        Div card = new Div();
+        card.addClassNames("hub-card", "hub-card--" + status);
+        Span number = new Span(String.valueOf(value));
+        number.addClassName("hub-card-value");
+        Span text = new Span(label);
+        text.addClassName("hub-card-label");
+        card.add(number, text);
+        return card;
+    }
+
+    private Div progressBar() {
+        Div bar = new Div();
+        bar.addClassName("hub-progress");
+        addSegment(bar, "present", lastResult.gapReport().count(CoverageStatus.PRESENT));
+        addSegment(bar, "inferred", lastResult.gapReport().count(CoverageStatus.INFERRED));
+        addSegment(bar, "partial", lastResult.gapReport().count(CoverageStatus.PARTIAL));
+        addSegment(bar, "missing", lastResult.gapReport().count(CoverageStatus.MISSING));
+        return bar;
+    }
+
+    private void addSegment(Div bar, String status, int count) {
+        Div segment = new Div();
+        segment.addClassNames("hub-progress-segment", "hub-progress--" + status);
+        segment.getStyle().set("flex-grow", String.valueOf(Math.max(count, 0)));
+        bar.add(segment);
+    }
+
+    private static String formatClass(AssetFileFormat format) {
+        return switch (format) {
+            case AAS_XML, AAS_JSON -> "aas";
+            case MTP_AML -> "mtp";
+            case OPCUA_JSON -> "opcua";
+        };
+    }
+
     private void exportManifest() {
         String json = hubService.buildManifest();
         String base64 = Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
-        UI.getCurrent().getPage().open("data:application/json;base64," + base64, "_blank");
+        UI.getCurrent().getPage().openUnsafe("data:application/json;base64," + base64, "_blank");
         Notification.show("Manifest exported", 3000, Notification.Position.TOP_CENTER);
     }
 

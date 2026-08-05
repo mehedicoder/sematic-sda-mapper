@@ -15,6 +15,7 @@ import com.sda.mapper.hub.parser.MtpModelParser;
 import com.sda.mapper.hub.parser.OpcUaModelParser;
 import com.sda.mapper.reasoning.SparqlQueryLoader;
 import com.sda.mapper.service.OntologyDataService;
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dependency.CssImport;
@@ -31,6 +32,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -113,6 +115,32 @@ class MappingHubViewTest {
     }
 
     @Test
+    @DisplayName("Should show coverage percentage badges on every layer tab")
+    void shouldShowCoverageBadgesOnTabs() throws Exception {
+        MappingHubView view = createView();
+        LayerTabs layerTabs = getField(view, "layerTabs", LayerTabs.class);
+        long badges = 0;
+        for (Component tab : layerTabs.getChildren().toList()) {
+            badges += tab.getElement().getChildren()
+                .filter(element -> element.getClassList().contains("hub-tab-badge--coverage"))
+                .count();
+        }
+        assertEquals(6, badges);
+    }
+
+    @Test
+    @DisplayName("Should render a per-layer coverage strip in the dashboard")
+    void shouldRenderPerLayerCoverageStrip() throws Exception {
+        MappingHubView view = createView();
+        VerticalLayout dashboard = getField(view, "dashboard", VerticalLayout.class);
+        String text = fullText(dashboard.getElement());
+        assertTrue(text.contains("Layer coverage"));
+        assertTrue(text.contains("L1"));
+        assertTrue(text.contains("L2b"));
+        assertTrue(text.contains("L4"));
+    }
+
+    @Test
     @DisplayName("Should write a re-run log line to the console on construction")
     void shouldLogToConsoleOnConstruction() throws Exception {
         MappingHubView view = createView();
@@ -150,6 +178,33 @@ class MappingHubViewTest {
         ClassListPanel classListPanel = getField(view, "classListPanel", ClassListPanel.class);
         long rows = classListPanel.getChildren().filter(c -> c instanceof Div).count();
         assertEquals(5, rows);
+    }
+
+    @Test
+    @DisplayName("Should hide the upload dropzone for L1 classes and advertise manual entry")
+    void shouldDisableUploadForL1Classes() throws Exception {
+        MappingHubView view = createView();
+        view.selectLayer("L1");
+        view.selectClass("Requirement");
+        ClassDetailPanel detailPanel = getField(view, "detailPanel", ClassDetailPanel.class);
+        String text = fullText(detailPanel.getElement());
+        assertTrue(text.contains("Enter manually"));
+        assertTrue(text.contains("file upload is not available for this layer"));
+        assertFalse(hasClass(detailPanel.getElement(), "hub-dropzone"),
+            "L1 detail must not render an upload dropzone");
+    }
+
+    @Test
+    @DisplayName("Should keep the upload dropzone for non-L1 gap classes")
+    void shouldKeepUploadForNonL1Classes() throws Exception {
+        MappingHubView view = createView();
+        view.selectLayer("L2");
+        view.selectClass("Capability");
+        ClassDetailPanel detailPanel = getField(view, "detailPanel", ClassDetailPanel.class);
+        String text = fullText(detailPanel.getElement());
+        assertTrue(text.contains("Upload supplementary file"));
+        assertTrue(hasClass(detailPanel.getElement(), "hub-dropzone"),
+            "L2 detail must still render an upload dropzone");
     }
 
     @Test
@@ -197,5 +252,12 @@ class MappingHubViewTest {
             builder.append(own);
         }
         element.getChildren().forEach(child -> appendText(child, builder));
+    }
+
+    private static boolean hasClass(Element element, String className) {
+        if (element.getClassList().contains(className)) {
+            return true;
+        }
+        return element.getChildren().anyMatch(child -> hasClass(child, className));
     }
 }

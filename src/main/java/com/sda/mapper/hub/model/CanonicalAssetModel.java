@@ -50,6 +50,9 @@ public final class CanonicalAssetModel {
      * @throws IllegalArgumentException when the class name is not a known ontology class
      */
     public void addEntity(CanonicalEntity entity) {
+        if (entity instanceof ManualEntity manual) {
+            entity = ManualEntityConverter.toTyped(manual);
+        }
         switch (entity.className()) {
             case "Stakeholder" -> addUnique(stakeholders, (Stakeholder) entity);
             case "UseCase" -> addUnique(useCases, (UseCase) entity);

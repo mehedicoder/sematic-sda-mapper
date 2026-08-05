@@ -15,16 +15,32 @@ import java.util.function.Consumer;
 
 /**
  * Builds the manual-entry form for ontology classes that support it, with the
- * exact per-class field lists from the UI spec. Dropdown fields are rendered
- * as ComboBoxes populated from the current canonical model.
+ * exact per-class field lists from the UI spec. All L1 classes
+ * (Stakeholder, UseCase, Requirement, RequirementParameter,
+ * RequirementConstraint, VerificationCriterion) are supported without file
+ * upload. Fields are either free-text inputs or suggestion ComboBoxes that
+ * still allow custom values.
  */
 public final class ManualEntryFormFactory {
 
     /**
      * A single manual-entry field: the attribute key, the label shown to the
-     * user and whether it is offered as a dropdown.
+     * user, the suggested ComboBox options and whether the options must be
+     * derived from the canonical model.
      */
-    private record Field(String key, String label, boolean dropdown) {
+    private record Field(String key, String label, List<String> suggestions, boolean fromModel) {
+
+        static Field text(String key, String label) {
+            return new Field(key, label, List.of(), false);
+        }
+
+        static Field suggested(String key, String label, List<String> suggestions) {
+            return new Field(key, label, suggestions, false);
+        }
+
+        static Field modelRef(String key, String label) {
+            return new Field(key, label, List.of(), true);
+        }
     }
 
     /**
@@ -44,41 +60,56 @@ public final class ManualEntryFormFactory {
     private static Map<String, ClassSpec> buildSpecs() {
         Map<String, ClassSpec> specs = new LinkedHashMap<>();
         specs.put("Stakeholder", new ClassSpec("role", List.of(
-            new Field("role", "Role", false),
-            new Field("organization", "Organization", false),
-            new Field("contact", "Contact", false))));
+            Field.text("role", "Role"),
+            Field.text("organization", "Organization"),
+            Field.text("contact", "Contact"))));
         specs.put("UseCase", new ClassSpec("name", List.of(
-            new Field("name", "Name", false),
-            new Field("description", "Description", false),
-            new Field("targetAsset", "Target Asset", true))));
-        specs.put("Requirement", new ClassSpec("text", List.of(
-            new Field("text", "Text", false),
-            new Field("priority", "Priority", false),
-            new Field("category", "Category", false))));
+            Field.text("name", "Name"),
+            Field.text("description", "Description"),
+            Field.modelRef("targetAsset", "Target Asset"))));
+        specs.put("Requirement", new ClassSpec("name", List.of(
+            Field.text("name", "Name"),
+            Field.text("description", "Description"),
+            Field.suggested("priority", "Priority",
+                List.of("Critical", "High", "Medium", "Low")))));
+        specs.put("RequirementParameter", new ClassSpec("name", List.of(
+            Field.text("name", "Name"),
+            Field.text("value", "Value"),
+            Field.suggested("unit", "Unit",
+                List.of("l/min", "bar", "\u00b0C", "%", "m", "s", "mA", "V")))));
+        specs.put("RequirementConstraint", new ClassSpec("name", List.of(
+            Field.text("name", "Name"),
+            Field.text("expression", "Expression"),
+            Field.text("description", "Description"))));
+        specs.put("VerificationCriterion", new ClassSpec("name", List.of(
+            Field.text("name", "Name"),
+            Field.text("criterion", "Criterion"),
+            Field.modelRef("verifiesRequirement", "Verifies Requirement"))));
         specs.put("DeploymentContext", new ClassSpec("name", List.of(
-            new Field("name", "Name", false),
-            new Field("runtime", "Runtime", false),
-            new Field("zone", "Zone", false))));
+            Field.text("name", "Name"),
+            Field.text("runtime", "Runtime"),
+            Field.text("zone", "Zone"))));
         specs.put("ClusterNode", new ClassSpec("hostname", List.of(
-            new Field("hostname", "Hostname", false),
-            new Field("ipAddress", "IP Address", false),
-            new Field("role", "Role", false))));
+            Field.text("hostname", "Hostname"),
+            Field.text("ipAddress", "IP Address"),
+            Field.text("role", "Role"))));
         specs.put("NetworkZone", new ClassSpec("name", List.of(
-            new Field("name", "Name", false),
-            new Field("subnet", "Subnet", false),
-            new Field("securityLevel", "Security Level", false))));
+            Field.text("name", "Name"),
+            Field.text("subnet", "Subnet"),
+            Field.text("securityLevel", "Security Level"))));
         specs.put("Sensor", new ClassSpec("type", List.of(
-            new Field("type", "Type", false),
-            new Field("location", "Location", false),
-            new Field("measuredVariable", "Measured Variable", true))));
+            Field.text("type", "Type"),
+            Field.text("location", "Location"),
+            Field.modelRef("measuredVariable", "Measured Variable"))));
         specs.put("Capability", new ClassSpec("name", List.of(
-            new Field("name", "Name", false),
-            new Field("description", "Description", false),
-            new Field("mapsToRequirement", "Maps-To Requirement", true))));
+            Field.text("name", "Name"),
+            Field.text("description", "Description"),
+            Field.modelRef("mapsToRequirement", "Maps-To Requirement"))));
         specs.put("ServiceInstance", new ClassSpec("instanceId", List.of(
-            new Field("instanceId", "Instance ID", false),
-            new Field("deployedOn", "Deployed On", true),
-            new Field("status", "Status", false))));
+            Field.text("instanceId", "Instance ID"),
+            Field.modelRef("deployedOn", "Deployed On"),
+            Field.suggested("status", "Status",
+                List.of("Running", "Stopped", "Maintenance", "Unknown")))));
         return specs;
     }
 
@@ -118,17 +149,23 @@ public final class ManualEntryFormFactory {
         Map<String, TextField> textInputs = new LinkedHashMap<>();
         Map<String, ComboBox<String>> selectInputs = new LinkedHashMap<>();
         for (Field field : spec.fields()) {
-            if (field.dropdown()) {
+            if (field.fromModel() || !field.suggestions().isEmpty()) {
                 ComboBox<String> combo = new ComboBox<>(field.label());
                 combo.setId("hub-field-" + className.toLowerCase() + "-" + field.key());
-                combo.setItems(dropdownOptions.getOrDefault(field.key(), List.of()));
+                combo.setItems(field.fromModel()
+                    ? dropdownOptions.getOrDefault(field.key(), List.of())
+                    : field.suggestions());
                 combo.setAllowCustomValue(true);
+                combo.setPlaceholder("Select " + field.label().toLowerCase() + "...");
+                combo.setWidthFull();
                 combo.addCustomValueSetListener(e -> combo.setValue(e.getDetail()));
                 selectInputs.put(field.key(), combo);
                 form.add(combo);
             } else {
                 TextField input = new TextField(field.label());
                 input.setId("hub-field-" + className.toLowerCase() + "-" + field.key());
+                input.setPlaceholder("Enter " + field.label().toLowerCase() + "...");
+                input.setWidthFull();
                 textInputs.put(field.key(), input);
                 form.add(input);
             }

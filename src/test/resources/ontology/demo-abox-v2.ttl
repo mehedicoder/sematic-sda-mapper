@@ -1,6 +1,6 @@
 # Demo ABox for the Semantic SDA Mapper v2 test suite.
 #
-# Instance namespace: http://www.example.org/instance#
+# Instance namespace: http://sda-platform.org/instance#
 # Ontology namespace: http://sda-platform.org/ontology# (bare prefix : in the TBox)
 #
 # This fixture provides the individuals that exercise the v2 matching, reasoning,
@@ -22,7 +22,7 @@
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
 @prefix owl:  <http://www.w3.org/2002/07/owl#> .
 @prefix sda:  <http://sda-platform.org/ontology#> .
-@prefix :     <http://www.example.org/instance#> .
+@prefix :     <http://sda-platform.org/instance#> .
 
 # =====================================================================
 # Use Cases and Use Case Requirements

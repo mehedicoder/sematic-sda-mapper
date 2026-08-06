@@ -53,7 +53,7 @@ class OntologyInferenceServiceTest {
         Model baseModel = loader.getModel();
         Model inferredModel = service.getInferredModel();
 
-        String instNs = "http://www.example.org/instance#";
+        String instNs = "http://sda-platform.org/instance#";
         String sdaNs = "http://sda-platform.org/ontology#";
 
         // CAP-FlowDiagnostics is an explicit Capability — must still exist

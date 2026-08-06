@@ -31,7 +31,7 @@ public class OpcUaNodeSetParser implements Parser {
 
     private static final Logger log = LoggerFactory.getLogger(OpcUaNodeSetParser.class);
 
-    private static final String INST_NS = "http://www.example.org/instance#";
+    private static final String INST_NS = "http://sda-platform.org/instance#";
     private static final String SDA_NS = "http://sda-platform.org/ontology#";
     private static final String UA_NS = "http://opcfoundation.org/UA/2011/03/UANodeSet.xsd";
     private static final String RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";

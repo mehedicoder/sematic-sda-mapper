@@ -14,7 +14,7 @@ import java.io.InputStream;
  * <p>
  * The demo ABox uses the canonical v2 vocabulary
  * {@code http://sda-platform.org/ontology#} with instance namespace
- * {@code http://www.example.org/instance#} (see
+ * {@code http://sda-platform.org/instance#} (see
  * {@code src/test/resources/ontology/demo-abox-v2.ttl}).
  */
 public final class DemoAboxBuilder {

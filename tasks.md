@@ -857,6 +857,36 @@ Interactive dark-themed ontology visualizer at `/visualizer` grounded in the can
 
 ---
 
+## Maintenance: Instance-Namespace Cleanup — `example.org` Removed from Production Identity Bases
+
+**Status:** [x] Completed
+**Branch:** `main`
+**Completed:** 2026-08-06
+**Tests:** 468 passing (0 failures, 0 errors, 0 skipped)
+
+### Completion Evidence
+
+- `mvn -B clean "-Dvaadin.skip=true" test` — BUILD SUCCESS, 468 tests, 0 failures, 0 errors (unchanged count; pure identity-base rename)
+- Production identity bases moved off the RFC 2606 documentation domain `example.org` onto the project domain: instance base `http://www.example.org/instance#` → `http://sda-platform.org/instance#`, mapping-hub persistence base → `http://sda-platform.org/mapping-hub/`, lifted-concept base → `http://sda-platform.org/concept/`
+- `example.org` now remains only in test/example fixture data and vendor semantic-IRI literals (AAS identifiers, MTP AML XML namespaces, `connectorSemanticIRI`, `mtp/descriptor` literal) plus historical `tasks.md` records
+
+### What was built / changed
+
+| Component | Files |
+|---|---|
+| Instance base constant `http://www.example.org/instance#` → `http://sda-platform.org/instance#` | 10 production classes (`RequirementMatchingController`, `RDeployService`, `RVerifyService`, `SemanticReasonerService` incl. inline `PREFIX`, `EndToEndPipelineService`, `SemanticMatchService`, `AasParser`, `MTPAmlParser`, `OpcUaNodeSetParser`, `UaServerDatasheetParser`), 4 SPARQL queries (`match-service*.rq`, `r0-hard-constraint-prefilter.rq`) |
+| Instance base in ABox + tests | `demo-abox-v2.ttl` (prefix + header comment), `DemoAboxBuilder` javadoc, 9 test classes (INST_NS constants and inline URIs) |
+| Mapping-hub persistence base → `http://sda-platform.org/mapping-hub/` | `CanonicalTripleMapper.java` |
+| Lifted-concept base → `http://sda-platform.org/concept/` | `LiftService.java` |
+
+### Key technical decisions
+
+- Instance base, queries and the ABox fixture were moved **together**: they share one identity space, so a base change in production code alone would have desynchronized matching (production injects instances at the base the queries/ABox must resolve).
+- Left `example.org` untouched in fixture/vendor data (AAS `identifier`/`globalAssetId`/`value` IRIs, MTP AML `xmlns`, `connectorSemanticIRI`, `https://example.org/mtp/descriptor` literal) — those are sample/vendor-document values, exactly what `example.org` is reserved for.
+- No persisted-data migration needed at this stage: the change is identity-base rename only, and the MVP database is dev/demo (persisted hub triples at the old base would need re-running through the pipeline).
+
+---
+
 ## Summary
 
 | Phase | Status | Tests | Date |
@@ -884,6 +914,7 @@ Interactive dark-themed ontology visualizer at `/visualizer` grounded in the can
 | Ontology Validation Test Suite (Categories A–E) | [x] Completed | 467 | 2026-08-05 |
 | Maintenance: v2 Ontology Test Migration + Milo/Guava Test-Classpath Fix | [x] Completed | 467 | 2026-08-05 |
 | Maintenance: v2 Ontology Production Migration — Jena-Derived Catalog + UseCaseRequirement Renames | [x] Completed | 468 | 2026-08-06 |
+| Maintenance: Instance-Namespace Cleanup — example.org removed from production identity bases | [x] Completed | 468 | 2026-08-06 |
 | Phase 12: Documentation | [ ] Not started | — | — |
 | Phase 13: EKA UI Polish | [ ] Not started | — | — |
 | Phase 14: Margo Sandbox | [ ] Not started | — | — |

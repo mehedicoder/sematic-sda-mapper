@@ -57,7 +57,7 @@ public class SemanticMatchService {
     private static final Logger log = LoggerFactory.getLogger(SemanticMatchService.class);
 
     private static final String SDA_NS = "http://sda-platform.org/ontology#";
-    private static final String INST_NS = "http://www.example.org/instance#";
+    private static final String INST_NS = "http://sda-platform.org/instance#";
     private static final String MATCH_QUERY_PATH = "queries/hub-match-offered-required.rq";
 
     private final SparqlQueryLoader sparqlQueryLoader;

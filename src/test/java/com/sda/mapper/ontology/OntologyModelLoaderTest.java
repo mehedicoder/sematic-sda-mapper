@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class OntologyModelLoaderTest {
 
     private static final String SDA_NS = "http://sda-platform.org/ontology#";
-    private static final String INST_NS = "http://www.example.org/instance#";
+    private static final String INST_NS = "http://sda-platform.org/instance#";
 
     private OntologyModelLoader loadWithDemoAbox() {
         var loader = new OntologyModelLoader();

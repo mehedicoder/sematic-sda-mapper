@@ -148,7 +148,7 @@ class SemanticReasonerServiceTest {
     void shouldMatchDynamicRequirementWithOpcUaParams() {
         Model model = sharedLoader.getModel();
         String reqId = "REQ-TEST-DYN-01";
-        String uri = "http://www.example.org/instance#" + reqId;
+        String uri = "http://sda-platform.org/instance#" + reqId;
 
         Resource req = model.createResource(uri);
         req.addProperty(
@@ -170,7 +170,7 @@ class SemanticReasonerServiceTest {
     void shouldNotMatchDynamicRequirementWithMqtt() {
         Model model = sharedLoader.getModel();
         String reqId = "REQ-TEST-DYN-02";
-        String uri = "http://www.example.org/instance#" + reqId;
+        String uri = "http://sda-platform.org/instance#" + reqId;
 
         Resource req = model.createResource(uri);
         req.addProperty(
@@ -190,7 +190,7 @@ class SemanticReasonerServiceTest {
     void shouldMatchDynamicRequirementWithNoParamsUsingDefaults() {
         Model model = sharedLoader.getModel();
         String reqId = "REQ-TEST-DYN-03";
-        String uri = "http://www.example.org/instance#" + reqId;
+        String uri = "http://sda-platform.org/instance#" + reqId;
 
         Resource req = model.createResource(uri);
         req.addProperty(

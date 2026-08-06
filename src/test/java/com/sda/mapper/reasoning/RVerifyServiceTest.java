@@ -127,7 +127,7 @@ class RVerifyServiceTest {
             "OT Zone 3 deployment");
 
         // Remove all verifiedBy links so the requirement has no criteria at all
-        loader.getModel().getResource("http://www.example.org/instance#REQ-003")
+        loader.getModel().getResource("http://sda-platform.org/instance#REQ-003")
             .removeAll(loader.getModel().createProperty(
                 "http://sda-platform.org/ontology#verifiedBy"));
 

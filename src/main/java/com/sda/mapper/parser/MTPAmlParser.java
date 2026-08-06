@@ -29,7 +29,7 @@ public class MTPAmlParser implements Parser {
 
     private static final Logger log = LoggerFactory.getLogger(MTPAmlParser.class);
 
-    private static final String INST_NS = "http://www.example.org/instance#";
+    private static final String INST_NS = "http://sda-platform.org/instance#";
     private static final String SDA_NS = "http://sda-platform.org/ontology#";
     private static final String RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
     private static final String RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label";

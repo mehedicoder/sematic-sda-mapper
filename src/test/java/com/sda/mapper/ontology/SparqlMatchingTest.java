@@ -68,7 +68,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class SparqlMatchingTest {
 
     private static final String ONTOLOGY_PATH = "ontology/sda_ontology_v2_structured.ttl";
-    private static final String INST_NS = "http://www.example.org/instance#";
+    private static final String INST_NS = "http://sda-platform.org/instance#";
     private static final String SDA_NS = "http://sda-platform.org/ontology#";
 
     private static Model model;
@@ -84,7 +84,7 @@ class SparqlMatchingTest {
         PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
         PREFIX sda:  <http://sda-platform.org/ontology#>
-        PREFIX :     <http://www.example.org/instance#>
+        PREFIX :     <http://sda-platform.org/instance#>
 
         SELECT ?requirement ?capability ?skill ?service ?binding ?protocol ?accessMode
                ?recall ?latency ?safetyIntegrityLevel ?determinismClass ?networkZone

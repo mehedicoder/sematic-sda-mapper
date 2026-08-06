@@ -39,7 +39,7 @@ public class LiftService {
             }
         }
         for (String concept : concepts) {
-            String iri = "https://example.org/concept/" + concept;
+            String iri = "http://sda-platform.org/concept/" + concept;
             lifted.add(new SemanticConcept("SC-" + concept, concept,
                 "Lifted from exposed node " + concept, iri));
         }

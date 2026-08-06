@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("R2a requiresConcept filter — concept coverage blocks unmatched skills")
 class R2aConceptCoverageTest {
 
-    private static final String INST_NS = "http://www.example.org/instance#";
+    private static final String INST_NS = "http://sda-platform.org/instance#";
     private static final String SDA_NS = "http://sda-platform.org/ontology#";
 
     private OntologyModelLoader loader;

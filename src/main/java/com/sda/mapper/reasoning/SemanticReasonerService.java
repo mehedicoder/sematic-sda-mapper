@@ -33,7 +33,7 @@ public class SemanticReasonerService {
 
     private static final Logger log = LoggerFactory.getLogger(SemanticReasonerService.class);
 
-    private static final String INST_NS = "http://www.example.org/instance#";
+    private static final String INST_NS = "http://sda-platform.org/instance#";
     private static final String SDA_NS = "http://sda-platform.org/ontology#";
 
     private static final Map<String, String> REQUIREMENT_QUERY_MAP = Map.of(
@@ -280,7 +280,7 @@ public class SemanticReasonerService {
             PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             PREFIX sda:  <http://sda-platform.org/ontology#>
-            PREFIX :     <http://www.example.org/instance#>
+            PREFIX :     <http://sda-platform.org/instance#>
 
             SELECT ?capability ?skill ?service ?binding ?protocol ?accessMode
                    ?recall ?latency ?label ?capLabel

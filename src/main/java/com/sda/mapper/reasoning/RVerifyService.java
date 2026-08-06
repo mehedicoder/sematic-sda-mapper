@@ -29,7 +29,7 @@ public class RVerifyService {
 
     private static final Logger log = LoggerFactory.getLogger(RVerifyService.class);
 
-    private static final String INST_NS = "http://www.example.org/instance#";
+    private static final String INST_NS = "http://sda-platform.org/instance#";
     private static final String SDA_NS = "http://sda-platform.org/ontology#";
 
     private final OntologyModelLoader ontologyModelLoader;

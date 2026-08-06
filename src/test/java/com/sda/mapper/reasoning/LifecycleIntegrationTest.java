@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("Full lifecycle integration — Defined → Matched → Verified")
 class LifecycleIntegrationTest {
 
-    private static final String INST_NS = "http://www.example.org/instance#";
+    private static final String INST_NS = "http://sda-platform.org/instance#";
     private static final String SDA_NS = "http://sda-platform.org/ontology#";
 
     private static OntologyModelLoader loader;

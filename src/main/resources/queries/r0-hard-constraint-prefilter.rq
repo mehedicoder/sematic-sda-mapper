@@ -1,7 +1,7 @@
 PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX sda:  <http://sda-platform.org/ontology#>
 PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
-PREFIX :     <http://www.example.org/instance#>
+PREFIX :     <http://sda-platform.org/instance#>
 
 # R0 pre-filter: keep only services that satisfy every hard constraint of
 # :REQ-001 (latency <= 60, recall >= 0.90) before the full multi-dimensional

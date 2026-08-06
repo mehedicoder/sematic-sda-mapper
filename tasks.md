@@ -819,6 +819,44 @@ Interactive dark-themed ontology visualizer at `/visualizer` grounded in the can
 
 ---
 
+## Maintenance: v2 Ontology Production Migration — Jena-Derived Visualizer Catalog + UseCaseRequirement Record Renames
+
+**Status:** [x] Completed
+**Branch:** `main`
+**Completed:** 2026-08-06
+**Tests:** 468 passing (0 failures, 0 errors, 0 skipped)
+
+### Completion Evidence
+
+- `mvn -B clean "-Dvaadin.skip=true" test` — BUILD SUCCESS, 468 tests, 0 failures, 0 errors
+- `OntologyDataService` derives the ontology-visualizer catalog at runtime from the loaded v2 TBox (`sda_ontology_v2_structured.ttl`, 1602 triples) instead of hardcoded lists, so the catalog cannot drift from the ontology
+- Hub records renamed to the v2 vocabulary: `Requirement` → `UseCaseRequirement`, `RequirementParameter` → `UseCaseRequirementParameter`, `RequirementConstraint` → `UseCaseRequirementConstraint` (IntelliJ rename refactoring applied to all usages including string literals)
+- v1 → v2 aliases retained in `CanonicalEntityRestorer` and `ManualEntityConverter` so persisted v1 rows remain restorable without a data migration
+- `demo-abox-v2.ttl` requirement literals updated to the `UseCaseRequirement` suffix, fixing `OntologyModelLoaderTest.shouldContainRequirementProperties`
+- No roadmap markers changed: this work is production-code maintenance with no open roadmap task/acceptance criteria of its own
+
+### What was built / changed
+
+| Component | Files |
+|---|---|
+| Jena-derived visualizer catalog — layers (via `:ontologyLayer`), classes (via `:classNumber`), relations (labeled `owl:ObjectProperty` with class domain/range), core vs supporting via `CORE_PROPERTIES`; `@Autowired` ctor taking `OntologyModelLoader` + no-arg ctor loading the default TTL | `src/main/java/com/sda/mapper/service/OntologyDataService.java` |
+| Renamed records (files renamed) | `src/main/java/com/sda/mapper/hub/model/UseCaseRequirement.java`, `UseCaseRequirementParameter.java`, `UseCaseRequirementConstraint.java` |
+| Cascade updates for renamed records (typed lists, switches, `REQUIRED_FIELDS` keys, form specs, dropdown refs) | `src/main/java/com/sda/mapper/hub/model/CanonicalAssetModel.java`, `hub/service/MatchingService.java`, `hub/ui/ManualEntryFormFactory.java`, `hub/ui/ClassDetailPanel.java` |
+| v1 aliases + deterministic canonical-constructor invocation (`getDeclaredConstructor(componentTypes)` instead of `getConstructors()[0]`) | `src/main/java/com/sda/mapper/hub/persistence/CanonicalEntityRestorer.java` |
+| v1 aliases in the converter switch | `src/main/java/com/sda/mapper/hub/model/ManualEntityConverter.java` |
+| Derived-data assertions (24 classes / 89 relations; 22 core / 67 supporting; Service 9 outgoing / 9 incoming) | `src/test/java/com/sda/mapper/ui/OntologyViewTest.java` |
+| v2 form element IDs (`hub-field-usecaserequirement-*`) | `src/test/java/com/sda/mapper/hub/ui/ManualEntryFormFactoryTest.java` |
+| v2 requirement literals for REQ-001/002/003 | `src/test/resources/ontology/demo-abox-v2.ttl` |
+
+### Key technical decisions
+
+- The visualizer reads the TBox instead of a static snapshot so layer/class/relation data always matches the versioned, reviewable ontology file; class annotations (`:classNumber`, `:ontologyLayer`) in the TTL are the single source of truth.
+- v1 className aliases live in the restorer/converter rather than migrating persisted rows, because the DB stores class names as strings; new sessions use the v2 names.
+- `CanonicalEntityRestorer` resolves the record's canonical constructor deterministically via `getDeclaredConstructor(RecordComponent[] types)` — `getConstructors()[0]` ordering is unspecified across JDKs and produced XML-parse failures in `CanonicalEntityRestorerTest`.
+- Fixture updated (not the test): the ABox is the v2 vocabulary's instance data, so instance labels/names follow the class rename to `UseCaseRequirement`.
+
+---
+
 ## Summary
 
 | Phase | Status | Tests | Date |
@@ -845,6 +883,7 @@ Interactive dark-themed ontology visualizer at `/visualizer` grounded in the can
 | Session Visibility View | [x] Completed | 451 | 2026-08-05 |
 | Ontology Validation Test Suite (Categories A–E) | [x] Completed | 467 | 2026-08-05 |
 | Maintenance: v2 Ontology Test Migration + Milo/Guava Test-Classpath Fix | [x] Completed | 467 | 2026-08-05 |
+| Maintenance: v2 Ontology Production Migration — Jena-Derived Catalog + UseCaseRequirement Renames | [x] Completed | 468 | 2026-08-06 |
 | Phase 12: Documentation | [ ] Not started | — | — |
 | Phase 13: EKA UI Polish | [ ] Not started | — | — |
 | Phase 14: Margo Sandbox | [ ] Not started | — | — |

@@ -35,9 +35,9 @@
     sda:targetsAsset :AHU01 .
 
 :REQ-001 a sda:UseCaseRequirement ;
-    rdfs:label "Flowmeter Diagnostics Requirement" ;
+    rdfs:label "Flowmeter Diagnostics UseCaseRequirement" ;
     sda:requirementID "REQ-001" ;
-    sda:requirementName "Flowmeter Diagnostics Requirement" ;
+    sda:requirementName "Flowmeter Diagnostics UseCaseRequirement" ;
     sda:requirementDescription "Match a flowmeter diagnostics service for FT-101." ;
     sda:requirementType "Diagnostics" ;
     sda:lifecycleStatus "Defined" ;
@@ -47,9 +47,9 @@
     sda:validatedBy :UseCase-HVACTempMonitoring .
 
 :REQ-002 a sda:UseCaseRequirement ;
-    rdfs:label "Fermentation Skid Requirement" ;
+    rdfs:label "Fermentation Skid UseCaseRequirement" ;
     sda:requirementID "REQ-002" ;
-    sda:requirementName "Fermentation Skid Requirement" ;
+    sda:requirementName "Fermentation Skid UseCaseRequirement" ;
     sda:requirementDescription "Match a read-write PROFINET service for the fermentation skid." ;
     sda:requirementType "Control" ;
     sda:lifecycleStatus "Defined" ;
@@ -59,9 +59,9 @@
     sda:validatedBy :UseCase-FermentationSkid .
 
 :REQ-003 a sda:UseCaseRequirement ;
-    rdfs:label "AHU Temperature Monitoring Requirement" ;
+    rdfs:label "AHU Temperature Monitoring UseCaseRequirement" ;
     sda:requirementID "REQ-003" ;
-    sda:requirementName "AHU Temperature Monitoring Requirement" ;
+    sda:requirementName "AHU Temperature Monitoring UseCaseRequirement" ;
     sda:requirementDescription "Match an OT-Zone-3 OPC-UA read-only service for AHU-01." ;
     sda:requirementType "Monitoring" ;
     sda:lifecycleStatus "Defined" ;

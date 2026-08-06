@@ -80,11 +80,11 @@ class EndToEndPipelineServiceTest {
     }
 
     @Test
-    @DisplayName("Requirement is created from form params even when no requirement list is selected")
+    @DisplayName("UseCaseRequirement is created from form params even when no requirement list is selected")
     void shouldCreateRequirementFromFormParams() {
         EndToEndPipelineService pipelineService = createPipelineService();
         Map<String, String> formParams = new HashMap<>();
-        formParams.put("title", "Test Flow Rate Requirement");
+        formParams.put("title", "Test Flow Rate UseCaseRequirement");
         formParams.put("protocol", "OPC-UA");
         formParams.put("accessMode", "read-only");
         formParams.put("minRecall", "0.90");

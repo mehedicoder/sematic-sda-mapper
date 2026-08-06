@@ -1,51 +1,69 @@
 PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
-PREFIX sda:  <https://example.org/ontology/sda#>
+PREFIX sda:  <http://sda-platform.org/ontology#>
 
-# Semantic match between an inferred sda:OfferedCapability and an
-# sda:RequiredCapability across all three CSS-SDA dimensions simultaneously
+# Semantic match between an inferred sda:Capability and an
+# sda:UseCaseRequirement across all three CSS-SDA dimensions simultaneously
 # (paper, Step 5):
-#   1. Capability dimension:     functionClass equality, engineering unit
-#                                compatibility, nominal range containment and
-#                                SIL sufficiency.
+#   1. Capability dimension:     semantic concept identity (parameterName vs
+#                                conceptName), engineering unit compatibility,
+#                                nominal range containment and SIL sufficiency.
 #   2. Communication dimension:  binding protocol of the matched service.
 #   3. Deployment dimension:     network zone of the deployment context.
 # The matched skill, service and endpoint are projected together with the SIL
 # evidence.
+#
+# v2 vocabulary mapping (cf. demo-abox-v2.ttl canonical chains):
+#   UseCaseRequirement --hasParameter--> UseCaseRequirementParameter
+#     (parameterName/unit/minValue/maxValue)
+#   UseCaseRequirement --mapsToDeploymentContext--> DeploymentContext
+#     --contextConstrainedBy--> SafetyClass (safetyIntegrityLevel)
+#     --locatedInZone--> NetworkZone (zoneName)
+#   Capability --realisedBy--> Skill --requiresConcept--> SemanticConcept
+#     (conceptName) --hasSkillParameter--> SkillParameter
+#     (paramName/paramUnit/paramMinValue/paramMaxValue)
+#     --isImplementedBy--> Service --hasBinding--> CommunicationBinding
+#     (protocol/bindingEndpointUri)
+#   DeploymentContext --deploysService--> Service
+#     --contextConstrainedBy--> SafetyClass --locatedInZone--> NetworkZone
 SELECT ?required ?offered ?skill ?service ?serviceName ?endpointUrl ?protocol ?networkZone ?sil
 WHERE {
-    # Capability dimension: the required function class drives the match.
-    ?required a sda:RequiredCapability ;
-              sda:functionClass ?reqFunctionClass .
-    OPTIONAL { ?required sda:engineeringUnit ?reqUnit }
-    OPTIONAL { ?required sda:nominalRange_min ?reqMin }
-    OPTIONAL { ?required sda:nominalRange_max ?reqMax }
-    OPTIONAL { ?required sda:safetyIntegrityLevel ?reqSil }
+    # Capability dimension: the required semantic concept drives the match.
+    ?required a sda:UseCaseRequirement ;
+              sda:hasParameter ?reqParam .
+    ?reqParam sda:parameterName ?reqConcept .
+    OPTIONAL { ?reqParam sda:unit ?reqUnit }
+    OPTIONAL { ?reqParam sda:minValue ?reqMin }
+    OPTIONAL { ?reqParam sda:maxValue ?reqMax }
     OPTIONAL { ?required sda:protocol ?reqProtocol }
-    OPTIONAL { ?required sda:networkZone ?reqZone }
+    OPTIONAL { ?required sda:mapsToDeploymentContext ?reqDeployment }
+    OPTIONAL { ?reqDeployment sda:contextConstrainedBy ?reqSafety . ?reqSafety sda:safetyIntegrityLevel ?reqSil }
+    OPTIONAL { ?reqDeployment sda:locatedInZone ?reqZoneResource . ?reqZoneResource sda:zoneName ?reqZone }
 
-    ?offered a sda:OfferedCapability ;
-             sda:functionClass ?reqFunctionClass ;
+    ?offered a sda:Capability ;
              sda:realisedBy ?skill .
-    OPTIONAL { ?offered sda:engineeringUnit ?offUnit }
-    OPTIONAL { ?offered sda:nominalRange_min ?offMin }
-    OPTIONAL { ?offered sda:nominalRange_max ?offMax }
-    OPTIONAL { ?offered sda:safetyIntegrityLevel ?sil }
+    ?skill sda:requiresConcept ?concept .
+    ?concept sda:conceptName ?reqConcept .
+    ?skill sda:hasSkillParameter ?offParam .
+    OPTIONAL { ?offParam sda:paramUnit ?offUnit }
+    OPTIONAL { ?offParam sda:paramMinValue ?offMin }
+    OPTIONAL { ?offParam sda:paramMaxValue ?offMax }
 
     # Communication dimension: the matched skill is implemented by a service
-    # that uses a binding with a protocol and an endpoint.
+    # that has a binding with a protocol and an endpoint.
     ?skill sda:isImplementedBy ?service .
     OPTIONAL { ?service rdfs:label ?serviceName }
-    ?service sda:uses ?binding .
+    ?service sda:hasBinding ?binding .
     ?binding sda:protocol ?protocol .
-    OPTIONAL { ?binding sda:endpointUrl ?endpointUrl }
+    OPTIONAL { ?binding sda:bindingEndpointUri ?endpointUrl }
 
     # Deployment dimension: the matched service is deployed in a context that
-    # defines a network zone.
+    # defines a network zone and a safety class.
     OPTIONAL {
-        ?service sda:isDeployedBy ?deployment .
-        OPTIONAL { ?deployment sda:networkZone ?networkZone }
+        ?deployment sda:deploysService ?service .
+        OPTIONAL { ?deployment sda:locatedInZone ?zone . ?zone sda:zoneName ?networkZone }
+        OPTIONAL { ?deployment sda:contextConstrainedBy ?safetyClass . ?safetyClass sda:safetyIntegrityLevel ?sil }
     }
 
     # Capability dimension: engineering unit must be equal when required.

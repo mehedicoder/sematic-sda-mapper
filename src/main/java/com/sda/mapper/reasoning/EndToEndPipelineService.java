@@ -23,7 +23,7 @@ import java.util.UUID;
  * <p>
  * Requirements are never auto-created or auto-selected. The pipeline only
  * matches the explicitly supplied requirement IDs and, optionally, a new
- * {@code sda:Requirement} created from user-provided form parameters.
+ * {@code sda:UseCaseRequirement} created from user-provided form parameters.
  */
 @Service
 public class EndToEndPipelineService {

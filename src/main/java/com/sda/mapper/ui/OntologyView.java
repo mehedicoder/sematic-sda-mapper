@@ -177,7 +177,7 @@ public class OntologyView extends VerticalLayout {
      * Selects a class and re-renders the class browser and inspector.
      * Package-private for testability.
      *
-     * @param className class name (e.g. {@code "Requirement"})
+     * @param className class name (e.g. {@code "UseCaseRequirement"})
      */
     void selectClass(String className) {
         if (dataService.getClassByName(className).isPresent()) {

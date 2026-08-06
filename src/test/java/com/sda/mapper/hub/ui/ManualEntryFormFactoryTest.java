@@ -24,8 +24,8 @@ class ManualEntryFormFactoryTest {
     @Test
     @DisplayName("Should support all six L1 classes and the other manually editable classes")
     void shouldSupportL1Classes() {
-        for (String className : List.of("Stakeholder", "UseCase", "Requirement",
-            "RequirementParameter", "RequirementConstraint", "VerificationCriterion",
+        for (String className : List.of("Stakeholder", "UseCase", "UseCaseRequirement",
+            "UseCaseRequirementParameter", "UseCaseRequirementConstraint", "VerificationCriterion",
             "Capability", "Sensor", "ServiceInstance", "DeploymentContext",
             "ClusterNode", "NetworkZone")) {
             assertTrue(ManualEntryFormFactory.supports(className),
@@ -40,16 +40,16 @@ class ManualEntryFormFactoryTest {
     }
 
     @Test
-    @DisplayName("Should build a Requirement form with a free-text name and a priority suggestion ComboBox")
+    @DisplayName("Should build a UseCaseRequirement form with a free-text name and a priority suggestion ComboBox")
     void shouldBuildRequirementFormWithSuggestionComboBox() {
-        VerticalLayout form = ManualEntryFormFactory.create("Requirement", Map.of(), entity -> { });
+        VerticalLayout form = ManualEntryFormFactory.create("UseCaseRequirement", Map.of(), entity -> { });
         assertNotNull(form);
 
-        TextField nameField = childById(form, "hub-field-requirement-name", TextField.class);
+        TextField nameField = childById(form, "hub-field-usecaserequirement-name", TextField.class);
         assertNotNull(nameField);
         assertEquals("Name", nameField.getLabel());
 
-        ComboBox<String> priority = childById(form, "hub-field-requirement-priority", ComboBox.class);
+        ComboBox<String> priority = childById(form, "hub-field-usecaserequirement-priority", ComboBox.class);
         assertNotNull(priority);
         assertEquals(List.of("Critical", "High", "Medium", "Low"),
             priority.getListDataView().getItems().toList());

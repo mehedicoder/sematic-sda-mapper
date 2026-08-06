@@ -46,7 +46,7 @@ class PipelineControllerTest {
             assertFalse(body.matches().isEmpty(), "Should have match results");
 
             for (var match : body.matches().entrySet()) {
-                assertNotNull(match.getKey(), "Requirement ID should not be null");
+                assertNotNull(match.getKey(), "UseCaseRequirement ID should not be null");
                 assertNotNull(match.getValue(), "Match result should not be null");
             }
         }

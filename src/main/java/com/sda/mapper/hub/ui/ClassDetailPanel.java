@@ -330,9 +330,9 @@ public class ClassDetailPanel extends VerticalLayout {
         switch (className) {
             case "UseCase" -> options.put("targetAsset", namesOf("Asset"));
             case "Sensor" -> options.put("measuredVariable", namesOf("ProcessVariable"));
-            case "Capability" -> options.put("mapsToRequirement", namesOf("Requirement"));
+            case "Capability" -> options.put("mapsToRequirement", namesOf("UseCaseRequirement"));
             case "ServiceInstance" -> options.put("deployedOn", namesOf("ClusterNode"));
-            case "VerificationCriterion" -> options.put("verifiesRequirement", namesOf("Requirement"));
+            case "VerificationCriterion" -> options.put("verifiesRequirement", namesOf("UseCaseRequirement"));
             default -> {
                 // no dropdowns
             }

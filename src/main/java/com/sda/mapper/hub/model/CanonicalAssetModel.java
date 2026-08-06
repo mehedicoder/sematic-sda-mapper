@@ -17,9 +17,9 @@ public final class CanonicalAssetModel {
 
     private final List<Stakeholder> stakeholders = new ArrayList<>();
     private final List<UseCase> useCases = new ArrayList<>();
-    private final List<Requirement> requirements = new ArrayList<>();
-    private final List<RequirementParameter> requirementParameters = new ArrayList<>();
-    private final List<RequirementConstraint> requirementConstraints = new ArrayList<>();
+    private final List<UseCaseRequirement> requirements = new ArrayList<>();
+    private final List<UseCaseRequirementParameter> requirementParameters = new ArrayList<>();
+    private final List<UseCaseRequirementConstraint> requirementConstraints = new ArrayList<>();
     private final List<VerificationCriterion> verificationCriteria = new ArrayList<>();
     private final List<Capability> capabilities = new ArrayList<>();
     private final List<OfferedCapability> offeredCapabilities = new ArrayList<>();
@@ -56,9 +56,9 @@ public final class CanonicalAssetModel {
         switch (entity.className()) {
             case "Stakeholder" -> addUnique(stakeholders, (Stakeholder) entity);
             case "UseCase" -> addUnique(useCases, (UseCase) entity);
-            case "Requirement" -> addUnique(requirements, (Requirement) entity);
-            case "RequirementParameter" -> addUnique(requirementParameters, (RequirementParameter) entity);
-            case "RequirementConstraint" -> addUnique(requirementConstraints, (RequirementConstraint) entity);
+            case "UseCaseRequirement" -> addUnique(requirements, (UseCaseRequirement) entity);
+            case "UseCaseRequirementParameter" -> addUnique(requirementParameters, (UseCaseRequirementParameter) entity);
+            case "UseCaseRequirementConstraint" -> addUnique(requirementConstraints, (UseCaseRequirementConstraint) entity);
             case "VerificationCriterion" -> addUnique(verificationCriteria, (VerificationCriterion) entity);
             case "Capability" -> addUnique(capabilities, (Capability) entity);
             case "OfferedCapability" -> addUnique(offeredCapabilities, (OfferedCapability) entity);
@@ -131,9 +131,9 @@ public final class CanonicalAssetModel {
         return switch (className) {
             case "Stakeholder" -> List.copyOf(stakeholders);
             case "UseCase" -> List.copyOf(useCases);
-            case "Requirement" -> List.copyOf(requirements);
-            case "RequirementParameter" -> List.copyOf(requirementParameters);
-            case "RequirementConstraint" -> List.copyOf(requirementConstraints);
+            case "UseCaseRequirement" -> List.copyOf(requirements);
+            case "UseCaseRequirementParameter" -> List.copyOf(requirementParameters);
+            case "UseCaseRequirementConstraint" -> List.copyOf(requirementConstraints);
             case "VerificationCriterion" -> List.copyOf(verificationCriteria);
             case "Capability" -> List.copyOf(capabilities);
             case "OfferedCapability" -> List.copyOf(offeredCapabilities);
@@ -183,7 +183,7 @@ public final class CanonicalAssetModel {
      *
      * @return an immutable list of requirements
      */
-    public List<Requirement> requirements() {
+    public List<UseCaseRequirement> requirements() {
         return List.copyOf(requirements);
     }
 
@@ -192,7 +192,7 @@ public final class CanonicalAssetModel {
      *
      * @return an immutable list of requirement parameters
      */
-    public List<RequirementParameter> requirementParameters() {
+    public List<UseCaseRequirementParameter> requirementParameters() {
         return List.copyOf(requirementParameters);
     }
 
@@ -201,7 +201,7 @@ public final class CanonicalAssetModel {
      *
      * @return an immutable list of requirement constraints
      */
-    public List<RequirementConstraint> requirementConstraints() {
+    public List<UseCaseRequirementConstraint> requirementConstraints() {
         return List.copyOf(requirementConstraints);
     }
 

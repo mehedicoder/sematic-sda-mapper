@@ -12,7 +12,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
-@DisplayName("Requirement Matching Controller")
+@DisplayName("UseCaseRequirement Matching Controller")
 class RequirementMatchingControllerTest {
 
     @Autowired
@@ -107,6 +107,25 @@ class RequirementMatchingControllerTest {
         var body = (java.util.Map<String, String>) response.getBody();
         assertTrue(body.containsKey("requirementId"));
         assertEquals("REQ-FLOW-01", body.get("requirementId"));
+    }
+
+    @Test
+    @DisplayName("Should persist a requirement and match it back dynamically via its requirement ID")
+    void shouldPersistAndThenMatchDynamicRequirement() {
+        var persistRequest = new MatchRequirementRequest(
+            "REQ-FLOW-DYN", null, "OPC-UA", "read-only", null, null, null, null, null, null, null, null
+        );
+        var persistResponse = controller.persistRequirement(persistRequest);
+        assertEquals(201, persistResponse.getStatusCode().value());
+
+        var matchRequest = new MatchRequirementRequest(
+            "REQ-FLOW-DYN", null, null, null, null, null, null, null, null, null, null, null
+        );
+        var response = controller.match(matchRequest);
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        var body = (MatchRequirementResponse) response.getBody();
+        assertTrue(body.matched(), "A persisted UseCaseRequirement should be matchable dynamically");
     }
 
     @Test

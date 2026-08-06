@@ -49,7 +49,7 @@ public class RequirementMatchingController {
     private static final Logger log = LoggerFactory.getLogger(RequirementMatchingController.class);
 
     private static final String INST_NS = "http://www.example.org/instance#";
-    private static final String SDA_NS = "https://example.org/ontology/sda#";
+    private static final String SDA_NS = "http://sda-platform.org/ontology#";
     private static final String RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
     private final SemanticReasonerService reasonerService;
@@ -187,12 +187,11 @@ public class RequirementMatchingController {
         Resource requirement = model.createResource(resourceUri);
         requirement.addProperty(
             model.createProperty(RDF_TYPE),
-            model.createResource(SDA_NS + "Requirement"));
+            model.createResource(SDA_NS + "UseCaseRequirement"));
 
-        if (request.functionClass() != null) {
-            requirement.addProperty(
-                model.createProperty(SDA_NS + "functionClass"), request.functionClass());
-        }
+        requirement.addProperty(
+            model.createProperty(SDA_NS + "requirementID"), requirementId);
+
         if (request.protocol() != null) {
             requirement.addProperty(
                 model.createProperty(SDA_NS + "protocol"), request.protocol());
@@ -201,37 +200,45 @@ public class RequirementMatchingController {
             requirement.addProperty(
                 model.createProperty(SDA_NS + "accessMode"), request.accessMode());
         }
-        if (request.engineeringUnit() != null) {
-            requirement.addProperty(
-                model.createProperty(SDA_NS + "engineeringUnit"), request.engineeringUnit());
+        if (request.minRecall() != null) {
+            addConstraint(model, requirement, "recall",
+                "reportedRecall >= " + request.minRecall());
         }
-        if (request.safetyIntegrityLevel() != null) {
-            requirement.addProperty(
-                model.createProperty(SDA_NS + "safetyIntegrityLevel"), request.safetyIntegrityLevel());
-        }
-        if (request.networkZone() != null) {
-            requirement.addProperty(
-                model.createProperty(SDA_NS + "networkZone"), request.networkZone());
-        }
-        if (request.determinismClass() != null) {
-            requirement.addProperty(
-                model.createProperty(SDA_NS + "determinismClass"), request.determinismClass());
-        }
-        if (request.nominalRangeMin() != null) {
-            requirement.addProperty(
-                model.createProperty(SDA_NS + "nominalRangeMin"),
-                String.valueOf(request.nominalRangeMin()));
-        }
-        if (request.nominalRangeMax() != null) {
-            requirement.addProperty(
-                model.createProperty(SDA_NS + "nominalRangeMax"),
-                String.valueOf(request.nominalRangeMax()));
+        if (request.maxLatencyMs() != null) {
+            addConstraint(model, requirement, "latency",
+                "reportedLatency <= " + request.maxLatencyMs());
         }
 
         log.info("Persisted requirement {} to ontology model", requirementId);
 
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(Map.of("requirementId", requirementId));
+    }
+
+    /**
+     * Adds a hard {@code sda:UseCaseRequirementConstraint} to a requirement.
+     *
+     * @param model      the ontology model
+     * @param requirement the requirement resource
+     * @param type       the constraint type (e.g. "recall", "latency")
+     * @param expression the constraint expression
+     */
+    private void addConstraint(Model model, Resource requirement, String type, String expression) {
+        String requirementId = requirement.getURI().substring(INST_NS.length());
+        Resource constraint = model.createResource(
+            INST_NS + requirementId + "-Constraint-" + type);
+        constraint.addProperty(
+            model.createProperty(RDF_TYPE),
+            model.createResource(SDA_NS + "UseCaseRequirementConstraint"));
+        constraint.addProperty(
+            model.createProperty(SDA_NS + "constraintType"), type);
+        constraint.addProperty(
+            model.createProperty(SDA_NS + "expression"), expression);
+        constraint.addProperty(
+            model.createProperty(SDA_NS + "isHardConstraint"),
+            model.createTypedLiteral(true));
+        requirement.addProperty(
+            model.createProperty(SDA_NS + "hasConstraint"), constraint);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

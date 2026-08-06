@@ -33,20 +33,20 @@ class ManualEntityConverterTest {
     }
 
     @Test
-    @DisplayName("Should convert a manual Requirement into a typed requirement stored in the model")
+    @DisplayName("Should convert a manual UseCaseRequirement into a typed requirement stored in the model")
     void shouldConvertManualRequirementToTypedEntity() {
         CanonicalAssetModel model = new CanonicalAssetModel();
-        model.addEntity(manual("Requirement", attributes(
+        model.addEntity(manual("UseCaseRequirement", attributes(
             "id", "manual-requirement-1",
             "name", "Pump must deliver 0-100 l/min",
             "description", "Flow control over the nominal range",
             "priority", "High")));
 
-        assertEquals(1, model.countForClass("Requirement"));
+        assertEquals(1, model.countForClass("UseCaseRequirement"));
         assertEquals(CoverageStatus.PRESENT,
             new MatchingService(new OntologyDataService())
-                .compute(model, List.of()).forClass("Requirement").orElseThrow().status());
-        Requirement requirement = model.requirements().get(0);
+                .compute(model, List.of()).forClass("UseCaseRequirement").orElseThrow().status());
+        UseCaseRequirement requirement = model.requirements().get(0);
         assertEquals("Pump must deliver 0-100 l/min", requirement.name());
         assertEquals("High", requirement.priority());
         assertTrue(requirement.sourceFileName().isPresent());
@@ -58,9 +58,9 @@ class ManualEntityConverterTest {
     @DisplayName("Should store manual requirement parameter and constraint as typed entities")
     void shouldConvertManualL1RequirementTypes() {
         CanonicalAssetModel model = new CanonicalAssetModel();
-        model.addEntity(manual("RequirementParameter", attributes(
+        model.addEntity(manual("UseCaseRequirementParameter", attributes(
             "id", "manual-reqparam-1", "name", "Flow", "value", "100", "unit", "l/min")));
-        model.addEntity(manual("RequirementConstraint", attributes(
+        model.addEntity(manual("UseCaseRequirementConstraint", attributes(
             "id", "manual-reqconstraint-1", "name", "Accuracy", "expression", "<= 0.1 %",
             "description", "Accuracy class")));
 

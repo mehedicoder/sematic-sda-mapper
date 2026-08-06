@@ -4,9 +4,9 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Canonical entity for the {@code RequirementConstraint} ontology class (L1).
+ * Canonical entity for the {@code UseCaseRequirementConstraint} ontology class (L1).
  */
-public record RequirementConstraint(
+public record UseCaseRequirementConstraint(
     String id,
     String name,
     String expression,
@@ -15,17 +15,17 @@ public record RequirementConstraint(
     boolean inferred
 ) implements CanonicalEntity {
 
-    public RequirementConstraint(String id, String name, String expression, String description) {
+    public UseCaseRequirementConstraint(String id, String name, String expression, String description) {
         this(id, name, expression, description, Optional.empty(), false);
     }
 
-    public RequirementConstraint(String id, String name, String expression, String description, String sourceFileName) {
+    public UseCaseRequirementConstraint(String id, String name, String expression, String description, String sourceFileName) {
         this(id, name, expression, description, Optional.of(sourceFileName), false);
     }
 
     @Override
     public String className() {
-        return "RequirementConstraint";
+        return "UseCaseRequirementConstraint";
     }
 
     @Override

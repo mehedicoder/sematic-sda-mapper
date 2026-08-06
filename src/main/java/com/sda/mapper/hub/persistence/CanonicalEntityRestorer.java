@@ -15,9 +15,9 @@ import com.sda.mapper.hub.model.Observation;
 import com.sda.mapper.hub.model.OfferedCapability;
 import com.sda.mapper.hub.model.ProcessVariable;
 import com.sda.mapper.hub.model.RequiredCapability;
-import com.sda.mapper.hub.model.Requirement;
-import com.sda.mapper.hub.model.RequirementConstraint;
-import com.sda.mapper.hub.model.RequirementParameter;
+import com.sda.mapper.hub.model.UseCaseRequirement;
+import com.sda.mapper.hub.model.UseCaseRequirementConstraint;
+import com.sda.mapper.hub.model.UseCaseRequirementParameter;
 import com.sda.mapper.hub.model.SafetyClass;
 import com.sda.mapper.hub.model.SemanticConcept;
 import com.sda.mapper.hub.model.Sensor;
@@ -30,8 +30,10 @@ import com.sda.mapper.hub.model.UseCase;
 import com.sda.mapper.hub.model.VerificationCriterion;
 import org.springframework.stereotype.Component;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.RecordComponent;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
 
@@ -64,8 +66,14 @@ public class CanonicalEntityRestorer {
             args[i] = resolveComponent(components[i], canonicalId, name, sourceFileName, inferred, attributes);
         }
         try {
-            return (CanonicalEntity) recordClass.getConstructors()[0].newInstance(args);
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+            Class<?>[] types = Arrays.stream(components)
+                .map(RecordComponent::getType)
+                .toArray(Class<?>[]::new);
+            Constructor<?> constructor = recordClass.getDeclaredConstructor(types);
+            constructor.setAccessible(true);
+            return (CanonicalEntity) constructor.newInstance(args);
+        } catch (NoSuchMethodException | InstantiationException | IllegalAccessException
+                 | InvocationTargetException e) {
             throw new IllegalArgumentException("Failed to restore canonical entity of class " + className, e);
         }
     }
@@ -91,9 +99,9 @@ public class CanonicalEntityRestorer {
         return switch (className) {
             case "Stakeholder" -> Stakeholder.class;
             case "UseCase" -> UseCase.class;
-            case "Requirement" -> Requirement.class;
-            case "RequirementParameter" -> RequirementParameter.class;
-            case "RequirementConstraint" -> RequirementConstraint.class;
+            case "UseCaseRequirement", "Requirement" -> UseCaseRequirement.class;
+            case "UseCaseRequirementParameter", "RequirementParameter" -> UseCaseRequirementParameter.class;
+            case "UseCaseRequirementConstraint", "RequirementConstraint" -> UseCaseRequirementConstraint.class;
             case "VerificationCriterion" -> VerificationCriterion.class;
             case "Capability" -> Capability.class;
             case "OfferedCapability" -> OfferedCapability.class;

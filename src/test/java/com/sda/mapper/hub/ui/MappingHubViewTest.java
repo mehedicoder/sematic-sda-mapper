@@ -185,7 +185,7 @@ class MappingHubViewTest {
     void shouldDisableUploadForL1Classes() throws Exception {
         MappingHubView view = createView();
         view.selectLayer("L1");
-        view.selectClass("Requirement");
+        view.selectClass("UseCaseRequirement");
         ClassDetailPanel detailPanel = getField(view, "detailPanel", ClassDetailPanel.class);
         String text = fullText(detailPanel.getElement());
         assertTrue(text.contains("Enter manually"));

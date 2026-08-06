@@ -37,15 +37,15 @@ public final class ManualEntityConverter {
                 text(attributes, "id"), text(attributes, "name"),
                 text(attributes, "description"), text(attributes, "priority"),
                 Optional.of(MANUAL_SOURCE), false);
-            case "Requirement" -> new Requirement(
+            case "UseCaseRequirement", "Requirement" -> new UseCaseRequirement(
                 text(attributes, "id"), text(attributes, "name"),
                 text(attributes, "description"), text(attributes, "priority"),
                 Optional.of(MANUAL_SOURCE), false);
-            case "RequirementParameter" -> new RequirementParameter(
+            case "UseCaseRequirementParameter", "RequirementParameter" -> new UseCaseRequirementParameter(
                 text(attributes, "id"), text(attributes, "name"),
                 text(attributes, "value"), text(attributes, "unit"),
                 Optional.of(MANUAL_SOURCE), false);
-            case "RequirementConstraint" -> new RequirementConstraint(
+            case "UseCaseRequirementConstraint", "RequirementConstraint" -> new UseCaseRequirementConstraint(
                 text(attributes, "id"), text(attributes, "name"),
                 text(attributes, "expression"), text(attributes, "description"),
                 Optional.of(MANUAL_SOURCE), false);

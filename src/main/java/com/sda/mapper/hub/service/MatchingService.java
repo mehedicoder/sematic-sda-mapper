@@ -42,9 +42,9 @@ public class MatchingService {
     private static final Map<String, List<String>> REQUIRED_FIELDS = Map.ofEntries(
         Map.entry("Stakeholder", List.of("name", "role")),
         Map.entry("UseCase", List.of("name")),
-        Map.entry("Requirement", List.of("name")),
-        Map.entry("RequirementParameter", List.of("name", "value")),
-        Map.entry("RequirementConstraint", List.of("name", "expression")),
+        Map.entry("UseCaseRequirement", List.of("name")),
+        Map.entry("UseCaseRequirementParameter", List.of("name", "value")),
+        Map.entry("UseCaseRequirementConstraint", List.of("name", "expression")),
         Map.entry("VerificationCriterion", List.of("name", "criterion")),
         Map.entry("Capability", List.of("name")),
         Map.entry("Skill", List.of("name")),

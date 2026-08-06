@@ -98,14 +98,14 @@ class OntologyModelLoaderTest {
     }
 
     @Test
-    @DisplayName("Should contain Requirement properties from paper Figure 5")
+    @DisplayName("Should contain UseCaseRequirement properties from paper Figure 5")
     void shouldContainRequirementProperties() {
         Model model = loadWithDemoAbox().getModel();
 
         Resource req001 = model.getResource(INST_NS + "REQ-001");
         assertNotNull(req001, "REQ-001 must exist");
         assertEquals("REQ-001", req001.getProperty(model.createProperty(SDA_NS + "requirementID")).getString());
-        assertEquals("Flowmeter Diagnostics Requirement", req001.getProperty(model.createProperty(SDA_NS + "requirementName")).getString());
+        assertEquals("Flowmeter Diagnostics UseCaseRequirement", req001.getProperty(model.createProperty(SDA_NS + "requirementName")).getString());
         assertNotNull(req001.getProperty(model.createProperty(SDA_NS + "requirementDescription")), "REQ-001 must have requirementDescription");
         assertEquals("Diagnostics", req001.getProperty(model.createProperty(SDA_NS + "requirementType")).getString());
         assertEquals("Defined", req001.getProperty(model.createProperty(SDA_NS + "lifecycleStatus")).getString());

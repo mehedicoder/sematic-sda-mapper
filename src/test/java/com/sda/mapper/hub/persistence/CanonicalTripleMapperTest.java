@@ -28,12 +28,12 @@ class CanonicalTripleMapperTest {
             "INSTANTIATE", EntityOrigin.PARSED, false, List.of(asset));
 
         assertTrue(triples.stream().anyMatch(t -> t.predicateIri().equals(RDF_TYPE)
-            && t.objectValue().equals("https://example.org/ontology/sda#Asset")
+            && t.objectValue().equals("http://sda-platform.org/ontology#Asset")
             && !t.objectIsLiteral()));
         assertTrue(triples.stream().anyMatch(t -> t.predicateIri().equals(RDFS_LABEL)
             && t.objectValue().equals("Pump FT101")
             && t.objectIsLiteral()));
-        assertTrue(triples.stream().anyMatch(t -> t.predicateIri().equals("https://example.org/ontology/sda#manufacturer")
+        assertTrue(triples.stream().anyMatch(t -> t.predicateIri().equals("http://sda-platform.org/ontology#manufacturer")
             && t.objectValue().equals("ACME")));
         assertEquals(sessionId, triples.get(0).sessionId());
         assertTrue(triples.stream().allMatch(t -> t.origin() == EntityOrigin.PARSED));

@@ -67,7 +67,7 @@ public class SemanticReasonerService {
      */
     public ServiceMatchResult matchByRequirementId(String requirementId) {
         if (requirementId == null || requirementId.isBlank()) {
-            return ServiceMatchResult.noMatch("Requirement ID is null or blank");
+            return ServiceMatchResult.noMatch("UseCaseRequirement ID is null or blank");
         }
 
         // Mode A: predefined requirement with dedicated SPARQL query

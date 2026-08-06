@@ -4,9 +4,9 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Canonical entity for the {@code RequirementParameter} ontology class (L1).
+ * Canonical entity for the {@code UseCaseRequirementParameter} ontology class (L1).
  */
-public record RequirementParameter(
+public record UseCaseRequirementParameter(
     String id,
     String name,
     String value,
@@ -15,17 +15,17 @@ public record RequirementParameter(
     boolean inferred
 ) implements CanonicalEntity {
 
-    public RequirementParameter(String id, String name, String value, String unit) {
+    public UseCaseRequirementParameter(String id, String name, String value, String unit) {
         this(id, name, value, unit, Optional.empty(), false);
     }
 
-    public RequirementParameter(String id, String name, String value, String unit, String sourceFileName) {
+    public UseCaseRequirementParameter(String id, String name, String value, String unit, String sourceFileName) {
         this(id, name, value, unit, Optional.of(sourceFileName), false);
     }
 
     @Override
     public String className() {
-        return "RequirementParameter";
+        return "UseCaseRequirementParameter";
     }
 
     @Override

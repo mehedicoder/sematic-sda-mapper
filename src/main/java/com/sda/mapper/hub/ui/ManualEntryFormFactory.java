@@ -16,8 +16,8 @@ import java.util.function.Consumer;
 /**
  * Builds the manual-entry form for ontology classes that support it, with the
  * exact per-class field lists from the UI spec. All L1 classes
- * (Stakeholder, UseCase, Requirement, RequirementParameter,
- * RequirementConstraint, VerificationCriterion) are supported without file
+ * (Stakeholder, UseCase, UseCaseRequirement, UseCaseRequirementParameter,
+ * UseCaseRequirementConstraint, VerificationCriterion) are supported without file
  * upload. Fields are either free-text inputs or suggestion ComboBoxes that
  * still allow custom values.
  */
@@ -67,24 +67,24 @@ public final class ManualEntryFormFactory {
             Field.text("name", "Name"),
             Field.text("description", "Description"),
             Field.modelRef("targetAsset", "Target Asset"))));
-        specs.put("Requirement", new ClassSpec("name", List.of(
+        specs.put("UseCaseRequirement", new ClassSpec("name", List.of(
             Field.text("name", "Name"),
             Field.text("description", "Description"),
             Field.suggested("priority", "Priority",
                 List.of("Critical", "High", "Medium", "Low")))));
-        specs.put("RequirementParameter", new ClassSpec("name", List.of(
+        specs.put("UseCaseRequirementParameter", new ClassSpec("name", List.of(
             Field.text("name", "Name"),
             Field.text("value", "Value"),
             Field.suggested("unit", "Unit",
                 List.of("l/min", "bar", "\u00b0C", "%", "m", "s", "mA", "V")))));
-        specs.put("RequirementConstraint", new ClassSpec("name", List.of(
+        specs.put("UseCaseRequirementConstraint", new ClassSpec("name", List.of(
             Field.text("name", "Name"),
             Field.text("expression", "Expression"),
             Field.text("description", "Description"))));
         specs.put("VerificationCriterion", new ClassSpec("name", List.of(
             Field.text("name", "Name"),
             Field.text("criterion", "Criterion"),
-            Field.modelRef("verifiesRequirement", "Verifies Requirement"))));
+            Field.modelRef("verifiesRequirement", "Verifies UseCaseRequirement"))));
         specs.put("DeploymentContext", new ClassSpec("name", List.of(
             Field.text("name", "Name"),
             Field.text("runtime", "Runtime"),
@@ -104,7 +104,7 @@ public final class ManualEntryFormFactory {
         specs.put("Capability", new ClassSpec("name", List.of(
             Field.text("name", "Name"),
             Field.text("description", "Description"),
-            Field.modelRef("mapsToRequirement", "Maps-To Requirement"))));
+            Field.modelRef("mapsToRequirement", "Maps-To UseCaseRequirement"))));
         specs.put("ServiceInstance", new ClassSpec("instanceId", List.of(
             Field.text("instanceId", "Instance ID"),
             Field.modelRef("deployedOn", "Deployed On"),

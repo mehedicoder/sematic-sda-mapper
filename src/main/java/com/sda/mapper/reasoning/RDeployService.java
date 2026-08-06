@@ -12,10 +12,10 @@ import org.springframework.stereotype.Service;
 /**
  * Java equivalent of the SWRL R-Deploy rule from the paper (Table I).
  * <p>
- * After a SPARQL match identifies a valid Service for a Requirement,
+ * After a SPARQL match identifies a valid Service for a UseCaseRequirement,
  * this service asserts the complete runtime binding tuple
  * (boundService, boundBinding, boundConnector, boundContext)
- * on the Requirement and updates its lifecycleStatus to "Matched".
+ * on the UseCaseRequirement and updates its lifecycleStatus to "Matched".
  * <p>
  * Paper reference: R-Deploy SWRL rule — "Asserts binding relationships
  * and updates lifecycleStatus to Matched".
@@ -36,7 +36,7 @@ public class RDeployService {
 
     /**
      * Executes the R-Deploy rule: asserts bound properties on the matched
-     * Requirement and transitions lifecycleStatus to "Matched".
+     * UseCaseRequirement and transitions lifecycleStatus to "Matched".
      *
      * @param requirementId the requirement ID (e.g. "REQ-001")
      * @param serviceName   rdfs:label of the matched Service

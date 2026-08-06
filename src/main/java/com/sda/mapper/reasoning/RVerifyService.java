@@ -16,7 +16,7 @@ import java.util.List;
 /**
  * Java equivalent of the SWRL R-Verify rule from the paper (Table I).
  * <p>
- * After R-Deploy marks a Requirement as "Matched", this service evaluates
+ * After R-Deploy marks a UseCaseRequirement as "Matched", this service evaluates
  * each {@code sda:VerificationCriterion} linked via {@code sda:verifiedBy}
  * against the matched Service's actual metrics. If all criteria are satisfied,
  * lifecycleStatus is advanced to "Verified".

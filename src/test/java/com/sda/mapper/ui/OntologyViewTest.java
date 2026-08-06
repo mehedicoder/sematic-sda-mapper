@@ -89,23 +89,23 @@ class OntologyViewTest {
     }
 
     @Test
-    @DisplayName("Should expose all 62 relations of the canonical TBox")
+    @DisplayName("Should expose all 89 labeled relations of the v2 TBox")
     void shouldExposeAllRelations() {
         OntologyDataService service = new OntologyDataService();
         List<OntologyRelation> relations = service.getRelations();
-        assertEquals(62, relations.size());
+        assertEquals(89, relations.size());
         long core = relations.stream().filter(r -> "core".equals(r.kind())).count();
         long supporting = relations.stream().filter(r -> "supporting".equals(r.kind())).count();
-        assertEquals(15, core);
-        assertEquals(47, supporting);
+        assertEquals(22, core);
+        assertEquals(67, supporting);
     }
 
     @Test
     @DisplayName("Should resolve classes and layers by name")
     void shouldResolveClassesAndLayersByName() {
         OntologyDataService service = new OntologyDataService();
-        assertTrue(service.getClassByName("Requirement").isPresent());
-        assertEquals("1.3", service.getClassByName("Requirement").orElseThrow().code());
+        assertTrue(service.getClassByName("UseCaseRequirement").isPresent());
+        assertEquals("1.3", service.getClassByName("UseCaseRequirement").orElseThrow().code());
         assertTrue(service.getClassByName("NotAClass").isEmpty());
         assertTrue(service.getLayerById("L2b").isPresent());
         assertTrue(service.getLayerById("Nope").isEmpty());
@@ -116,12 +116,12 @@ class OntologyViewTest {
     void shouldExposeOutgoingAndIncomingRelations() {
         OntologyDataService service = new OntologyDataService();
         List<OntologyRelation> outgoing = service.getRelationsFrom("Service");
-        assertEquals(6, outgoing.size());
-        assertTrue(outgoing.stream().anyMatch(r -> "satisfies".equals(r.label())), "Service satisfies Requirement");
+        assertEquals(9, outgoing.size());
+        assertTrue(outgoing.stream().anyMatch(r -> "satisfies".equals(r.label())), "Service satisfies UseCaseRequirement");
         assertTrue(outgoing.stream().anyMatch(r -> "instantiatedAs".equals(r.label())));
 
         List<OntologyRelation> incoming = service.getRelationsTo("Service");
-        assertEquals(6, incoming.size());
+        assertEquals(9, incoming.size());
         assertTrue(incoming.stream().anyMatch(r -> "exposedAs".equals(r.label())), "Capability exposes Service");
         assertTrue(incoming.stream().anyMatch(r -> "bindsService".equals(r.label())));
     }
@@ -165,7 +165,7 @@ class OntologyViewTest {
     @DisplayName("Should render class inspector with graph and relation cards on selection")
     void shouldRenderInspectorOnClassSelection() throws Exception {
         OntologyView view = createView();
-        view.selectClass("Requirement");
+        view.selectClass("UseCaseRequirement");
         VerticalLayout detailPanel = getField(view, "detailPanel", VerticalLayout.class);
         String text = fullText(detailPanel.getElement());
         assertTrue(text.contains("Neighborhood Graph"));
@@ -184,7 +184,7 @@ class OntologyViewTest {
     void shouldReRenderInspectorWhenSwitchingClasses() throws Exception {
         OntologyView view = createView();
         view.selectClass("Skill");
-        view.selectClass("Requirement");
+        view.selectClass("UseCaseRequirement");
         view.selectClass("Skill");
         VerticalLayout detailPanel = getField(view, "detailPanel", VerticalLayout.class);
         String text = fullText(detailPanel.getElement());

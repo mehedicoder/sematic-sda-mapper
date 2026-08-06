@@ -34,7 +34,7 @@ public class SearchBar extends HtmlComponent {
 
         typeFilter = new ComboBox<>("Type");
         typeFilter.setItems(List.of(
-                "All", "Requirement", "Capability", "Skill",
+                "All", "UseCaseRequirement", "Capability", "Skill",
                 "Service", "CommunicationBinding", "DataConnector", "DeploymentContext"
         ));
         typeFilter.setValue("All");

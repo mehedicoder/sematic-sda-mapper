@@ -1,45 +1,62 @@
 package com.sda.mapper.hub.ui;
 
+import com.sda.mapper.hub.model.AttributeBindings;
 import com.sda.mapper.hub.model.CanonicalEntity;
 import com.sda.mapper.hub.model.ManualEntity;
+import com.sda.mapper.service.OntologyDataService;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
+import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * Builds the manual-entry form for ontology classes that support it, with the
- * exact per-class field lists from the UI spec. All L1 classes
- * (Stakeholder, UseCase, UseCaseRequirement, UseCaseRequirementParameter,
- * UseCaseRequirementConstraint, VerificationCriterion) are supported without file
- * upload. Fields are either free-text inputs or suggestion ComboBoxes that
- * still allow custom values.
+ * Builds the manual-entry form for ontology classes that support it. The
+ * per-class field inventory is derived from the v2 ontology: every supported
+ * class shows the datatype properties declared on it in the TBox (projected
+ * onto the hub attribute vocabulary via {@link AttributeBindings}), plus a
+ * small set of curated convenience fields (free-text entries with no ontology
+ * counterpart, e.g. {@code UseCase.description}) and object-property reference
+ * ComboBoxes.
+ *
+ * <p>The property registry is validated against the ontology at construction,
+ * so a field whose ontology property no longer exists fails startup with a
+ * clear error instead of silently drifting from the TBox.</p>
  */
-public final class ManualEntryFormFactory {
+@Component
+public class ManualEntryFormFactory {
 
     /**
-     * A single manual-entry field: the attribute key, the label shown to the
-     * user, the suggested ComboBox options and whether the options must be
-     * derived from the canonical model.
+     * A single manual-entry field: the hub attribute key, the label shown to
+     * the user, the bound ontology datatype property (or {@code null} for
+     * curated and reference fields), the suggested ComboBox options and
+     * whether the options must be derived from the canonical model.
      */
-    private record Field(String key, String label, List<String> suggestions, boolean fromModel) {
+    private record Field(String key, String label, String ontologyProperty,
+                         List<String> suggestions, boolean fromModel) {
 
-        static Field text(String key, String label) {
-            return new Field(key, label, List.of(), false);
+        static Field text(String key, String label, String ontologyProperty) {
+            return new Field(key, label, ontologyProperty, List.of(), false);
         }
 
-        static Field suggested(String key, String label, List<String> suggestions) {
-            return new Field(key, label, suggestions, false);
+        static Field suggested(String key, String label, String ontologyProperty,
+                               List<String> suggestions) {
+            return new Field(key, label, ontologyProperty, suggestions, false);
+        }
+
+        static Field curated(String key, String label) {
+            return new Field(key, label, null, List.of(), false);
         }
 
         static Field modelRef(String key, String label) {
-            return new Field(key, label, List.of(), true);
+            return new Field(key, label, null, List.of(), true);
         }
     }
 
@@ -52,65 +69,167 @@ public final class ManualEntryFormFactory {
     private record ClassSpec(String nameAttribute, List<Field> fields) {
     }
 
-    private static final Map<String, ClassSpec> SPECS = buildSpecs();
+    /**
+     * How a bound ontology property is rendered in the form.
+     */
+    private enum Widget { TEXT, SUGGESTED }
 
-    private ManualEntryFormFactory() {
+    /**
+     * Hub presentation of an ontology datatype property.
+     *
+     * @param hubKey      the attribute key stored on the entity
+     * @param label       the label shown to the user
+     * @param widget      the widget type
+     * @param suggestions the suggested options for {@link Widget#SUGGESTED}
+     */
+    private record PropertyBinding(String hubKey, String label,
+                                   Widget widget, List<String> suggestions) {
+
+        static PropertyBinding text(String ontologyProperty, String label) {
+            return new PropertyBinding(AttributeBindings.hubKey(ontologyProperty), label,
+                Widget.TEXT, List.of());
+        }
+
+        static PropertyBinding suggested(String ontologyProperty, String label,
+                                         List<String> suggestions) {
+            return new PropertyBinding(AttributeBindings.hubKey(ontologyProperty), label,
+                Widget.SUGGESTED, suggestions);
+        }
     }
 
-    private static Map<String, ClassSpec> buildSpecs() {
+    /**
+     * Ontology datatype properties shown on manual-entry forms, keyed by the
+     * ontology property name. Every key must be declared as a datatype property
+     * on at least one class of the TBox (validated at construction).
+     */
+    private static final Map<String, PropertyBinding> BINDINGS = Map.ofEntries(
+        Map.entry("stakeholderName", PropertyBinding.text("stakeholderName", "Name")),
+        Map.entry("role", PropertyBinding.text("role", "Role")),
+        Map.entry("organization", PropertyBinding.text("organization", "Organization")),
+        Map.entry("contactInfo", PropertyBinding.text("contactInfo", "Contact")),
+        Map.entry("useCaseName", PropertyBinding.text("useCaseName", "Name")),
+        Map.entry("priority", PropertyBinding.suggested("priority", "Priority",
+            List.of("Critical", "High", "Medium", "Low"))),
+        Map.entry("businessGoal", PropertyBinding.text("businessGoal", "Business Goal")),
+        Map.entry("title", PropertyBinding.text("title", "Name")),
+        Map.entry("description", PropertyBinding.text("description", "Description")),
+        Map.entry("requirementType", PropertyBinding.text("requirementType", "Requirement Type")),
+        Map.entry("parameterName", PropertyBinding.text("parameterName", "Name")),
+        Map.entry("unit", PropertyBinding.suggested("unit", "Unit",
+            List.of("l/min", "bar", "\u00b0C", "%", "m", "s", "mA", "V"))),
+        Map.entry("dataType", PropertyBinding.text("dataType", "Data Type")),
+        Map.entry("minValue", PropertyBinding.text("minValue", "Min Value")),
+        Map.entry("maxValue", PropertyBinding.text("maxValue", "Max Value")),
+        Map.entry("expression", PropertyBinding.text("expression", "Expression")),
+        Map.entry("constraintType", PropertyBinding.text("constraintType", "Constraint Type")),
+        Map.entry("criterionDescription", PropertyBinding.text("criterionDescription", "Criterion")),
+        Map.entry("testMethod", PropertyBinding.text("testMethod", "Test Method")),
+        Map.entry("passThreshold", PropertyBinding.text("passThreshold", "Pass Threshold")),
+        Map.entry("deploymentMethod", PropertyBinding.text("deploymentMethod", "Runtime")),
+        Map.entry("safetyZone", PropertyBinding.text("safetyZone", "Zone")),
+        Map.entry("hostname", PropertyBinding.text("hostname", "Hostname")),
+        Map.entry("marginDeviceRole", PropertyBinding.text("marginDeviceRole", "Role")),
+        Map.entry("zoneName", PropertyBinding.text("zoneName", "Name")),
+        Map.entry("zoneType", PropertyBinding.text("zoneType", "Zone Type")),
+        Map.entry("iec62443Level", PropertyBinding.text("iec62443Level", "Security Level")),
+        Map.entry("sensorType", PropertyBinding.text("sensorType", "Type")),
+        Map.entry("capabilityName", PropertyBinding.text("capabilityName", "Name")),
+        Map.entry("capabilityDescription", PropertyBinding.text("capabilityDescription", "Description")),
+        Map.entry("capabilityVersion", PropertyBinding.text("capabilityVersion", "Version")),
+        Map.entry("instanceID", PropertyBinding.text("instanceID", "Instance ID")),
+        Map.entry("deployStatus", PropertyBinding.suggested("deployStatus", "Status",
+            List.of("Running", "Stopped", "Maintenance", "Unknown")))
+    );
+
+    private final OntologyDataService ontologyDataService;
+    private final Map<String, ClassSpec> specs;
+
+    /**
+     * Creates the factory and derives every manual form from the ontology.
+     *
+     * @param ontologyDataService the ontology data service
+     * @throws IllegalStateException when a form field is bound to an ontology
+     *                               property that does not exist, or a form has
+     *                               no fields
+     */
+    public ManualEntryFormFactory(OntologyDataService ontologyDataService) {
+        this.ontologyDataService = ontologyDataService;
+        this.specs = buildSpecs();
+        validate();
+    }
+
+    private Map<String, ClassSpec> buildSpecs() {
         Map<String, ClassSpec> specs = new LinkedHashMap<>();
-        specs.put("Stakeholder", new ClassSpec("role", List.of(
-            Field.text("role", "Role"),
-            Field.text("organization", "Organization"),
-            Field.text("contact", "Contact"))));
-        specs.put("UseCase", new ClassSpec("name", List.of(
-            Field.text("name", "Name"),
-            Field.text("description", "Description"),
-            Field.modelRef("targetAsset", "Target Asset"))));
-        specs.put("UseCaseRequirement", new ClassSpec("name", List.of(
-            Field.text("name", "Name"),
-            Field.text("description", "Description"),
-            Field.suggested("priority", "Priority",
-                List.of("Critical", "High", "Medium", "Low")))));
-        specs.put("UseCaseRequirementParameter", new ClassSpec("name", List.of(
-            Field.text("name", "Name"),
-            Field.text("value", "Value"),
-            Field.suggested("unit", "Unit",
-                List.of("l/min", "bar", "\u00b0C", "%", "m", "s", "mA", "V")))));
-        specs.put("UseCaseRequirementConstraint", new ClassSpec("name", List.of(
-            Field.text("name", "Name"),
-            Field.text("expression", "Expression"),
-            Field.text("description", "Description"))));
-        specs.put("VerificationCriterion", new ClassSpec("name", List.of(
-            Field.text("name", "Name"),
-            Field.text("criterion", "Criterion"),
-            Field.modelRef("verifiesRequirement", "Verifies UseCaseRequirement"))));
-        specs.put("DeploymentContext", new ClassSpec("name", List.of(
-            Field.text("name", "Name"),
-            Field.text("runtime", "Runtime"),
-            Field.text("zone", "Zone"))));
-        specs.put("ClusterNode", new ClassSpec("hostname", List.of(
-            Field.text("hostname", "Hostname"),
-            Field.text("ipAddress", "IP Address"),
-            Field.text("role", "Role"))));
-        specs.put("NetworkZone", new ClassSpec("name", List.of(
-            Field.text("name", "Name"),
-            Field.text("subnet", "Subnet"),
-            Field.text("securityLevel", "Security Level"))));
-        specs.put("Sensor", new ClassSpec("type", List.of(
-            Field.text("type", "Type"),
-            Field.text("location", "Location"),
-            Field.modelRef("measuredVariable", "Measured Variable"))));
-        specs.put("Capability", new ClassSpec("name", List.of(
-            Field.text("name", "Name"),
-            Field.text("description", "Description"),
-            Field.modelRef("mapsToRequirement", "Maps-To UseCaseRequirement"))));
-        specs.put("ServiceInstance", new ClassSpec("instanceId", List.of(
-            Field.text("instanceId", "Instance ID"),
-            Field.modelRef("deployedOn", "Deployed On"),
-            Field.suggested("status", "Status",
-                List.of("Running", "Stopped", "Maintenance", "Unknown")))));
+        specs.put("Stakeholder", spec("Stakeholder", "name", List.of(), List.of()));
+        specs.put("UseCase", spec("UseCase", "name",
+            List.of(Field.curated("description", "Description")),
+            List.of(Field.modelRef("targetAsset", "Target Asset"))));
+        specs.put("UseCaseRequirement", spec("UseCaseRequirement", "name", List.of(), List.of()));
+        specs.put("UseCaseRequirementParameter",
+            spec("UseCaseRequirementParameter", "name", List.of(), List.of()));
+        specs.put("UseCaseRequirementConstraint",
+            spec("UseCaseRequirementConstraint", "name",
+                List.of(Field.curated("name", "Name")), List.of()));
+        specs.put("VerificationCriterion", spec("VerificationCriterion", "name",
+            List.of(Field.curated("name", "Name")),
+            List.of(Field.modelRef("verifiesRequirement", "Verifies UseCaseRequirement"))));
+        specs.put("DeploymentContext", spec("DeploymentContext", "name",
+            List.of(Field.curated("name", "Name")), List.of()));
+        specs.put("ClusterNode", spec("ClusterNode", "hostname",
+            List.of(Field.curated("ipAddress", "IP Address")), List.of()));
+        specs.put("NetworkZone", spec("NetworkZone", "name",
+            List.of(Field.curated("subnet", "Subnet")), List.of()));
+        specs.put("Sensor", spec("Sensor", "name",
+            List.of(Field.curated("name", "Name"), Field.curated("location", "Location")),
+            List.of(Field.modelRef("measuredVariable", "Measured Variable"))));
+        specs.put("Capability", spec("Capability", "name", List.of(),
+            List.of(Field.modelRef("mapsToRequirement", "Maps-To UseCaseRequirement"))));
+        specs.put("ServiceInstance", spec("ServiceInstance", "name", List.of(),
+            List.of(Field.modelRef("deployedOn", "Deployed On"))));
         return specs;
+    }
+
+    private ClassSpec spec(String className, String nameAttribute,
+                           List<Field> curatedFields, List<Field> referenceFields) {
+        List<Field> datatypeFields = ontologyDataService.getDatatypeProperties(className).stream()
+            .filter(property -> BINDINGS.containsKey(property.name()))
+            .map(property -> {
+                PropertyBinding binding = BINDINGS.get(property.name());
+                return switch (binding.widget()) {
+                    case TEXT -> Field.text(binding.hubKey(), binding.label(), property.name());
+                    case SUGGESTED -> Field.suggested(binding.hubKey(), binding.label(),
+                        property.name(), binding.suggestions());
+                };
+            })
+            .toList();
+        List<Field> fields = new ArrayList<>(datatypeFields);
+        fields.addAll(curatedFields);
+        fields.addAll(referenceFields);
+        return new ClassSpec(nameAttribute, List.copyOf(fields));
+    }
+
+    private void validate() {
+        for (Map.Entry<String, ClassSpec> entry : specs.entrySet()) {
+            String className = entry.getKey();
+            if (ontologyDataService.getClassByName(className).isEmpty()) {
+                throw new IllegalStateException(
+                    "Manual entry form references unknown ontology class: " + className);
+            }
+            if (entry.getValue().fields().isEmpty()) {
+                throw new IllegalStateException(
+                    "Manual entry form for " + className + " has no fields");
+            }
+        }
+        List<String> declaredProperties = ontologyDataService.getDatatypeProperties().stream()
+            .map(property -> property.name())
+            .toList();
+        for (String ontologyProperty : BINDINGS.keySet()) {
+            if (!declaredProperties.contains(ontologyProperty)) {
+                throw new IllegalStateException(
+                    "Manual entry binding references undeclared ontology datatype property: "
+                        + ontologyProperty);
+            }
+        }
     }
 
     /**
@@ -119,8 +238,8 @@ public final class ManualEntryFormFactory {
      * @param className the ontology class name
      * @return {@code true} when a manual form exists
      */
-    public static boolean supports(String className) {
-        return SPECS.containsKey(className);
+    public boolean supports(String className) {
+        return specs.containsKey(className);
     }
 
     /**
@@ -131,9 +250,9 @@ public final class ManualEntryFormFactory {
      * @param onSave          callback with the built entity
      * @return the form, or {@code null} when manual entry is not supported
      */
-    public static VerticalLayout create(String className, Map<String, List<String>> dropdownOptions,
-                                        Consumer<CanonicalEntity> onSave) {
-        ClassSpec spec = SPECS.get(className);
+    public VerticalLayout create(String className, Map<String, List<String>> dropdownOptions,
+                                 Consumer<CanonicalEntity> onSave) {
+        ClassSpec spec = specs.get(className);
         if (spec == null) {
             return null;
         }

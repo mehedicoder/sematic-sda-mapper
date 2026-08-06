@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 public class ClassDetailPanel extends VerticalLayout {
 
     private final OntologyDataService ontologyDataService;
+    private final ManualEntryFormFactory manualEntryFormFactory;
     private final BiConsumer<String, byte[]> onSupplementaryUpload;
     private final Consumer<String> onError;
     private final Consumer<CanonicalEntity> onManualSave;
@@ -47,10 +48,12 @@ public class ClassDetailPanel extends VerticalLayout {
      * Creates the detail panel.
      */
     public ClassDetailPanel(OntologyDataService ontologyDataService,
+                            ManualEntryFormFactory manualEntryFormFactory,
                             BiConsumer<String, byte[]> onSupplementaryUpload,
                             Consumer<String> onError,
                             Consumer<CanonicalEntity> onManualSave) {
         this.ontologyDataService = ontologyDataService;
+        this.manualEntryFormFactory = manualEntryFormFactory;
         this.onSupplementaryUpload = onSupplementaryUpload;
         this.onError = onError;
         this.onManualSave = onManualSave;
@@ -84,8 +87,11 @@ public class ClassDetailPanel extends VerticalLayout {
             return;
         }
 
-        CoverageEntry entry = report.forClass(className)
-            .orElse(CoverageEntry.missing(className, clazz.get().layerId()));
+        // Derived subclasses reuse the coverage entry of their numbered parent,
+        // because instances are always typed on the numbered parent class.
+        String coverageClass = clazz.get().derived() ? clazz.get().parent() : className;
+        CoverageEntry entry = report.forClass(coverageClass)
+            .orElse(CoverageEntry.missing(coverageClass, clazz.get().layerId()));
         OntologyLayer layer = ontologyDataService.getLayerById(entry.layerId()).orElse(null);
 
         add(createHeader(clazz.get(), entry, layer));
@@ -112,6 +118,11 @@ public class ClassDetailPanel extends VerticalLayout {
         status.addClassName("hub-status--" + entry.status().name().toLowerCase());
 
         header.add(code, title, status);
+        if (clazz.derived()) {
+            Span subclassBadge = new Span("subclass of " + clazz.parent());
+            subclassBadge.addClassName("hub-subclass-badge");
+            header.add(subclassBadge);
+        }
         if (layer != null) {
             Span layerPill = new Span(layer.label());
             layerPill.addClassName("hub-layer-pill");
@@ -266,7 +277,7 @@ public class ClassDetailPanel extends VerticalLayout {
         actions.add(createSectionLabel("Gap actions"));
 
         boolean layerOne = layerOne(entry.layerId());
-        boolean manualSupported = ManualEntryFormFactory.supports(className);
+        boolean manualSupported = manualEntryFormFactory.supports(className);
 
         if (entry.status() != CoverageStatus.PRESENT && !layerOne) {
             Span hint = new Span("Upload a supplementary file to fill this gap");
@@ -308,7 +319,7 @@ public class ClassDetailPanel extends VerticalLayout {
 
     private void toggleManualForm(String className, Button toggle) {
         if (manualFormVisible) {
-            VerticalLayout form = ManualEntryFormFactory.create(className,
+            VerticalLayout form = manualEntryFormFactory.create(className,
                 dropdownOptions(className), entity -> {
                     manualFormVisible = false;
                     onManualSave.accept(entity);

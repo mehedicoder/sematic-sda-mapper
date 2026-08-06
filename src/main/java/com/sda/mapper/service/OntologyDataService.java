@@ -2,6 +2,7 @@ package com.sda.mapper.service;
 
 import com.sda.mapper.error.OntologyLoadingException;
 import com.sda.mapper.model.OntologyClass;
+import com.sda.mapper.model.OntologyDatatypeProperty;
 import com.sda.mapper.model.OntologyLayer;
 import com.sda.mapper.model.OntologyRelation;
 import com.sda.mapper.ontology.OntologyModelLoader;
@@ -76,6 +77,7 @@ public class OntologyDataService {
     private final List<OntologyClass> subClasses;
     private final Map<String, String> parentByName;
     private final List<OntologyRelation> relations;
+    private final List<OntologyDatatypeProperty> datatypeProperties;
 
     /**
      * Creates the data service over the application's loaded ontology model.
@@ -101,6 +103,7 @@ public class OntologyDataService {
         this.parentByName = subClasses.stream()
             .collect(Collectors.toUnmodifiableMap(OntologyClass::name, OntologyClass::parent));
         this.relations = deriveRelations(model, this.classes);
+        this.datatypeProperties = deriveDatatypeProperties(model, this.classes, this.subClasses);
     }
 
     private static Model loadDefaultModel() {
@@ -221,6 +224,32 @@ public class OntologyDataService {
         return List.copyOf(result);
     }
 
+    private static List<OntologyDatatypeProperty> deriveDatatypeProperties(
+            Model model, List<OntologyClass> classes, List<OntologyClass> subClasses) {
+        Set<String> knownClasses = Stream.concat(
+                classes.stream(), subClasses.stream())
+            .map(OntologyClass::name)
+            .collect(Collectors.toSet());
+        List<OntologyDatatypeProperty> result = new ArrayList<>();
+        model.listStatements(null, RDF.type, OWL.DatatypeProperty).forEachRemaining(st -> {
+            Resource property = st.getSubject();
+            Resource domain = property.getPropertyResourceValue(RDFS.domain);
+            Resource range = property.getPropertyResourceValue(RDFS.range);
+            String name = localName(property);
+            if (name == null || domain == null || range == null) {
+                return;
+            }
+            String className = localName(domain);
+            if (!knownClasses.contains(className)) {
+                return;
+            }
+            String xsdType = "xsd:" + localName(range);
+            result.add(new OntologyDatatypeProperty(name, className, xsdType));
+        });
+        result.sort(Comparator.comparing(OntologyDatatypeProperty::name));
+        return List.copyOf(result);
+    }
+
     private static String localName(Resource resource) {
         String uri = resource.getURI();
         if (uri == null) {
@@ -302,6 +331,31 @@ public class OntologyDataService {
      */
     public List<OntologyRelation> getRelations() {
         return relations;
+    }
+
+    /**
+     * Returns every datatype property derived from the {@code owl:DatatypeProperty}
+     * declarations of the v2 TBox with a known-class {@code rdfs:domain}.
+     *
+     * @return all datatype properties sorted by property name
+     */
+    public List<OntologyDatatypeProperty> getDatatypeProperties() {
+        return datatypeProperties;
+    }
+
+    /**
+     * Returns the datatype properties declared on the given class, derived from
+     * the {@code owl:DatatypeProperty} declarations with a known-class
+     * {@code rdfs:domain}.
+     *
+     * @param className class name (e.g. {@code "Skill"} or {@code "AASSkill"})
+     * @return datatype properties of the class sorted by property name, or an
+     *         empty list for unknown classes
+     */
+    public List<OntologyDatatypeProperty> getDatatypeProperties(String className) {
+        return datatypeProperties.stream()
+            .filter(p -> p.className().equals(className))
+            .toList();
     }
 
     /**

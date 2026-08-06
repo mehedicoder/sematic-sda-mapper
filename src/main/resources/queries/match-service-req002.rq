@@ -1,6 +1,6 @@
 PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX sda:  <https://example.org/ontology/sda#>
+PREFIX sda:  <http://sda-platform.org/ontology#>
 PREFIX :     <http://www.example.org/instance#>
 
 SELECT ?requirement ?capability ?skill ?service ?binding ?protocol ?accessMode ?recall ?latency ?safetyIntegrityLevel ?determinismClass ?networkZone ?connector ?connectorLabel ?deploy ?deployLabel
@@ -9,7 +9,7 @@ WHERE {
     BIND(:REQ-002 AS ?requirement)
 
     # R1: Capability match chain
-    ?requirement  a                  sda:Requirement ;
+    ?requirement  a                  sda:UseCaseRequirement ;
                  sda:mapsToCapability ?capability .
 
     ?capability   sda:realisedBy      ?skill .
@@ -39,13 +39,16 @@ WHERE {
     ?service      sda:isDeployedBy    ?deploy .
 
     ?deploy       rdfs:label          ?deployLabel ;
-                  sda:onPlantNetwork           ?onPlantNetwork ;
-                  sda:safetyIntegrityLevel     ?safetyIntegrityLevel ;
-                  sda:determinismClass         ?determinismClass .
+                  sda:onPlantNetwork  ?onPlantNetwork ;
+                  sda:determinismClass ?determinismClass ;
+                  sda:locatedInZone   ?zone ;
+                  sda:contextConstrainedBy ?safetyClass .
+
+    ?safetyClass  sda:safetyIntegrityLevel ?safetyIntegrityLevel .
 
     FILTER (?onPlantNetwork = true)
 
-    OPTIONAL { ?deploy sda:networkZone ?networkZone }
+    OPTIONAL { ?zone rdfs:label ?networkZone }
 
     # R3: SIL and determinism class must match requirement
     FILTER (?safetyIntegrityLevel = "SIL-2")

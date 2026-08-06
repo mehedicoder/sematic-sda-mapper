@@ -1,0 +1,647 @@
+# Demo ABox for the Semantic SDA Mapper v2 test suite.
+#
+# Instance namespace: http://www.example.org/instance#
+# Ontology namespace: http://sda-platform.org/ontology# (bare prefix : in the TBox)
+#
+# This fixture provides the individuals that exercise the v2 matching, reasoning,
+# deployment and verification queries. It is the test ABox; the historical v1
+# demo-abox.ttl remains in the repository for reference only.
+#
+# v2 canonical chains used below:
+#   UseCaseRequirement --mapsToCapability--> Capability --realisedBy--> Skill
+#     --isImplementedBy--> Service --hasBinding--> CommunicationBinding
+#     --hasConnector--> DataConnector --mapsVariable--> ProcessVariable
+#     --describedBy--> SemanticConcept
+#   UseCaseRequirement --verifiedBy--> VerificationCriterion (testMethod/passThreshold)
+#   UseCaseRequirement --hasConstraint--> UseCaseRequirementConstraint
+#   DeploymentContext --contextConstrainedBy--> SafetyClass
+#   DeploymentContext --locatedInZone--> NetworkZone (--contains--> ClusterNode)
+
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix sda:  <http://sda-platform.org/ontology#> .
+@prefix :     <http://www.example.org/instance#> .
+
+# =====================================================================
+# Use Cases and Use Case Requirements
+# =====================================================================
+:UC-HVACTempMonitoring a sda:UseCase ;
+    rdfs:label "HVAC Temperature Monitoring" ;
+    sda:useCaseID "UC-001" ;
+    sda:useCaseName "HVAC Temperature Monitoring" ;
+    sda:useCaseDescription "Monitor and analyse the supply-air temperature of AHU-01." ;
+    sda:targetsAsset :AHU01 .
+
+:REQ-001 a sda:UseCaseRequirement ;
+    rdfs:label "Flowmeter Diagnostics Requirement" ;
+    sda:requirementID "REQ-001" ;
+    sda:requirementName "Flowmeter Diagnostics Requirement" ;
+    sda:requirementDescription "Match a flowmeter diagnostics service for FT-101." ;
+    sda:requirementType "Diagnostics" ;
+    sda:lifecycleStatus "Defined" ;
+    sda:hasConstraint :CON-REQ001 ;
+    sda:verifiedBy :CRIT-REQ001-Latency, :CRIT-REQ001-Recall ;
+    sda:mapsToCapability :CAP-FlowDiagnostics ;
+    sda:validatedBy :UseCase-HVACTempMonitoring .
+
+:REQ-002 a sda:UseCaseRequirement ;
+    rdfs:label "Fermentation Skid Requirement" ;
+    sda:requirementID "REQ-002" ;
+    sda:requirementName "Fermentation Skid Requirement" ;
+    sda:requirementDescription "Match a read-write PROFINET service for the fermentation skid." ;
+    sda:requirementType "Control" ;
+    sda:lifecycleStatus "Defined" ;
+    sda:hasConstraint :CON-REQ002 ;
+    sda:verifiedBy :CRIT-REQ002-Latency, :CRIT-REQ002-Recall ;
+    sda:mapsToCapability :CAP-FermentationControl ;
+    sda:validatedBy :UseCase-FermentationSkid .
+
+:REQ-003 a sda:UseCaseRequirement ;
+    rdfs:label "AHU Temperature Monitoring Requirement" ;
+    sda:requirementID "REQ-003" ;
+    sda:requirementName "AHU Temperature Monitoring Requirement" ;
+    sda:requirementDescription "Match an OT-Zone-3 OPC-UA read-only service for AHU-01." ;
+    sda:requirementType "Monitoring" ;
+    sda:lifecycleStatus "Defined" ;
+    sda:hasConstraint :CON-REQ003 ;
+    sda:verifiedBy :CRIT-REQ003-Latency, :CRIT-REQ003-Recall ;
+    sda:mapsToCapability :CAP-HVACTempMonitoring ;
+    sda:validatedBy :UseCase-HVACTempMonitoring .
+
+:UseCase-HVACTempMonitoring a sda:UseCase ;
+    rdfs:label "HVAC Temperature Monitoring" ;
+    sda:useCaseID "UC-001" ;
+    sda:useCaseName "HVAC Temperature Monitoring" ;
+    sda:useCaseDescription "Monitor and analyse the supply-air temperature of AHU-01." ;
+    sda:targetsAsset :AHU01 ;
+    sda:hasRequirement :REQ-001, :REQ-003 .
+
+:UseCase-FermentationSkid a sda:UseCase ;
+    rdfs:label "Fermentation Skid Control" ;
+    sda:useCaseID "UC-002" ;
+    sda:useCaseName "Fermentation Skid Control" ;
+    sda:useCaseDescription "Control the fermentation skid Skid-A1." ;
+    sda:targetsAsset :Skid-A1 ;
+    sda:hasRequirement :REQ-002 .
+
+# =====================================================================
+# Use Case Requirement Constraints
+# =====================================================================
+:CON-REQ001 a sda:UseCaseRequirementConstraint ;
+    sda:constraintID "CON-REQ001" ;
+    sda:constraintType "Latency" ;
+    sda:expression "reportedLatency <= 60" ;
+    sda:isHardConstraint true .
+
+:CON-REQ001-Recall a sda:UseCaseRequirementConstraint ;
+    sda:constraintID "CON-REQ001-Recall" ;
+    sda:constraintType "Recall" ;
+    sda:expression "reportedRecall >= 0.90" ;
+    sda:isHardConstraint true .
+
+:CON-REQ002 a sda:UseCaseRequirementConstraint ;
+    sda:constraintID "CON-REQ002" ;
+    sda:constraintType "Latency" ;
+    sda:expression "reportedLatency <= 60" ;
+    sda:isHardConstraint true .
+
+:CON-REQ002-Protocol a sda:UseCaseRequirementConstraint ;
+    sda:constraintID "CON-REQ002-Protocol" ;
+    sda:constraintType "Protocol" ;
+    sda:expression "protocol = PROFINET" ;
+    sda:isHardConstraint true .
+
+:CON-REQ003 a sda:UseCaseRequirementConstraint ;
+    sda:constraintID "CON-REQ003" ;
+    sda:constraintType "Latency" ;
+    sda:expression "reportedLatency <= 60" ;
+    sda:isHardConstraint true .
+
+# =====================================================================
+# Verification Criteria
+# =====================================================================
+:CRIT-REQ001-Latency a sda:VerificationCriterion ;
+    sda:criterionID "CRIT-REQ001-Latency" ;
+    sda:criterionType "Hard" ;
+    sda:testMethod "reportedLatency" ;
+    sda:passThreshold 60.0 ;
+    sda:requiresConcept :PA-DIM-FlowConcept .
+
+:CRIT-REQ001-Recall a sda:VerificationCriterion ;
+    sda:criterionID "CRIT-REQ001-Recall" ;
+    sda:criterionType "Hard" ;
+    sda:testMethod "reportedRecall" ;
+    sda:passThreshold 0.90 ;
+    sda:requiresConcept :PA-DIM-FlowConcept .
+
+:CRIT-REQ002-Latency a sda:VerificationCriterion ;
+    sda:criterionID "CRIT-REQ002-Latency" ;
+    sda:criterionType "Hard" ;
+    sda:testMethod "reportedLatency" ;
+    sda:passThreshold 60.0 ;
+    sda:requiresConcept :PA-DIM-TemperatureConcept .
+
+:CRIT-REQ002-Recall a sda:VerificationCriterion ;
+    sda:criterionID "CRIT-REQ002-Recall" ;
+    sda:criterionType "Hard" ;
+    sda:testMethod "reportedRecall" ;
+    sda:passThreshold 0.90 ;
+    sda:requiresConcept :PA-DIM-TemperatureConcept .
+
+:CRIT-REQ003-Latency a sda:VerificationCriterion ;
+    sda:criterionID "CRIT-REQ003-Latency" ;
+    sda:criterionType "Hard" ;
+    sda:testMethod "reportedLatency" ;
+    sda:passThreshold 60.0 ;
+    sda:requiresConcept :PA-DIM-TemperatureConcept .
+
+:CRIT-REQ003-Recall a sda:VerificationCriterion ;
+    sda:criterionID "CRIT-REQ003-Recall" ;
+    sda:criterionType "Hard" ;
+    sda:testMethod "reportedRecall" ;
+    sda:passThreshold 0.90 ;
+    sda:requiresConcept :PA-DIM-TemperatureConcept .
+
+# =====================================================================
+# Capabilities and Skills
+# =====================================================================
+:CAP-FlowDiagnostics a sda:Capability ;
+    rdfs:label "Flowmeter Diagnostics" ;
+    sda:capabilityID "CAP-FLOW-DIAG-001" ;
+    sda:capabilityName "Flowmeter Diagnostics" ;
+    sda:capabilityDescription "Diagnose FT-101 flowmeter health and alarm state." ;
+    sda:capabilityVersion "1.0" ;
+    sda:realisedBy :SK-FlowmeterDiagnostics ;
+    sda:hasContext :Context-FT101 .
+
+:CAP-FermentationControl a sda:Capability ;
+    rdfs:label "Fermentation Control" ;
+    sda:capabilityID "CAP-FERM-CTRL-001" ;
+    sda:capabilityName "Fermentation Control" ;
+    sda:capabilityDescription "Control the fermentation skid process." ;
+    sda:capabilityVersion "1.0" ;
+    sda:realisedBy :SK-FermentationControl ;
+    sda:hasContext :Context-SkidA1 .
+
+:CAP-HVACTempMonitoring a sda:Capability ;
+    rdfs:label "HVAC Temperature Monitoring" ;
+    sda:capabilityID "CAP-HVAC-TEMP-001" ;
+    sda:capabilityName "HVAC Temperature Monitoring" ;
+    sda:capabilityDescription "Monitor AHU-01 supply-air temperature." ;
+    sda:capabilityVersion "1.0" ;
+    sda:realisedBy :SK-HVACTempAnalysis ;
+    sda:hasContext :Context-AHU01 .
+
+:SK-FlowmeterDiagnostics a sda:Skill ;
+    rdfs:label "Flowmeter Diagnostics Skill" ;
+    sda:skillID "SK-FLOW-DIAG-001" ;
+    sda:skillName "Flowmeter Diagnostics Skill" ;
+    sda:skillDescription "Diagnostic skill for FT-101." ;
+    sda:skillVersion "1.0" ;
+    sda:requiresConcept :PA-DIM-FlowConcept ;
+    sda:isImplementedBy :SVC-FlowmeterDiagnostics .
+
+:SK-FermentationControl a sda:Skill ;
+    rdfs:label "Fermentation Control Skill" ;
+    sda:skillID "SK-FERM-CTRL-001" ;
+    sda:skillName "Fermentation Control Skill" ;
+    sda:skillDescription "Control skill for Skid-A1." ;
+    sda:skillVersion "1.0" ;
+    sda:requiresConcept :PA-DIM-TemperatureConcept, :PA-DIM-DosingConcept ;
+    sda:isImplementedBy :SVC-FermentationSkid .
+
+:SK-HVACTempAnalysis a sda:Skill ;
+    rdfs:label "HVAC Temperature Analysis Skill" ;
+    sda:skillID "SK-HVAC-TEMP-001" ;
+    sda:skillName "HVAC Temperature Analysis Skill" ;
+    sda:skillDescription "Temperature analysis skill for AHU-01." ;
+    sda:skillVersion "1.0" ;
+    sda:requiresConcept :PA-DIM-TemperatureConcept ;
+    sda:isImplementedBy :SVC-HVACTempAnalysis .
+
+# =====================================================================
+# Services
+# =====================================================================
+:SVC-FlowmeterDiagnostics a sda:Service ;
+    rdfs:label "Flowmeter Diagnostics Service" ;
+    sda:serviceID "SVC-FLOW-DIAG-001" ;
+    sda:serviceName "Flowmeter Diagnostics Service" ;
+    sda:serviceType "Diagnostics" ;
+    sda:reportedRecall 0.94 ;
+    sda:reportedLatency 45 ;
+    sda:hasBinding :CB-FT101-OPCUA ;
+    sda:hasConnector :DC-FT101-OPCUA ;
+    sda:isImplementedBy :SK-FlowmeterDiagnostics ;
+    sda:isDeployedBy :DEPLOY-OnPrem ;
+    sda:satisfiesConstraint :CON-REQ001, :CON-REQ001-Recall .
+
+:SVC-FermentationSkid a sda:Service ;
+    rdfs:label "Fermentation Skid Service" ;
+    sda:serviceID "SVC-FERM-SKID-001" ;
+    sda:serviceName "Fermentation Skid Service" ;
+    sda:serviceType "Control" ;
+    sda:reportedRecall 0.93 ;
+    sda:reportedLatency 50 ;
+    sda:hasBinding :CB-SkidA1-PROFINET ;
+    sda:hasConnector :DC-SkidA1-OPCUA ;
+    sda:isImplementedBy :SK-FermentationControl ;
+    sda:isDeployedBy :DEPLOY-Critical ;
+    sda:satisfiesConstraint :CON-REQ002, :CON-REQ002-Protocol .
+
+:SVC-HVACTempAnalysis a sda:Service ;
+    rdfs:label "HVAC Temperature Analysis Service" ;
+    sda:serviceID "SVC-HVAC-TEMP-001" ;
+    sda:serviceName "HVAC Temperature Analysis Service" ;
+    sda:serviceType "Monitoring" ;
+    sda:reportedRecall 0.91 ;
+    sda:reportedLatency 55 ;
+    sda:hasBinding :CB-AHU01-OPCUA ;
+    sda:hasConnector :DC-AHU01-OPCUA ;
+    sda:isImplementedBy :SK-HVACTempAnalysis ;
+    sda:isDeployedBy :DEPLOY-OTZone3 ;
+    sda:satisfiesConstraint :CON-REQ003 .
+
+:SVC-Orphan a sda:Service ;
+    rdfs:label "Orphan Service" ;
+    sda:serviceID "SVC-ORPHAN-001" ;
+    sda:serviceName "Orphan Service" ;
+    sda:serviceType "Diagnostics" ;
+    sda:reportedRecall 0.85 ;
+    sda:reportedLatency 42 ;
+    sda:hasBinding :CB-Orphan-OPCUA ;
+    sda:hasConnector :DC-Orphan-OPCUA ;
+    sda:isDeployedBy :DEPLOY-OTZone3 .
+
+# =====================================================================
+# Communication Bindings
+# =====================================================================
+:CB-FT101-OPCUA a sda:CommunicationBinding ;
+    rdfs:label "OPC-UA binding for flowmeter" ;
+    sda:bindingID "CB-FT101-OPCUA" ;
+    sda:protocol "OPC-UA" ;
+    sda:accessMode "read-only" ;
+    sda:securityMode "Sign" ;
+    sda:bindingEndpointUri "opc.tcp://opcua-ft101:4840" ;
+    sda:bindsService :SVC-FlowmeterDiagnostics .
+
+:CB-SkidA1-PROFINET a sda:CommunicationBinding ;
+    rdfs:label "Skid-A1 PROFINET binding" ;
+    sda:bindingID "CB-SkidA1-PROFINET" ;
+    sda:protocol "PROFINET" ;
+    sda:accessMode "read-write" ;
+    sda:securityMode "None" ;
+    sda:bindingEndpointUri "profinet://skid-a1:1" ;
+    sda:bindsService :SVC-FermentationSkid .
+
+:CB-AHU01-OPCUA a sda:CommunicationBinding ;
+    rdfs:label "AHU-01 OPC-UA binding" ;
+    sda:bindingID "CB-AHU01-OPCUA" ;
+    sda:protocol "OPC-UA" ;
+    sda:accessMode "read-only" ;
+    sda:securityMode "SignAndEncrypt" ;
+    sda:bindingEndpointUri "opc.tcp://opcua-ahu01:4840" ;
+    sda:bindsService :SVC-HVACTempAnalysis .
+
+:CB-Orphan-OPCUA a sda:CommunicationBinding ;
+    rdfs:label "Orphan OPC-UA binding" ;
+    sda:bindingID "CB-Orphan-OPCUA" ;
+    sda:protocol "OPC-UA" ;
+    sda:accessMode "read-only" ;
+    sda:securityMode "Sign" ;
+    sda:bindingEndpointUri "opc.tcp://opcua-orphan:4840" ;
+    sda:bindsService :SVC-Orphan .
+
+# =====================================================================
+# Data Connectors
+# =====================================================================
+:DC-FT101-OPCUA a sda:DataConnector ;
+    rdfs:label "FT101 flowmeter OPC-UA connector" ;
+    sda:connectorID "DC-FT101-OPCUA" ;
+    sda:connectorType "OPC-UA" ;
+    sda:connectorSemanticIRI "http://example.org/opcua/FT101" ;
+    sda:dataType "Double" ;
+    sda:mapsVariable :PV-Flow-FT101 ;
+    sda:connectsService :SVC-FlowmeterDiagnostics .
+
+:DC-SkidA1-OPCUA a sda:DataConnector ;
+    rdfs:label "Skid-A1 OPC-UA connector" ;
+    sda:connectorID "DC-SkidA1-OPCUA" ;
+    sda:connectorType "OPC-UA" ;
+    sda:connectorSemanticIRI "http://example.org/opcua/SkidA1" ;
+    sda:dataType "Double" ;
+    sda:mapsVariable :PV-Temp-SkidA1, :PV-Dosing-SkidA1 ;
+    sda:connectsService :SVC-FermentationSkid .
+
+:DC-AHU01-OPCUA a sda:DataConnector ;
+    rdfs:label "AHU01 OPC-UA connector" ;
+    sda:connectorID "DC-AHU01-OPCUA" ;
+    sda:connectorType "OPC-UA" ;
+    sda:connectorSemanticIRI "http://example.org/opcua/AHU01" ;
+    sda:dataType "Double" ;
+    sda:mapsVariable :PV-Temp-AHU01 ;
+    sda:connectsService :SVC-HVACTempAnalysis .
+
+:DC-Orphan-OPCUA a sda:DataConnector ;
+    rdfs:label "Orphan OPC-UA connector" ;
+    sda:connectorID "DC-Orphan-OPCUA" ;
+    sda:connectorType "OPC-UA" ;
+    sda:connectorSemanticIRI "http://example.org/opcua/Orphan" ;
+    sda:dataType "Double" ;
+    sda:mapsVariable :PV-Orphan ;
+    sda:connectsService :SVC-Orphan .
+
+# =====================================================================
+# Process Variables, Semantic Concepts, Sensors, Observations, Assets
+# =====================================================================
+:PV-Flow-FT101 a sda:ProcessVariable ;
+    rdfs:label "FT101 flow rate" ;
+    sda:variableName "FT101 flow rate" ;
+    sda:variableUnit "m3/h" ;
+    sda:describedBy :PA-DIM-FlowConcept ;
+    sda:hasObservation :OBS-FT101-1, :OBS-FT101-2 .
+
+:PV-Temp-SkidA1 a sda:ProcessVariable ;
+    rdfs:label "Skid-A1 Fermentation Temperature" ;
+    sda:variableName "Skid-A1 Fermentation Temperature" ;
+    sda:variableUnit "degC" ;
+    sda:describedBy :PA-DIM-TemperatureConcept ;
+    sda:hasObservation :OBS-TEMP-SkidA1-1 .
+
+:PV-Dosing-SkidA1 a sda:ProcessVariable ;
+    rdfs:label "Skid-A1 Dosing Rate" ;
+    sda:variableName "Skid-A1 Dosing Rate" ;
+    sda:variableUnit "kg" ;
+    sda:describedBy :PA-DIM-DosingConcept ;
+    sda:hasObservation :OBS-DOSING-SkidA1-1 .
+
+:PV-Temp-AHU01 a sda:ProcessVariable ;
+    rdfs:label "AHU01 Supply Air Temperature" ;
+    sda:variableName "AHU01 Supply Air Temperature" ;
+    sda:variableUnit "degC" ;
+    sda:describedBy :PA-DIM-TemperatureConcept ;
+    sda:hasObservation :OBS-TEMP-AHU01-1 .
+
+:PV-Orphan a sda:ProcessVariable ;
+    rdfs:label "Orphan flow rate" ;
+    sda:variableName "Orphan flow rate" ;
+    sda:variableUnit "m3/h" ;
+    sda:describedBy :PA-DIM-FlowConcept ;
+    sda:hasObservation :OBS-Orphan-1 .
+
+:PA-DIM-FlowConcept a sda:SemanticConcept ;
+    rdfs:label "PA-DIM Flow" ;
+    sda:conceptID "PA-DIM-Flow" ;
+    sda:conceptName "PA-DIM Flow" ;
+    sda:conceptUnit "m3/h" ;
+    sda:conceptDataType "xsd:decimal" .
+
+:PA-DIM-TemperatureConcept a sda:SemanticConcept ;
+    rdfs:label "PA-DIM Temperature" ;
+    sda:conceptID "PA-DIM-Temperature" ;
+    sda:conceptName "PA-DIM Temperature" ;
+    sda:conceptUnit "degC" ;
+    sda:conceptDataType "xsd:double" .
+
+:PA-DIM-DosingConcept a sda:SemanticConcept ;
+    rdfs:label "PA-DIM Dosing" ;
+    sda:conceptID "PA-DIM-Dosing" ;
+    sda:conceptName "PA-DIM Dosing" ;
+    sda:conceptUnit "kg" ;
+    sda:conceptDataType "xsd:double" .
+
+:Sensor-FT101 a sda:Sensor ;
+    rdfs:label "FT101 Flow Sensor" ;
+    sda:sensorID "FT101" ;
+    sda:sensorType "Coriolis" ;
+    sda:locatedIn :FT101 ;
+    sda:observes :PV-Flow-FT101 .
+
+:Sensor-AHU01 a sda:Sensor ;
+    rdfs:label "AHU01 Temperature Sensor" ;
+    sda:sensorID "AHU01-TEMP" ;
+    sda:sensorType "RTD" ;
+    sda:locatedIn :AHU01 ;
+    sda:observes :PV-Temp-AHU01 .
+
+:OBS-FT101-1 a sda:Observation ;
+    rdfs:label "FT101 flow observation 1" ;
+    sda:value 42.5 ;
+    sda:timestamp "2026-08-05T10:15:00Z"^^xsd:dateTime ;
+    sda:observes :PV-Flow-FT101 .
+
+:OBS-FT101-2 a sda:Observation ;
+    rdfs:label "FT101 flow observation 2" ;
+    sda:value 43.1 ;
+    sda:timestamp "2026-08-05T10:30:00Z"^^xsd:dateTime ;
+    sda:observes :PV-Flow-FT101 .
+
+:OBS-TEMP-SkidA1-1 a sda:Observation ;
+    rdfs:label "Skid-A1 temperature observation 1" ;
+    sda:value 28.4 ;
+    sda:timestamp "2026-08-05T10:20:00Z"^^xsd:dateTime ;
+    sda:observes :PV-Temp-SkidA1 .
+
+:OBS-DOSING-SkidA1-1 a sda:Observation ;
+    rdfs:label "Skid-A1 dosing observation 1" ;
+    sda:value 15.2 ;
+    sda:timestamp "2026-08-05T10:22:00Z"^^xsd:dateTime ;
+    sda:observes :PV-Dosing-SkidA1 .
+
+:OBS-TEMP-AHU01-1 a sda:Observation ;
+    rdfs:label "AHU01 temperature observation 1" ;
+    sda:value 22.0 ;
+    sda:timestamp "2026-08-05T10:25:00Z"^^xsd:dateTime ;
+    sda:observes :PV-Temp-AHU01 .
+
+:OBS-Orphan-1 a sda:Observation ;
+    rdfs:label "Orphan flow observation 1" ;
+    sda:value 12.0 ;
+    sda:timestamp "2026-08-05T10:35:00Z"^^xsd:dateTime ;
+    sda:observes :PV-Orphan .
+
+:FT101 a sda:Asset ;
+    rdfs:label "FT101 Flowmeter" ;
+    sda:assetID "FT101" ;
+    sda:assetName "FT101 Flowmeter" ;
+    sda:locatedIn :PlantA ;
+    sda:hasCapability :CAP-FlowDiagnostics ;
+    sda:hasContext :Context-FT101 .
+
+:AHU01 a sda:Asset ;
+    rdfs:label "AHU01 Air Handling Unit" ;
+    sda:assetID "AHU01" ;
+    sda:assetName "AHU01 Air Handling Unit" ;
+    sda:locatedIn :PlantA ;
+    sda:hasCapability :CAP-HVACTempMonitoring ;
+    sda:hasContext :Context-AHU01 .
+
+:Skid-A1 a sda:Asset ;
+    rdfs:label "Skid-A1 Fermentation Skid" ;
+    sda:assetID "Skid-A1" ;
+    sda:assetName "Skid-A1 Fermentation Skid" ;
+    sda:locatedIn :PlantB ;
+    sda:hasCapability :CAP-FermentationControl ;
+    sda:hasContext :Context-SkidA1 .
+
+# =====================================================================
+# Contexts
+# =====================================================================
+:Context-FT101 a sda:DeploymentContext ;
+    rdfs:label "FT-101 context" ;
+    sda:contextID "Context-FT101" ;
+    sda:locatedInZone :NZ-OT1 ;
+    sda:contextConstrainedBy :SCL-OnPrem ;
+    sda:determinismClass "SoftRealTime" ;
+    sda:onPlantNetwork true ;
+    sda:hostsService :SVC-FlowmeterDiagnostics .
+
+:Context-SkidA1 a sda:DeploymentContext ;
+    rdfs:label "Skid-A1 context" ;
+    sda:contextID "Context-SkidA1" ;
+    sda:locatedInZone :NZ-OT1 ;
+    sda:contextConstrainedBy :SCL-Critical ;
+    sda:determinismClass "HardRealTime" ;
+    sda:onPlantNetwork true ;
+    sda:hostsService :SVC-FermentationSkid .
+
+:Context-AHU01 a sda:DeploymentContext ;
+    rdfs:label "AHU-01 context" ;
+    sda:contextID "Context-AHU01" ;
+    sda:locatedInZone :NZ-OT3 ;
+    sda:contextConstrainedBy :SCL-OTZone3 ;
+    sda:determinismClass "SoftRealTime" ;
+    sda:onPlantNetwork true ;
+    sda:hostsService :SVC-HVACTempAnalysis .
+
+# =====================================================================
+# Deployment Contexts (service deployment environments)
+# =====================================================================
+:DEPLOY-OnPrem a sda:DeploymentContext ;
+    rdfs:label "On-premise deployment" ;
+    sda:contextID "DEPLOY-OnPrem" ;
+    sda:locatedInZone :NZ-OT1 ;
+    sda:contextConstrainedBy :SCL-OnPrem ;
+    sda:determinismClass "SoftRealTime" ;
+    sda:onPlantNetwork true ;
+    sda:hostsService :SVC-FlowmeterDiagnostics .
+
+:DEPLOY-Critical a sda:DeploymentContext ;
+    rdfs:label "Critical deployment" ;
+    sda:contextID "DEPLOY-Critical" ;
+    sda:locatedInZone :NZ-OT1 ;
+    sda:contextConstrainedBy :SCL-Critical ;
+    sda:determinismClass "HardRealTime" ;
+    sda:onPlantNetwork true ;
+    sda:hostsService :SVC-FermentationSkid .
+
+:DEPLOY-OTZone3 a sda:DeploymentContext ;
+    rdfs:label "OT Zone 3 deployment" ;
+    sda:contextID "DEPLOY-OTZone3" ;
+    sda:locatedInZone :NZ-OT3 ;
+    sda:contextConstrainedBy :SCL-OTZone3 ;
+    sda:determinismClass "SoftRealTime" ;
+    sda:onPlantNetwork true ;
+    sda:hostsService :SVC-HVACTempAnalysis, :SVC-Orphan .
+
+# =====================================================================
+# Safety Classes
+# =====================================================================
+:SCL-OnPrem a sda:SafetyClass ;
+    rdfs:label "On-premise SIL-0" ;
+    sda:classID "SCL-OnPrem" ;
+    sda:safetyIntegrityLevel "SIL-0" ;
+    sda:safetyStandard "IEC 61508" ;
+    sda:certificationRequired false .
+
+:SCL-Critical a sda:SafetyClass ;
+    rdfs:label "Critical SIL-2" ;
+    sda:classID "SCL-Critical" ;
+    sda:safetyIntegrityLevel "SIL-2" ;
+    sda:safetyStandard "IEC 61508" ;
+    sda:certificationRequired true .
+
+:SCL-OTZone3 a sda:SafetyClass ;
+    rdfs:label "OT Zone 3 SIL-0" ;
+    sda:classID "SCL-OTZone3" ;
+    sda:safetyIntegrityLevel "SIL-0" ;
+    sda:safetyStandard "IEC 62443" ;
+    sda:certificationRequired false .
+
+# =====================================================================
+# Network Zones
+# =====================================================================
+:NZ-OT1 a sda:OTZone ;
+    rdfs:label "OT-Zone-1" ;
+    sda:zoneID "OT-Zone-1" ;
+    sda:iec62443Level "Level 3" ;
+    sda:internetReachable false ;
+    sda:containsNode :Node-OT1-A, :Node-OT1-B .
+
+:NZ-OT3 a sda:OTZone ;
+    rdfs:label "OT-Zone-3" ;
+    sda:zoneID "OT-Zone-3" ;
+    sda:iec62443Level "Level 3" ;
+    sda:internetReachable false ;
+    sda:containsNode :Node-OT3-A, :Node-OT3-B, :Node-OT3-C .
+
+:NZ-IT a sda:ITZone ;
+    rdfs:label "IT-Zone-1" ;
+    sda:zoneID "IT-Zone-1" ;
+    sda:iec62443Level "Level 4" ;
+    sda:internetReachable true .
+
+:PlantA a rdfs:Resource ;
+    rdfs:label "Plant A" .
+
+:PlantB a rdfs:Resource ;
+    rdfs:label "Plant B" .
+
+# =====================================================================
+# Cluster Nodes
+# =====================================================================
+:Node-OT1-A a sda:ClusterNode ;
+    rdfs:label "node-ot1-a" ;
+    sda:nodeID "Node-OT1-A" ;
+    sda:hostname "node-ot1-a" ;
+    sda:secureBootEnabled true ;
+    sda:hasOTELCollector false ;
+    sda:cpuArchitectures "x86_64" ;
+    sda:cpuCores 4 .
+
+:Node-OT1-B a sda:ClusterNode ;
+    rdfs:label "node-ot1-b" ;
+    sda:nodeID "Node-OT1-B" ;
+    sda:hostname "node-ot1-b" ;
+    sda:secureBootEnabled true ;
+    sda:hasOTELCollector false ;
+    sda:cpuArchitectures "x86_64" ;
+    sda:cpuCores 8 .
+
+:Node-OT3-A a sda:ClusterNode ;
+    rdfs:label "node-ot3-a" ;
+    sda:nodeID "Node-OT3-A" ;
+    sda:hostname "node-ot3-a" ;
+    sda:secureBootEnabled true ;
+    sda:hasOTELCollector true ;
+    sda:cpuArchitectures "x86_64" ;
+    sda:cpuCores 4 .
+
+:Node-OT3-B a sda:ClusterNode ;
+    rdfs:label "node-ot3-b" ;
+    sda:nodeID "Node-OT3-B" ;
+    sda:hostname "node-ot3-b" ;
+    sda:secureBootEnabled true ;
+    sda:hasOTELCollector true ;
+    sda:cpuArchitectures "x86_64" ;
+    sda:cpuCores 8 .
+
+:Node-OT3-C a sda:ClusterNode ;
+    rdfs:label "node-ot3-c" ;
+    sda:nodeID "Node-OT3-C" ;
+    sda:hostname "node-ot3-c" ;
+    sda:secureBootEnabled true ;
+    sda:hasOTELCollector false ;
+    sda:cpuArchitectures "arm64" ;
+    sda:cpuCores 8 .

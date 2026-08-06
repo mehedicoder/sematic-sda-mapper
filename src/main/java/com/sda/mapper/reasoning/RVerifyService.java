@@ -30,7 +30,7 @@ public class RVerifyService {
     private static final Logger log = LoggerFactory.getLogger(RVerifyService.class);
 
     private static final String INST_NS = "http://www.example.org/instance#";
-    private static final String SDA_NS = "https://example.org/ontology/sda#";
+    private static final String SDA_NS = "http://sda-platform.org/ontology#";
 
     private final OntologyModelLoader ontologyModelLoader;
 
@@ -98,27 +98,24 @@ public class RVerifyService {
 
     private CriterionResult evaluateCriterion(Model model, Resource criterion,
                                                Resource serviceResource) {
-        Property criterionTypeProp = model.createProperty(SDA_NS + "criterionType");
-        Property criterionMetricProp = model.createProperty(SDA_NS + "criterionMetric");
-        Property criterionThresholdProp = model.createProperty(SDA_NS + "criterionThreshold");
-        Property criterionOperatorProp = model.createProperty(SDA_NS + "criterionOperator");
+        Property testMethodProp = model.createProperty(SDA_NS + "testMethod");
+        Property passThresholdProp = model.createProperty(SDA_NS + "passThreshold");
 
-        String type = getPropertyValue(criterion, criterionTypeProp);
-        String metric = getPropertyValue(criterion, criterionMetricProp);
-        String thresholdStr = getPropertyValue(criterion, criterionThresholdProp);
-        String operator = getPropertyValue(criterion, criterionOperatorProp);
+        String testMethod = getPropertyValue(criterion, testMethodProp);
+        String thresholdStr = getPropertyValue(criterion, passThresholdProp);
         String label = criterion.hasProperty(org.apache.jena.vocabulary.RDFS.label)
             ? criterion.getProperty(org.apache.jena.vocabulary.RDFS.label).getString()
             : criterion.getLocalName();
 
-        if (metric == null || thresholdStr == null || operator == null) {
+        if (testMethod == null || thresholdStr == null) {
             return new CriterionResult(label, false, "Incomplete criterion definition");
         }
 
-        Property metricProp = model.createProperty(SDA_NS + metric);
+        Property metricProp = model.createProperty(SDA_NS + testMethod);
         Statement metricStmt = serviceResource.getProperty(metricProp);
         if (metricStmt == null || metricStmt.getLiteral() == null) {
-            return new CriterionResult(label, false, "Metric '" + metric + "' not found on service");
+            return new CriterionResult(label, false,
+                "Metric '" + testMethod + "' not found on service");
         }
 
         double actualValue = metricStmt.getDouble();
@@ -129,18 +126,17 @@ public class RVerifyService {
             return new CriterionResult(label, false, "Invalid threshold: " + thresholdStr);
         }
 
-        boolean passed = switch (operator) {
-            case ">=" -> actualValue >= threshold;
-            case "<=" -> actualValue <= threshold;
-            case ">" -> actualValue > threshold;
-            case "<" -> actualValue < threshold;
-            case "=" -> Double.compare(actualValue, threshold) == 0;
-            case "!=" -> Double.compare(actualValue, threshold) != 0;
-            default -> false;
-        };
+        // Latency-like metrics are upper-bounded, all other metrics are
+        // lower-bounded.
+        String operator = testMethod.toLowerCase().contains("latency")
+            ? "<=" : ">=";
+
+        boolean passed = operator.equals("<=")
+            ? actualValue <= threshold : actualValue >= threshold;
 
         String detail = "%s: actual=%.2f %s %.2f → %s"
-            .formatted(metric, actualValue, operator, threshold, passed ? "PASS" : "FAIL");
+            .formatted(testMethod, actualValue, operator, threshold,
+                passed ? "PASS" : "FAIL");
 
         return new CriterionResult(label, passed, detail);
     }

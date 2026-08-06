@@ -913,6 +913,99 @@ Align the hub's INFER and MATCH stages with the paper: the INFER stage derives `
 
 ---
 
+## Phase 11c-3: Session Visibility View — user-wise list of incomplete / complete mapping sessions
+
+**Goal**
+
+Give operators a per-user overview of all Mapping Hub sessions (`/sessions`) with Incomplete/Complete status derived from persisted pipeline-run coverage, plus resume, archive and delete actions so persisted sessions are usable again after a restart.
+
+**Tasks**
+
+* [x] **User attribution**
+  * [x] Capture the authenticated principal on `MappingHubSession` (`userId` + `bindUser`) and persist it into `mapping_hub_session.user_id` via the overloaded `ensureSession(UUID, String)` (ON CONFLICT updates `user_id`)
+  * [x] `CurrentUser` resolves the authenticated username and admin role from `SecurityContextHolder`
+  * [x] Sessions without a user are listed as "Unassigned"
+* [x] **Completion semantics**
+  * [x] `SessionOverview.complete()` — `COMPLETED` status is complete; `FAILED` is always incomplete; otherwise complete only at `coveragePercent >= 100.0 && blockingGapCount == 0`
+  * [x] Status derived from persisted data (`mapping_hub_session` + subquery counts), not live UI state
+* [x] **Session listing query**
+  * [x] `MappingHubPersistenceService.listSessions()` — single SQL with subquery counts over uploaded files, canonical entities, semantic matches and manifests, ordered `updated_at DESC`
+  * [x] Per-user aggregate counts (`SessionVisibilityService.userSummaries()`) including an "Unassigned" bucket
+* [x] **Session Visibility View (`/sessions`, separate view under Mapping Hub)**
+  * [x] New `SessionOverviewView` with `@Route("sessions")`, `@PageTitle("Sessions")`, `MainLayout` layout — distinct route, not a tab in `MappingHubView`
+  * [x] Drawer link `VaadinIcon.GROUP` "Sessions" placed directly under "Mapping Hub" in `MainLayout`
+  * [x] `Grid<SessionOverview>` with user, session, status pill, coverage %, blocking gaps, files, entities, matches, manifests, last activity and actions columns
+  * [x] Per-user summary chips "N sessions, M incomplete, K complete"
+  * [x] Filters: status (All / Incomplete / Complete), user (All users / owners / Unassigned), free-text search on session name or id
+  * [x] Actions per row: Open/Resume (restores persisted state and navigates to Mapping Hub), Archive, Delete (both guarded by `ConfirmDialog`)
+  * [x] Refresh button + 30s auto-refresh daemon timer (attach/detach lifecycle listeners)
+* [x] **Session resume (restore path)**
+  * [x] `MappingHubService.resumeSession(UUID)` — validates persistence, restores `canonical_entity` rows into typed records via `CanonicalEntityRestorer`, resets the session, re-adds entities to the model and re-runs `runStages` so coverage/matches are current
+  * [x] `SessionResumeException` for resume failures with clear messages
+* [x] **Security**
+  * [x] `SessionVisibilityService` — admin sees all; non-admin sees own + unassigned sessions; unauthenticated sees unassigned only
+  * [x] Archive/Delete/Open governed by `canManage` (owner or admin)
+* [x] **Schema**
+  * [x] Flyway `V4__session_visibility_index.sql` — index on `mapping_hub_session(user_id, updated_at DESC)` (no other schema changes needed)
+* [x] **Tests**
+  * [x] `SessionVisibilityServiceTest` — classification boundaries (100%+0 gaps complete, 99.9% incomplete, FAILED incomplete, COMPLETED complete), user scoping, admin visibility, per-user aggregates, manage permissions
+  * [x] `SessionOverviewViewTest` — route/title/stylesheet, grid rendering, summary chips, filters, open/resume, archive/delete actions
+  * [x] `CanonicalEntityRestorerTest` — typed record reconstruction from persisted rows
+  * [x] `MappingHubServiceTest` — resume restores entities and rebuilds coverage; resume without persisted entities is rejected
+
+**Acceptance Criteria**
+
+* [x] `SessionOverviewView` is a separate view at `/sessions` (own `@Route` + `@PageTitle`), navigated from the drawer under "Mapping Hub" — it is not a tab or sub-panel of `MappingHubView`
+* [x] With two users and a mix of 100%-coverage and gap sessions, the view groups them per user and shows correct Incomplete/Complete pills
+* [x] A session at exactly `coveragePercent == 100.0` with zero blocking gaps is Complete; anything else is Incomplete (including FAILED)
+* [x] Filtering by Incomplete / Complete / user / search returns the expected rows
+* [x] Opening a persisted session restores its entities and manual entries and recomputes coverage (survives app restart)
+* [x] Non-admin users cannot see or act on other users' sessions
+* [x] Archive/Delete require a confirmation dialog; Delete removes all session data
+* [x] `mvn clean test` — BUILD SUCCESS, 451 tests, 0 failures (was 430)
+
+---
+
+## Phase 11c-4: Ontology Validation Test Suite (Categories A–E)
+
+**Goal**
+
+Extend `SparqlMatchingTest` with the uploaded Test Case Catalog's 18 cases (Categories A–E) as an executable ontology validation suite, mapped best-effort onto the repository's actual `css-sda-unified.ttl` vocabulary (the catalog's `sda_ontology_v2_structured.ttl` and its class names do not exist in the repo). Matching logic stays in RDF/Turtle and SPARQL; inference probes use the Apache Jena OWL reasoner; lifecycle cases reuse the existing SWRL-equivalent services.
+
+**Tasks**
+
+* [x] **Category A — coherence / class-separation probes (reasoner)**
+  * [x] A1 whole-model coherence: all CSS-SDA dimensions (UseCase, Requirement, Capability, Skill, Service, CommunicationBinding, DataConnector, DeploymentContext) remain typed under OWL inference
+  * [x] A2 OfferedCapability vs RequiredCapability separation across the whole ABox
+  * [x] A3 NE107Status vs NE107SubCode separation
+  * [x] A4 Capability / Skill / Service layer separation
+  * [x] A5 DeploymentContext vs ClusterNode / NetworkZone / DeploymentPolicy / SafetyClass separation
+  * [x] A6 Device separation (FieldDevice / BACnetDevice / EnergyMeter)
+* [x] **Category B — auto-classification probes (reasoner)**
+  * [x] B1 `RequiredCapability ⊑ Capability` positive classification
+  * [x] B2 plain `Capability` is not auto-classified into Offered/RequiredCapability (negative control)
+  * [x] B3 `OfferedCapability ⊑ Capability` positive classification, not RequiredCapability
+* [x] **Category C — SPARQL matching negatives** (C1–C3 already covered by Use Case tests)
+  * [x] C4 R2a concept-coverage `NOT EXISTS` filter excludes service when required concept is not covered
+  * [x] C5 R0 hard-constraint pre-filter excludes services violating `REQ-001` latency/recall constraints (new `r0-hard-constraint-prefilter.rq`)
+* [x] **Category D — R-Deploy / R-Verify lifecycle**
+  * [x] D1 Defined → Matched after a SPARQL match; unmatched requirement stays unadvanced (negative)
+  * [x] D2 Matched → Verified when all criteria pass; stays Matched when a criterion fails (negative)
+* [x] **Category E — Margo YAML cluster-node supply → deployment placement**
+  * [x] E1 YAML lift creates ClusterNode + DeploymentContext triples and places the HVAC service on a matching node (new `deployment-placement.rq`, fixtures `margo-cluster-node-edge3.yaml`)
+  * [x] E2 node with incompatible zone/SIL is rejected (fixture `margo-cluster-node-edge1.yaml`)
+
+**Acceptance Criteria**
+
+* [x] All 18 catalog cases are present as executable tests (16 new + C1–C3 already existing)
+* [x] Every test method carries a human-readable `@DisplayName` with the category letter
+* [x] Positive and negative scenarios for every category
+* [x] Existing Use Case A/B/C and cross-plant tests pass unchanged
+* [x] No new Maven dependencies (Apache Jena OWL reasoner + SPARQL + existing services only)
+* [x] `mvn clean test` — BUILD SUCCESS, 467 tests, 0 failures (was 451)
+
+---
+
 ## Phase 12: Documentation and Thesis Support
 
 **Goal**

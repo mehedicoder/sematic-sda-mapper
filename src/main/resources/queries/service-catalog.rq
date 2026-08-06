@@ -1,20 +1,20 @@
 PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX sda:  <https://example.org/ontology/sda#>
+PREFIX sda:  <http://sda-platform.org/ontology#>
 
-# Service Catalog: extract all services with their full CSS-SDA chain
+# Service Catalog: extract all services with their full CSS-SDA chain (v2).
+# SIL is read from the SafetyClass the deployment context is constrained by;
+# network zone is read from the NetworkZone the context is located in.
 SELECT ?service ?serviceLabel ?capabilityLabel ?skillLabel
        ?protocol ?accessMode ?securityMode
-       ?recall ?latency ?image
-       ?connectorLabel ?informationModel
+       ?recall ?latency
+       ?connectorLabel
        ?deployLabel ?sil ?determinism ?networkZone
 WHERE {
     ?service      a                  sda:Service ;
                  rdfs:label          ?serviceLabel ;
                  sda:reportedRecall  ?recall ;
                  sda:reportedLatency ?latency .
-
-    OPTIONAL { ?service sda:image ?image }
 
     # Capability chain: Service ← isImplementedBy ← Skill ← realisedBy ← Capability
     OPTIONAL {
@@ -35,7 +35,6 @@ WHERE {
         OPTIONAL {
             ?service   sda:hasConnector  ?connector .
             ?connector rdfs:label          ?connectorLabel .
-            OPTIONAL { ?connector sda:informationModel ?informationModel }
         }
     }
 
@@ -43,9 +42,15 @@ WHERE {
     OPTIONAL {
         ?service     sda:isDeployedBy   ?deploy .
         ?deploy      rdfs:label         ?deployLabel .
-        OPTIONAL { ?deploy sda:safetyIntegrityLevel ?sil }
-        OPTIONAL { ?deploy sda:determinismClass     ?determinism }
-        OPTIONAL { ?deploy sda:networkZone          ?networkZone }
+        OPTIONAL { ?deploy sda:determinismClass ?determinism }
+        OPTIONAL {
+            ?deploy sda:contextConstrainedBy ?safetyClass .
+            ?safetyClass sda:safetyIntegrityLevel ?sil
+        }
+        OPTIONAL {
+            ?deploy sda:locatedInZone ?zone .
+            ?zone rdfs:label ?networkZone
+        }
     }
 }
 ORDER BY ?serviceLabel

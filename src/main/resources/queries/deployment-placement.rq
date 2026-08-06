@@ -1,0 +1,38 @@
+PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX sda:  <http://sda-platform.org/ontology#>
+
+# Deployment placement: pair each deployed Service with every ClusterNode whose
+# DeploymentContext matches the service's own deployment demand on network zone
+# (NetworkZone label), safety class (SafetyClass SIL) and determinism class,
+# restricted to on-plant-network contexts. The zone comparison is done by label
+# so independently-lifted cluster nodes (Margo YAML) can be paired with ABox
+# deployment contexts that describe the same network zone.
+SELECT DISTINCT ?service ?serviceContext ?node ?nodeLabel ?context ?zone ?zoneLabel ?sil ?det
+WHERE {
+    ?service a sda:Service ;
+             sda:isDeployedBy ?serviceContext .
+
+    ?serviceContext sda:onPlantNetwork true ;
+                    sda:determinismClass ?det ;
+                    sda:locatedInZone ?serviceZone ;
+                    sda:contextConstrainedBy ?serviceScl .
+
+    ?serviceZone rdfs:label ?zoneLabel .
+    ?serviceScl sda:safetyIntegrityLevel ?sil .
+
+    ?context a sda:DeploymentContext ;
+             sda:onPlantNetwork true ;
+             sda:determinismClass ?det ;
+             sda:locatedInZone ?zone ;
+             sda:contextConstrainedBy ?safetyClass ;
+             sda:containsNode ?node .
+
+    ?safetyClass sda:safetyIntegrityLevel ?sil .
+    ?zone rdfs:label ?zoneLabel .
+    ?node a sda:ClusterNode ;
+          rdfs:label ?nodeLabel .
+
+    FILTER (?context != ?serviceContext)
+}
+ORDER BY ?service ?node

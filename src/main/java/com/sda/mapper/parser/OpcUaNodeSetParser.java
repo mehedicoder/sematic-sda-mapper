@@ -32,7 +32,7 @@ public class OpcUaNodeSetParser implements Parser {
     private static final Logger log = LoggerFactory.getLogger(OpcUaNodeSetParser.class);
 
     private static final String INST_NS = "http://www.example.org/instance#";
-    private static final String SDA_NS = "https://example.org/ontology/sda#";
+    private static final String SDA_NS = "http://sda-platform.org/ontology#";
     private static final String UA_NS = "http://opcfoundation.org/UA/2011/03/UANodeSet.xsd";
     private static final String RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
     private static final String RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label";
@@ -74,14 +74,11 @@ public class OpcUaNodeSetParser implements Parser {
             Resource skillClass = model.createResource(SDA_NS + "Skill");
             Resource bindingClass = model.createResource(SDA_NS + "CommunicationBinding");
             Resource serviceClass = model.createResource(SDA_NS + "Service");
-            Property informationModel = model.createProperty(SDA_NS + "informationModel");
             Property protocol = model.createProperty(SDA_NS + "protocol");
             Property accessMode = model.createProperty(SDA_NS + "accessMode");
             Property isImplementedBy = model.createProperty(SDA_NS + "isImplementedBy");
             Property hasBinding = model.createProperty(SDA_NS + "hasBinding");
             Property hasConnector = model.createProperty(SDA_NS + "hasConnector");
-            Property uaNodeId = model.createProperty(SDA_NS + "uaNodeId");
-            Property uaBrowseName = model.createProperty(SDA_NS + "uaBrowseName");
             Property dataType = model.createProperty(SDA_NS + "dataType");
 
             List<String> details = new ArrayList<>();
@@ -110,17 +107,13 @@ public class OpcUaNodeSetParser implements Parser {
                 Resource res = model.createResource(INST_NS + localName);
                 res.addProperty(rdfType, connectorClass);
                 res.addProperty(rdfsLabel, displayName != null ? displayName : browseName);
-                res.addProperty(informationModel, "OPC-UA");
-                res.addProperty(uaNodeId, nodeId);
-                if (browseName != null && !browseName.isBlank()) {
-                    res.addProperty(uaBrowseName, browseName);
-                }
+                tripleCount += 2;
                 if (dt != null && !dt.isBlank()) {
                     String resolvedDt = aliases.getOrDefault(dt, dt);
                     res.addProperty(dataType, resolvedDt);
+                    tripleCount++;
                 }
 
-                tripleCount += 4;
                 connectorResources.add(res);
                 details.add("DataConnector: " + INST_NS + localName
                     + " (nodeId=" + nodeId + ", browseName=" + browseName + ")");
@@ -137,16 +130,12 @@ public class OpcUaNodeSetParser implements Parser {
                 Resource res = model.createResource(INST_NS + localName);
                 res.addProperty(rdfType, connectorClass);
                 res.addProperty(rdfsLabel, displayName != null ? displayName : browseName);
-                res.addProperty(informationModel, "OPC-UA");
-                res.addProperty(uaNodeId, nodeId);
-                if (browseName != null && !browseName.isBlank()) {
-                    res.addProperty(uaBrowseName, browseName);
-                }
+                tripleCount += 2;
                 if (typeDef != null && !typeDef.isBlank()) {
                     res.addProperty(dataType, typeDef);
+                    tripleCount++;
                 }
 
-                tripleCount += 4;
                 connectorResources.add(res);
                 details.add("DataConnector: " + INST_NS + localName
                     + " (nodeId=" + nodeId + ", browseName=" + browseName + ")");
@@ -163,12 +152,8 @@ public class OpcUaNodeSetParser implements Parser {
                 Resource res = model.createResource(INST_NS + localName);
                 res.addProperty(rdfType, skillClass);
                 res.addProperty(rdfsLabel, displayName != null ? displayName : browseName);
-                res.addProperty(uaNodeId, nodeId);
-                if (browseName != null && !browseName.isBlank()) {
-                    res.addProperty(uaBrowseName, browseName);
-                }
+                tripleCount += 2;
 
-                tripleCount += 3;
                 skillResources.add(res);
                 details.add("Skill: " + INST_NS + localName
                     + " (nodeId=" + nodeId + ", browseName=" + browseName + ")");

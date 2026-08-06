@@ -34,7 +34,7 @@ public class SemanticReasonerService {
     private static final Logger log = LoggerFactory.getLogger(SemanticReasonerService.class);
 
     private static final String INST_NS = "http://www.example.org/instance#";
-    private static final String SDA_NS = "https://example.org/ontology/sda#";
+    private static final String SDA_NS = "http://sda-platform.org/ontology#";
 
     private static final Map<String, String> REQUIREMENT_QUERY_MAP = Map.of(
         "REQ-001", "queries/match-service.rq",
@@ -130,7 +130,7 @@ public class SemanticReasonerService {
 
         if (!reqResource.hasProperty(
                 org.apache.jena.vocabulary.RDF.type,
-                model.createResource(SDA_NS + "Requirement"))) {
+                model.createResource(SDA_NS + "UseCaseRequirement"))) {
             return ServiceMatchResult.noMatch("Unknown requirement: " + requirementId);
         }
 
@@ -169,9 +169,7 @@ public class SemanticReasonerService {
         Map<String, String> params = new HashMap<>();
         putIfPresent(model, reqResource, params, "protocol", "protocol");
         putIfPresent(model, reqResource, params, "accessMode", "accessMode");
-        putIfPresent(model, reqResource, params, "networkZone", "networkZone");
         putIfPresent(model, reqResource, params, "determinismClass", "determinismClass");
-        putIfPresent(model, reqResource, params, "safetyIntegrityLevel", "safetyIntegrityLevel");
 
         // Extract recall/latency from constraints if present
         extractConstraintParam(model, reqResource, params, "latency", "maxLatency");
@@ -198,10 +196,17 @@ public class SemanticReasonerService {
                 Statement typeStmt = constraint.getProperty(
                     model.createProperty(SDA_NS + "constraintType"));
                 if (typeStmt != null && constraintType.equals(typeStmt.getString())) {
-                    Statement valueStmt = constraint.getProperty(
-                        model.createProperty(SDA_NS + "constraintValue"));
-                    if (valueStmt != null) {
-                        params.put(paramKey, valueStmt.getString());
+                    // v2: constraints carry their numeric threshold inside the
+                    // expression (e.g. "reportedLatency <= 60"); extract the
+                    // trailing number.
+                    Statement exprStmt = constraint.getProperty(
+                        model.createProperty(SDA_NS + "expression"));
+                    if (exprStmt != null && exprStmt.getObject().isLiteral()) {
+                        String expression = exprStmt.getObject().asLiteral().getString();
+                        String number = expression.replaceAll(".*?(-?\\d+(\\.\\d+)?)\\s*$", "$1");
+                        if (!number.equals(expression)) {
+                            params.put(paramKey, number);
+                        }
                     }
                 }
             }
@@ -274,11 +279,11 @@ public class SemanticReasonerService {
         sb.append("""
             PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-            PREFIX sda:  <https://example.org/ontology/sda#>
+            PREFIX sda:  <http://sda-platform.org/ontology#>
             PREFIX :     <http://www.example.org/instance#>
 
             SELECT ?capability ?skill ?service ?binding ?protocol ?accessMode
-                   ?recall ?latency ?image ?label ?capLabel
+                   ?recall ?latency ?label ?capLabel
                    ?connector ?connectorLabel ?deploy ?deployLabel
                    ?safetyIntegrityLevel ?determinismClass ?networkZone
             WHERE {
@@ -295,7 +300,6 @@ public class SemanticReasonerService {
 
                 ?connector    rdfs:label          ?connectorLabel .
 
-                OPTIONAL { ?service sda:image ?image }
                 OPTIONAL {
                     ?capability  sda:realisedBy     ?skill .
                     ?skill       sda:isImplementedBy ?service .
@@ -314,10 +318,14 @@ public class SemanticReasonerService {
             """.formatted(protocol, accessMode, minRecall, maxLatency, onPlantNetwork));
 
         if (safetyIntegrityLevel != null) {
-            sb.append("                ?deploy sda:safetyIntegrityLevel ?safetyIntegrityLevel .\n");
+            sb.append("                ?deploy sda:contextConstrainedBy ?safetyClass .\n");
+            sb.append("                ?safetyClass sda:safetyIntegrityLevel ?safetyIntegrityLevel .\n");
             sb.append("                FILTER (?safetyIntegrityLevel = \"%s\")\n".formatted(safetyIntegrityLevel));
         } else {
-            sb.append("                OPTIONAL { ?deploy sda:safetyIntegrityLevel ?safetyIntegrityLevel }\n");
+            sb.append("                OPTIONAL {\n");
+            sb.append("                    ?deploy sda:contextConstrainedBy ?safetyClass .\n");
+            sb.append("                    ?safetyClass sda:safetyIntegrityLevel ?safetyIntegrityLevel\n");
+            sb.append("                }\n");
         }
         if (determinismClass != null) {
             sb.append("                ?deploy sda:determinismClass ?determinismClass .\n");
@@ -326,10 +334,14 @@ public class SemanticReasonerService {
             sb.append("                OPTIONAL { ?deploy sda:determinismClass ?determinismClass }\n");
         }
         if (networkZone != null) {
-            sb.append("                ?deploy sda:networkZone ?networkZone .\n");
+            sb.append("                ?deploy sda:locatedInZone ?zone .\n");
+            sb.append("                ?zone rdfs:label ?networkZone .\n");
             sb.append("                FILTER (?networkZone = \"%s\")\n".formatted(networkZone));
         } else {
-            sb.append("                OPTIONAL { ?deploy sda:networkZone ?networkZone }\n");
+            sb.append("                OPTIONAL {\n");
+            sb.append("                    ?deploy sda:locatedInZone ?zone .\n");
+            sb.append("                    ?zone rdfs:label ?networkZone\n");
+            sb.append("                }\n");
         }
 
         sb.append("            }\n");
@@ -357,12 +369,6 @@ public class SemanticReasonerService {
                 org.apache.jena.vocabulary.RDFS.label);
             if (labelStmt != null) {
                 serviceName = labelStmt.getString();
-            }
-            // Look up sda:image from the model
-            var imageStmt = serviceRes.getProperty(
-                ontologyModelLoader.getModel().createProperty(SDA_NS + "image"));
-            if (imageStmt != null) {
-                containerImage = imageStmt.getString();
             }
         }
 

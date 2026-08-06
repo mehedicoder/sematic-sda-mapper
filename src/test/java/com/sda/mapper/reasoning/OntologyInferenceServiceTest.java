@@ -22,7 +22,7 @@ class OntologyInferenceServiceTest {
     @BeforeAll
     static void setUp() {
         loader = new OntologyModelLoader();
-        loader.setFilePath("ontology/css-sda-unified.ttl");
+        loader.setFilePath("ontology/sda_ontology_v2_structured.ttl");
         loader.loadOntology();
         DemoAboxBuilder.apply(loader.getModel());
         service = new OntologyInferenceService(loader);
@@ -48,44 +48,43 @@ class OntologyInferenceServiceTest {
     }
 
     @Test
-    @DisplayName("Should not overwrite existing explicit OfferedCapability triples")
+    @DisplayName("Should not overwrite existing explicit Capability triples")
     void shouldNotOverwriteExplicitTriples() {
         Model baseModel = loader.getModel();
         Model inferredModel = service.getInferredModel();
 
         String instNs = "http://www.example.org/instance#";
-        String sdaNs = "https://example.org/ontology/sda#";
+        String sdaNs = "http://sda-platform.org/ontology#";
 
-        // OC-ACM-Flowmeter is an explicit OfferedCapability — must still exist
+        // CAP-FlowDiagnostics is an explicit Capability — must still exist
         assertTrue(inferredModel.contains(
-            inferredModel.createResource(instNs + "OC-ACM-Flowmeter"),
+            inferredModel.createResource(instNs + "CAP-FlowDiagnostics"),
             RDF.type,
-            inferredModel.createResource(sdaNs + "OfferedCapability")),
-            "Explicit OfferedCapability OC-ACM-Flowmeter must still exist after inference");
+            inferredModel.createResource(sdaNs + "Capability")),
+            "Explicit Capability CAP-FlowDiagnostics must still exist after inference");
 
         // Its capabilityName must be preserved
         var capNameProp = inferredModel.createProperty(sdaNs + "capabilityName");
-        var capNameStmt = inferredModel.getResource(instNs + "OC-ACM-Flowmeter")
+        var capNameStmt = inferredModel.getResource(instNs + "CAP-FlowDiagnostics")
             .getProperty(capNameProp);
-        assertNotNull(capNameStmt, "OC-ACM-Flowmeter must retain capabilityName property");
-        assertEquals("AssetConditionMonitoring", capNameStmt.getString());
+        assertNotNull(capNameStmt, "CAP-FlowDiagnostics must retain capabilityName property");
+        assertEquals("Flowmeter Diagnostics", capNameStmt.getString());
     }
 
     @Test
-    @DisplayName("Should infer capabilities with correct engineering units from Skill parameters")
+    @DisplayName("Should infer capabilities with correct names and skills from the capability chain")
     void shouldInferCapabilitiesWithCorrectEngineeringUnits() {
         List<InferredCapability> caps = service.getInferredCapabilities();
 
-        boolean hasLPerMin = caps.stream()
-            .anyMatch(c -> "l/min".equals(c.engineeringUnit()));
-        boolean hasCelsius = caps.stream()
-            .anyMatch(c -> "°C".equals(c.engineeringUnit()));
-        boolean hasMlPerMin = caps.stream()
-            .anyMatch(c -> "mL/min".equals(c.engineeringUnit()));
+        assertTrue(caps.stream().anyMatch(c -> "Flowmeter Diagnostics".equals(c.capabilityName())),
+            "Should infer capability named Flowmeter Diagnostics");
+        assertTrue(caps.stream().anyMatch(c -> "Fermentation Control".equals(c.capabilityName())),
+            "Should infer capability named Fermentation Control");
+        assertTrue(caps.stream().anyMatch(c -> "HVAC Temperature Monitoring".equals(c.capabilityName())),
+            "Should infer capability named HVAC Temperature Monitoring");
 
-        assertTrue(hasLPerMin, "Should infer capability with engineering unit l/min");
-        assertTrue(hasCelsius, "Should infer capability with engineering unit °C");
-        assertTrue(hasMlPerMin, "Should infer capability with engineering unit mL/min");
+        assertTrue(caps.stream().anyMatch(c -> "SK-FlowmeterDiagnostics".equals(c.sourceSkill())),
+            "Inferred capability should reference skill SK-FlowmeterDiagnostics");
     }
 
     @Test

@@ -28,6 +28,7 @@ public class MappingHubSession {
     private final List<UploadedFileInfo> files = new ArrayList<>();
     private final Set<AssetFileFormat> uploadedFormats = new LinkedHashSet<>();
     private List<CanonicalEntity> inferred = List.of();
+    private String userId;
 
     /**
      * Merges a freshly parsed model and registers the uploaded file.
@@ -67,6 +68,25 @@ public class MappingHubSession {
         files.clear();
         uploadedFormats.clear();
         inferred = List.of();
+    }
+
+    /**
+     * Binds the owning user name, captured lazily from the authenticated
+     * principal on the first pipeline activity.
+     *
+     * @param userId authenticated user name, or {@code null} when unauthenticated
+     */
+    public void bindUser(String userId) {
+        this.userId = userId;
+    }
+
+    /**
+     * Returns the owning user name.
+     *
+     * @return the user name, or {@code null} for unassigned sessions
+     */
+    public String getUserId() {
+        return userId;
     }
 
     /**

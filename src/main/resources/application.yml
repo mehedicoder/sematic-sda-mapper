@@ -75,6 +75,6 @@ vaadin:
 app:
   ontology:
     file-paths:
-      - ontology/css-sda-unified.ttl
+      - ontology/sda_ontology_v2_structured.ttl
     inference:
       enabled: ${ONTOLOGY_INFERENCE_ENABLED:true}

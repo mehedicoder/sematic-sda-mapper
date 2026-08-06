@@ -21,7 +21,7 @@ class SemanticReasonerServiceTest {
     @BeforeAll
     static void setUp() {
         sharedLoader = new OntologyModelLoader();
-        sharedLoader.setFilePath("ontology/css-sda-unified.ttl");
+        sharedLoader.setFilePath("ontology/sda_ontology_v2_structured.ttl");
         sharedLoader.loadOntology();
         DemoAboxBuilder.apply(sharedLoader.getModel());
         var queryLoader = new SparqlQueryLoader();
@@ -153,10 +153,10 @@ class SemanticReasonerServiceTest {
         Resource req = model.createResource(uri);
         req.addProperty(
             model.createProperty("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-            model.createResource("https://example.org/ontology/sda#Requirement"));
-        req.addProperty(model.createProperty("https://example.org/ontology/sda#RequirementID"), reqId);
-        req.addProperty(model.createProperty("https://example.org/ontology/sda#protocol"), "OPC-UA");
-        req.addProperty(model.createProperty("https://example.org/ontology/sda#accessMode"), "read-only");
+            model.createResource("http://sda-platform.org/ontology#UseCaseRequirement"));
+        req.addProperty(model.createProperty("http://sda-platform.org/ontology#requirementID"), reqId);
+        req.addProperty(model.createProperty("http://sda-platform.org/ontology#protocol"), "OPC-UA");
+        req.addProperty(model.createProperty("http://sda-platform.org/ontology#accessMode"), "read-only");
 
         ServiceMatchResult result = reasoner.matchByRequirementId(reqId);
         assertTrue(result.matched(),
@@ -175,10 +175,10 @@ class SemanticReasonerServiceTest {
         Resource req = model.createResource(uri);
         req.addProperty(
             model.createProperty("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-            model.createResource("https://example.org/ontology/sda#Requirement"));
-        req.addProperty(model.createProperty("https://example.org/ontology/sda#RequirementID"), reqId);
-        req.addProperty(model.createProperty("https://example.org/ontology/sda#protocol"), "MQTT");
-        req.addProperty(model.createProperty("https://example.org/ontology/sda#accessMode"), "read-only");
+            model.createResource("http://sda-platform.org/ontology#UseCaseRequirement"));
+        req.addProperty(model.createProperty("http://sda-platform.org/ontology#requirementID"), reqId);
+        req.addProperty(model.createProperty("http://sda-platform.org/ontology#protocol"), "MQTT");
+        req.addProperty(model.createProperty("http://sda-platform.org/ontology#accessMode"), "read-only");
 
         ServiceMatchResult result = reasoner.matchByRequirementId(reqId);
         assertFalse(result.matched(),
@@ -195,8 +195,8 @@ class SemanticReasonerServiceTest {
         Resource req = model.createResource(uri);
         req.addProperty(
             model.createProperty("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-            model.createResource("https://example.org/ontology/sda#Requirement"));
-        req.addProperty(model.createProperty("https://example.org/ontology/sda#RequirementID"), reqId);
+            model.createResource("http://sda-platform.org/ontology#UseCaseRequirement"));
+        req.addProperty(model.createProperty("http://sda-platform.org/ontology#requirementID"), reqId);
 
         ServiceMatchResult result = reasoner.matchByRequirementId(reqId);
         assertTrue(result.matched(),

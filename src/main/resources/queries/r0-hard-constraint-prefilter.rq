@@ -1,0 +1,27 @@
+PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX sda:  <http://sda-platform.org/ontology#>
+PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+PREFIX :     <http://www.example.org/instance#>
+
+# R0 pre-filter: keep only services that satisfy every hard constraint of
+# :REQ-001 (latency <= 60, recall >= 0.90) before the full multi-dimensional
+# match runs. In v2 the thresholds are carried by the requirement's
+# VerificationCriterion (testMethod + passThreshold) instead of the former
+# constraintValue/constraintOperator data properties.
+SELECT ?service ?latency ?recall
+WHERE {
+    ?service a sda:Service ;
+             sda:reportedLatency ?latency ;
+             sda:reportedRecall ?recall .
+
+    FILTER NOT EXISTS {
+        :REQ-001 sda:verifiedBy ?criterion .
+        ?criterion sda:testMethod ?method ;
+                   sda:passThreshold ?threshold .
+        FILTER (
+            (?method = "reportedLatency" && ?latency > xsd:decimal(?threshold)) ||
+            (?method = "reportedRecall"  && ?recall < xsd:decimal(?threshold))
+        )
+    }
+}
+ORDER BY DESC(?recall)

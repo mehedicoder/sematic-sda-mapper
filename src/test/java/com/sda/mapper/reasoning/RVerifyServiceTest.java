@@ -19,7 +19,7 @@ class RVerifyServiceTest {
     @BeforeAll
     static void setUp() {
         loader = new OntologyModelLoader();
-        loader.setFilePath("ontology/css-sda-unified.ttl");
+        loader.setFilePath("ontology/sda_ontology_v2_structured.ttl");
         loader.loadOntology();
         DemoAboxBuilder.apply(loader.getModel());
         deployService = new RDeployService(loader);
@@ -78,11 +78,11 @@ class RVerifyServiceTest {
 
         RVerifyService.VerifyResult result = verifyService.execute("REQ-001");
         RVerifyService.CriterionResult recallCheck = result.criteria().stream()
-            .filter(c -> c.name().equals("Recall Check"))
+            .filter(c -> c.name().equals("CRIT-REQ001-Recall"))
             .findFirst()
             .orElse(null);
 
-        assertNotNull(recallCheck, "Recall Check criterion should exist");
+        assertNotNull(recallCheck, "CRIT-REQ001-Recall criterion should exist");
         assertTrue(recallCheck.passed(),
             "RecallCheck should pass: recall=0.94 >= threshold=0.90");
     }
@@ -96,11 +96,11 @@ class RVerifyServiceTest {
 
         RVerifyService.VerifyResult result = verifyService.execute("REQ-001");
         RVerifyService.CriterionResult latencyCheck = result.criteria().stream()
-            .filter(c -> c.name().equals("Latency Check"))
+            .filter(c -> c.name().equals("CRIT-REQ001-Latency"))
             .findFirst()
             .orElse(null);
 
-        assertNotNull(latencyCheck, "Latency Check criterion should exist");
+        assertNotNull(latencyCheck, "CRIT-REQ001-Latency criterion should exist");
         assertTrue(latencyCheck.passed(),
             "LatencyCheck should pass: latency=45 <= threshold=60");
     }
@@ -120,14 +120,21 @@ class RVerifyServiceTest {
     }
 
     @Test
-    @DisplayName("Should handle requirement with no verification criteria")
+    @DisplayName("Should return not verified when requirement has no VerificationCriterion")
     void shouldHandleNoCriteria() {
         deployService.execute("REQ-003", "HVAC Temperature Analysis Service",
             "OPC-UA binding for AHU-01", "AHU-01 OPC-UA connector",
             "OT Zone 3 deployment");
 
+        // Remove all verifiedBy links so the requirement has no criteria at all
+        loader.getModel().getResource("http://www.example.org/instance#REQ-003")
+            .removeAll(loader.getModel().createProperty(
+                "http://sda-platform.org/ontology#verifiedBy"));
+
         RVerifyService.VerifyResult result = verifyService.execute("REQ-003");
         assertFalse(result.verified(),
-            "REQ-003 has no VerificationCriterion — should return not verified");
+            "REQ-003 without VerificationCriterion should return not verified");
+        assertTrue(result.summary().contains("No verification criteria"),
+            "Summary should indicate no verification criteria were defined");
     }
 }

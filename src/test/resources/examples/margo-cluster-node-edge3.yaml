@@ -1,0 +1,10 @@
+# Margo-style edge cluster node descriptor (test fixture) — compatible with the
+# HVAC service demand: OT-Zone-3, SIL-0, SoftRealTime, on plant network.
+margo-version: "1.0"
+cluster-node:
+  id: "NODE-EDGE-3"
+  name: "Edge Node 3"
+  network-zone: "OT-Zone-3"
+  safety-integrity-level: "SIL-0"
+  determinism-class: "SoftRealTime"
+  on-plant-network: true

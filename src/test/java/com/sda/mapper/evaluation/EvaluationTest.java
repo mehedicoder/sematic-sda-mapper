@@ -39,7 +39,7 @@ class EvaluationTest {
     @BeforeAll
     static void setUp() {
         loader = new OntologyModelLoader();
-        loader.setFilePath("ontology/css-sda-unified.ttl");
+        loader.setFilePath("ontology/sda_ontology_v2_structured.ttl");
         loader.loadOntology();
         DemoAboxBuilder.apply(loader.getModel());
         model = loader.getModel();
@@ -183,7 +183,7 @@ class EvaluationTest {
             assertNotNull(result.model(), "Model should not be null");
             assertTrue(result.model().size() > 0, "Model should contain triples");
             assertTrue(result.model().containsResource(
-                result.model().createResource("https://example.org/ontology/sda#Service")),
+                result.model().createResource("http://sda-platform.org/ontology#Service")),
                 "Model should contain Service resources");
         } catch (Exception e) {
             fail("Should not throw: " + e.getMessage());

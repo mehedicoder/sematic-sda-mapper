@@ -1,6 +1,6 @@
 PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX sda:  <https://example.org/ontology/sda#>
+PREFIX sda:  <http://sda-platform.org/ontology#>
 PREFIX :     <http://www.example.org/instance#>
 
 SELECT ?requirement ?capability ?skill ?service ?binding ?protocol ?accessMode ?recall ?latency ?networkZone ?safetyIntegrityLevel ?determinismClass ?connector ?connectorLabel ?deploy ?deployLabel
@@ -9,7 +9,7 @@ WHERE {
     BIND(:REQ-003 AS ?requirement)
 
     # R1: Capability match chain
-    ?requirement  a                  sda:Requirement ;
+    ?requirement  a                  sda:UseCaseRequirement ;
                  sda:mapsToCapability ?capability .
 
     ?capability   sda:realisedBy      ?skill .
@@ -40,13 +40,18 @@ WHERE {
 
     ?deploy       rdfs:label          ?deployLabel ;
                   sda:onPlantNetwork  ?onPlantNetwork ;
-                  sda:networkZone     ?networkZone .
+                  sda:locatedInZone   ?zone .
+
+    ?zone         rdfs:label          ?networkZone .
 
     FILTER (?onPlantNetwork = true)
     FILTER (?networkZone = "OT-Zone-3")
 
-    OPTIONAL { ?deploy sda:safetyIntegrityLevel ?safetyIntegrityLevel }
-    OPTIONAL { ?deploy sda:determinismClass     ?determinismClass }
+    OPTIONAL {
+        ?deploy sda:contextConstrainedBy ?safetyClass .
+        ?safetyClass sda:safetyIntegrityLevel ?safetyIntegrityLevel
+    }
+    OPTIONAL { ?deploy sda:determinismClass ?determinismClass }
 
     # R2a: Semantic concept coverage (paper Table I)
     FILTER NOT EXISTS {

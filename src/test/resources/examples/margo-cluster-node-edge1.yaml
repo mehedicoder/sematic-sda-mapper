@@ -1,0 +1,11 @@
+# Margo-style edge cluster node descriptor (test fixture) — incompatible with
+# the HVAC service demand: OT-Zone-1 and SIL-2 cannot host a SoftRealTime SIL-0
+# monitoring service running in OT-Zone-3.
+margo-version: "1.0"
+cluster-node:
+  id: "NODE-EDGE-1"
+  name: "Edge Node 1"
+  network-zone: "OT-Zone-1"
+  safety-integrity-level: "SIL-2"
+  determinism-class: "SoftRealTime"
+  on-plant-network: true

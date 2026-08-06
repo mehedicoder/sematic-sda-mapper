@@ -30,6 +30,7 @@ class MainLayoutTest {
     void testAllViewClassesExist() {
         assertDoesNotThrow(() -> {
             var loader = new com.sda.mapper.ontology.OntologyModelLoader();
+            loader.setFilePath("ontology/sda_ontology_v2_structured.ttl");
             loader.loadOntology();
             var queryLoader = new com.sda.mapper.reasoning.SparqlQueryLoader();
             var catalogService = new com.sda.mapper.ui.catalog.ServiceCatalogService(loader, queryLoader);

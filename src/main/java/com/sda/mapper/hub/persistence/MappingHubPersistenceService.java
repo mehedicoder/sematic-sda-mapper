@@ -1,9 +1,11 @@
 package com.sda.mapper.hub.persistence;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sda.mapper.hub.model.CanonicalEntity;
 import com.sda.mapper.hub.model.EntityOrigin;
+import com.sda.mapper.hub.model.SessionOverview;
 import com.sda.mapper.hub.model.UploadedFileInfo;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -30,27 +32,41 @@ public class MappingHubPersistenceService {
 
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final CanonicalEntityRestorer entityRestorer;
 
     /**
      * Creates the persistence service.
      *
-     * @param jdbcTemplate database access
+     * @param jdbcTemplate   database access
+     * @param entityRestorer typed canonical entity reconstruction
      */
-    public MappingHubPersistenceService(JdbcTemplate jdbcTemplate) {
+    public MappingHubPersistenceService(JdbcTemplate jdbcTemplate, CanonicalEntityRestorer entityRestorer) {
         this.jdbcTemplate = jdbcTemplate;
+        this.entityRestorer = entityRestorer;
     }
 
     /**
-     * Ensures that the durable session row exists.
+     * Ensures that the durable session row exists without a user.
      *
      * @param sessionId mapping hub session id
      */
     public void ensureSession(UUID sessionId) {
+        ensureSession(sessionId, null);
+    }
+
+    /**
+     * Ensures that the durable session row exists, attributing it to the given
+     * user when known.
+     *
+     * @param sessionId mapping hub session id
+     * @param userId    owning user name, or {@code null}
+     */
+    public void ensureSession(UUID sessionId, String userId) {
         jdbcTemplate.update("""
-            INSERT INTO mapping_hub_session (id, name, status)
-            VALUES (?, ?, 'ACTIVE')
-            ON CONFLICT (id) DO NOTHING
-            """, sessionId, "Mapping Hub Session " + sessionId);
+            INSERT INTO mapping_hub_session (id, name, user_id, status)
+            VALUES (?, ?, ?, 'ACTIVE')
+            ON CONFLICT (id) DO UPDATE SET user_id = COALESCE(EXCLUDED.user_id, mapping_hub_session.user_id)
+            """, sessionId, "Mapping Hub Session " + sessionId, userId);
     }
 
     /**
@@ -249,6 +265,93 @@ public class MappingHubPersistenceService {
      */
     public void deleteSessionData(UUID sessionId) {
         jdbcTemplate.update("DELETE FROM mapping_hub_session WHERE id = ?", sessionId);
+    }
+
+    /**
+     * Lists all persisted Mapping Hub sessions with their aggregate counts,
+     * most recently updated first.
+     *
+     * @return session overviews
+     */
+    public List<SessionOverview> listSessions() {
+        return jdbcTemplate.query("""
+            SELECT s.id, s.name, s.user_id AS owner, s.status,
+                   s.current_coverage_percent AS coverage_percent,
+                   s.current_blocking_gap_count AS blocking_gap_count,
+                   s.created_at, s.updated_at,
+                   (SELECT COUNT(*) FROM mapping_hub_uploaded_file f WHERE f.session_id = s.id) AS file_count,
+                   (SELECT COUNT(*) FROM canonical_entity e WHERE e.session_id = s.id) AS entity_count,
+                   (SELECT COUNT(*) FROM semantic_match_result m WHERE m.session_id = s.id) AS match_count,
+                   (SELECT COUNT(*) FROM deployment_manifest d WHERE d.session_id = s.id) AS manifest_count
+            FROM mapping_hub_session s
+            ORDER BY s.updated_at DESC
+            """, this::mapSessionOverview);
+    }
+
+    /**
+     * Marks a Mapping Hub session as archived.
+     *
+     * @param sessionId owning session id
+     */
+    public void archiveSession(UUID sessionId) {
+        jdbcTemplate.update("""
+            UPDATE mapping_hub_session
+            SET status = 'ARCHIVED', updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """, sessionId);
+    }
+
+    /**
+     * Loads the canonical entities persisted for a Mapping Hub session,
+     * reconstructed as their typed records.
+     *
+     * @param sessionId owning session id
+     * @return the reconstructed canonical entities
+     */
+    public List<CanonicalEntity> loadCanonicalEntities(UUID sessionId) {
+        if (entityRestorer == null) {
+            return List.of();
+        }
+        return jdbcTemplate.query("""
+            SELECT class_name, canonical_id, name, source_file_name, inferred, attributes
+            FROM canonical_entity
+            WHERE session_id = ?
+            ORDER BY updated_at, canonical_id
+            """, (rs, rowNum) -> mapCanonicalEntity(rs), sessionId);
+    }
+
+    private SessionOverview mapSessionOverview(ResultSet rs, int rowNum) throws SQLException {
+        return new SessionOverview(
+            rs.getObject("id", UUID.class),
+            rs.getString("name"),
+            rs.getString("owner"),
+            rs.getString("status"),
+            rs.getDouble("coverage_percent"),
+            rs.getInt("blocking_gap_count"),
+            rs.getInt("file_count"),
+            rs.getInt("entity_count"),
+            rs.getInt("match_count"),
+            rs.getInt("manifest_count"),
+            rs.getTimestamp("created_at").toInstant(),
+            rs.getTimestamp("updated_at").toInstant());
+    }
+
+    private CanonicalEntity mapCanonicalEntity(ResultSet rs) throws SQLException {
+        return entityRestorer.restore(
+            rs.getString("class_name"),
+            rs.getString("canonical_id"),
+            rs.getString("name"),
+            rs.getString("source_file_name"),
+            rs.getBoolean("inferred"),
+            readAttributes(rs.getString("attributes")));
+    }
+
+    private Map<String, Object> readAttributes(String json) {
+        try {
+            return objectMapper.readValue(json, new TypeReference<>() { });
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to parse persisted canonical entity attributes", e);
+        }
     }
 
     private InstanceTriple mapTriple(ResultSet rs, int rowNum) throws SQLException {

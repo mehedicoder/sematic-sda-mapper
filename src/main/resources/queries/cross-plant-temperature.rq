@@ -1,28 +1,30 @@
 PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX sda:  <https://example.org/ontology/sda#>
-PREFIX :     <http://www.example.org/instance#>
+PREFIX sda:  <http://sda-platform.org/ontology#>
 
-# Cross-plant query: find all temperature-related services across PlantA and PlantB
-SELECT ?service ?label ?site ?protocol ?recall ?latency
+# Cross-plant query: find all temperature-related services across plants.
+# A service counts as temperature-related when its own label mentions
+# temperature or when one of its DataConnectors maps a ProcessVariable whose
+# label mentions temperature (the v2 equivalent of the former
+# belongsToSite-based traversal: assets are linked through ProcessVariables
+# described by temperature concepts).
+SELECT DISTINCT ?service ?label ?protocol ?recall ?latency ?pv ?pvLabel
 WHERE {
-    ?service      a                  sda:Service ;
-                 rdfs:label          ?label ;
-                 sda:reportedRecall  ?recall ;
-                 sda:reportedLatency ?latency .
+    ?service a sda:Service ;
+             rdfs:label ?label ;
+             sda:reportedRecall ?recall ;
+             sda:reportedLatency ?latency ;
+             sda:hasBinding ?binding ;
+             sda:hasConnector ?connector .
 
-    ?service      sda:hasBinding    ?binding .
-    ?binding      sda:protocol       ?protocol .
+    ?binding sda:protocol ?protocol .
 
-    # Find the asset this service is connected to
-    ?service      sda:hasConnector  ?connector .
+    ?connector sda:mapsVariable ?pv .
+    ?pv rdfs:label ?pvLabel .
 
-    # Cross-plant: find site via asset relationship
-    OPTIONAL {
-        ?asset    sda:belongsToSite  ?site .
-    }
-
-    # Filter for temperature-related services
-    FILTER CONTAINS(LCASE(?label), "temperature")
+    FILTER (
+        CONTAINS(LCASE(?label), "temperature") ||
+        CONTAINS(LCASE(?pvLabel), "temperature")
+    )
 }
 ORDER BY DESC(?recall)

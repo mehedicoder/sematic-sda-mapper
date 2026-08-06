@@ -51,7 +51,7 @@ logging:
 app:
   ontology:
     file-paths:
-      - ontology/css-sda-unified.ttl
-      - ontology/demo-abox.ttl
+      - ontology/sda_ontology_v2_structured.ttl
+      - ontology/demo-abox-v2.ttl
     inference:
       enabled: true

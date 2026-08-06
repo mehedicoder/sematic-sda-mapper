@@ -26,8 +26,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("Ontology and SPARQL Query Loading")
 class OntologyAndQueryLoadingTest {
 
-    private static final String ONTOLOGY_PATH = "ontology/css-sda-unified.ttl";
-    private static final String SDA_NS = "https://example.org/ontology/sda#";
+    private static final String ONTOLOGY_PATH = "ontology/sda_ontology_v2_structured.ttl";
+    private static final String SDA_NS = "http://sda-platform.org/ontology#";
     private static final String INST_NS = "http://www.example.org/instance#";
 
     private Model loadOntology() throws IOException {
@@ -62,8 +62,8 @@ class OntologyAndQueryLoadingTest {
             "Ontology must contain sda:DataConnector class");
         assertTrue(model.containsResource(model.createResource(SDA_NS + "DeploymentContext")),
             "Ontology must contain sda:DeploymentContext class");
-        assertTrue(model.containsResource(model.createResource(SDA_NS + "Requirement")),
-            "Ontology must contain sda:Requirement class");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "UseCaseRequirement")),
+            "Ontology must contain sda:UseCaseRequirement class");
         assertTrue(model.containsResource(model.createResource(SDA_NS + "Capability")),
             "Ontology must contain sda:Capability class");
         assertTrue(model.containsResource(model.createResource(SDA_NS + "Skill")),
@@ -79,16 +79,16 @@ class OntologyAndQueryLoadingTest {
 
         assertTrue(model.containsResource(model.createResource(INST_NS + "REQ-001")),
             "Ontology must contain REQ-001 requirement");
-        assertTrue(model.containsResource(model.createResource(INST_NS + "OC-ACM-Flowmeter")),
-            "Ontology must contain OC-ACM-Flowmeter capability");
+        assertTrue(model.containsResource(model.createResource(INST_NS + "CAP-FlowDiagnostics")),
+            "Ontology must contain CAP-FlowDiagnostics capability");
         assertTrue(model.containsResource(model.createResource(INST_NS + "SK-FlowmeterDiagnostics")),
             "Ontology must contain SK-FlowmeterDiagnostics skill");
         assertTrue(model.containsResource(model.createResource(INST_NS + "SVC-FlowmeterDiagnostics")),
             "Ontology must contain SVC-FlowmeterDiagnostics service");
-        assertTrue(model.containsResource(model.createResource(INST_NS + "CB-Flowmeter-OPCUA")),
-            "Ontology must contain CB-Flowmeter-OPCUA binding");
-        assertTrue(model.containsResource(model.createResource(INST_NS + "DC-Flowmeter-FT101")),
-            "Ontology must contain DC-Flowmeter-FT101 connector");
+        assertTrue(model.containsResource(model.createResource(INST_NS + "CB-FT101-OPCUA")),
+            "Ontology must contain CB-FT101-OPCUA binding");
+        assertTrue(model.containsResource(model.createResource(INST_NS + "DC-FT101-OPCUA")),
+            "Ontology must contain DC-FT101-OPCUA connector");
         assertTrue(model.containsResource(model.createResource(INST_NS + "DEPLOY-OnPrem")),
             "Ontology must contain DEPLOY-OnPrem context");
     }
@@ -100,20 +100,18 @@ class OntologyAndQueryLoadingTest {
 
         assertTrue(model.containsResource(model.createResource(INST_NS + "REQ-002")),
             "Ontology must contain REQ-002 requirement");
-        assertTrue(model.containsResource(model.createResource(INST_NS + "OC-TempControl")),
-            "Ontology must contain OC-TempControl capability");
-        assertTrue(model.containsResource(model.createResource(INST_NS + "OC-DosingControl")),
-            "Ontology must contain OC-DosingControl capability");
+        assertTrue(model.containsResource(model.createResource(INST_NS + "CAP-FermentationControl")),
+            "Ontology must contain CAP-FermentationControl capability");
         assertTrue(model.containsResource(model.createResource(INST_NS + "SK-FermentationControl")),
             "Ontology must contain SK-FermentationControl skill");
-        assertTrue(model.containsResource(model.createResource(INST_NS + "SK-DosingControl")),
-            "Ontology must contain SK-DosingControl skill");
+        assertTrue(model.containsResource(model.createResource(INST_NS + "PA-DIM-DosingConcept")),
+            "Ontology must contain PA-DIM-DosingConcept semantic concept");
         assertTrue(model.containsResource(model.createResource(INST_NS + "SVC-FermentationSkid")),
             "Ontology must contain SVC-FermentationSkid service");
         assertTrue(model.containsResource(model.createResource(INST_NS + "DEPLOY-Critical")),
             "Ontology must contain DEPLOY-Critical context");
         assertTrue(model.containsResource(model.createResource(INST_NS + "Skid-A1")),
-            "Ontology must contain Skid-A1 MTPModule");
+            "Ontology must contain Skid-A1 asset");
     }
 
     @Test
@@ -123,47 +121,40 @@ class OntologyAndQueryLoadingTest {
 
         assertTrue(model.containsResource(model.createResource(INST_NS + "REQ-003")),
             "Ontology must contain REQ-003 requirement");
-        assertTrue(model.containsResource(model.createResource(INST_NS + "OC-HVACTempMonitoring")),
-            "Ontology must contain OC-HVACTempMonitoring capability");
+        assertTrue(model.containsResource(model.createResource(INST_NS + "CAP-HVACTempMonitoring")),
+            "Ontology must contain CAP-HVACTempMonitoring capability");
         assertTrue(model.containsResource(model.createResource(INST_NS + "SK-HVACTempAnalysis")),
             "Ontology must contain SK-HVACTempAnalysis skill");
         assertTrue(model.containsResource(model.createResource(INST_NS + "SVC-HVACTempAnalysis")),
             "Ontology must contain SVC-HVACTempAnalysis service");
-        assertTrue(model.containsResource(model.createResource(INST_NS + "AHU-01")),
-            "Ontology must contain AHU-01 BACnetDevice");
-        assertTrue(model.containsResource(model.createResource(INST_NS + "EM-01")),
-            "Ontology must contain EM-01 EnergyMeter");
+        assertTrue(model.containsResource(model.createResource(INST_NS + "AHU01")),
+            "Ontology must contain AHU01 asset");
         assertTrue(model.containsResource(model.createResource(INST_NS + "DEPLOY-OTZone3")),
             "Ontology must contain DEPLOY-OTZone3 context");
     }
 
     @Test
-    @DisplayName("Should contain NE 107 diagnostic classes and individuals")
-    void shouldContainNe107DiagnosticClasses() throws IOException {
+    @DisplayName("Should contain Layer 4 diagnostic individuals (Asset, Sensor, Observation, ProcessVariable)")
+    void shouldContainLayer4DiagnosticClasses() throws IOException {
         Model model = loadOntology();
 
-        assertTrue(model.containsResource(model.createResource(SDA_NS + "NE107Status")),
-            "Ontology must contain NE107Status class");
-        assertTrue(model.containsResource(model.createResource(SDA_NS + "NE107SubCode")),
-            "Ontology must contain NE107SubCode class");
-        assertTrue(model.containsResource(model.createResource(SDA_NS + "DegradedMode")),
-            "Ontology must contain DegradedMode class");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "Asset")),
+            "Ontology must contain Asset class");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "Sensor")),
+            "Ontology must contain Sensor class");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "Observation")),
+            "Ontology must contain Observation class");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "ProcessVariable")),
+            "Ontology must contain ProcessVariable class");
 
-        assertTrue(model.containsResource(model.createResource(INST_NS + "NE107-Good")),
-            "Ontology must contain NE107-Good individual");
-        assertTrue(model.containsResource(model.createResource(INST_NS + "NE107-Maintenance")),
-            "Ontology must contain NE107-Maintenance individual");
-        assertTrue(model.containsResource(model.createResource(INST_NS + "NE107-Failure")),
-            "Ontology must contain NE107-Failure individual");
-
-        assertTrue(model.containsResource(model.createResource(INST_NS + "NE107-Sensor")),
-            "Ontology must contain NE107-Sensor sub-code");
-        assertTrue(model.containsResource(model.createResource(INST_NS + "NE107-WireBreak")),
-            "Ontology must contain NE107-WireBreak sub-code");
-        assertTrue(model.containsResource(model.createResource(INST_NS + "NE107-ShortCircuit")),
-            "Ontology must contain NE107-ShortCircuit sub-code");
-        assertTrue(model.containsResource(model.createResource(INST_NS + "NE107-Function")),
-            "Ontology must contain NE107-Function sub-code");
+        assertTrue(model.containsResource(model.createResource(INST_NS + "FT101")),
+            "Ontology must contain FT101 asset individual");
+        assertTrue(model.containsResource(model.createResource(INST_NS + "Sensor-FT101")),
+            "Ontology must contain Sensor-FT101 sensor individual");
+        assertTrue(model.containsResource(model.createResource(INST_NS + "PV-Flow-FT101")),
+            "Ontology must contain PV-Flow-FT101 process variable individual");
+        assertTrue(model.containsResource(model.createResource(INST_NS + "OBS-FT101-1")),
+            "Ontology must contain OBS-FT101-1 observation individual");
     }
 
     @Test
@@ -171,12 +162,8 @@ class OntologyAndQueryLoadingTest {
     void shouldContainNegativeCandidates() throws IOException {
         Model model = loadOntology();
 
-        assertTrue(model.containsResource(model.createResource(INST_NS + "SVC-WrongProtocol")),
-            "Ontology must contain SVC-WrongProtocol negative candidate");
-        assertTrue(model.containsResource(model.createResource(INST_NS + "SVC-WrongCapability")),
-            "Ontology must contain SVC-WrongCapability negative candidate");
-        assertTrue(model.containsResource(model.createResource(INST_NS + "SVC-NE107Failure")),
-            "Ontology must contain SVC-NE107Failure negative candidate");
+        assertTrue(model.containsResource(model.createResource(INST_NS + "SVC-Orphan")),
+            "Ontology must contain SVC-Orphan negative candidate");
     }
 
     @Test
@@ -210,35 +197,43 @@ class OntologyAndQueryLoadingTest {
     }
 
     @Test
-    @DisplayName("Should contain capability matching classes and datatype properties")
-    void shouldContainCapabilityMatchingVocabulary() throws IOException {
+    @DisplayName("Should contain matching classes and datatype properties (v2 vocabulary)")
+    void shouldContainMatchingVocabulary() throws IOException {
         Model model = loadOntology();
 
-        assertTrue(model.containsResource(model.createResource(SDA_NS + "OfferedCapability")),
-            "Ontology must contain sda:OfferedCapability class");
-        assertTrue(model.containsResource(model.createResource(SDA_NS + "RequiredCapability")),
-            "Ontology must contain sda:RequiredCapability class");
-        assertTrue(model.getResource(SDA_NS + "OfferedCapability")
-                .hasProperty(org.apache.jena.vocabulary.RDFS.subClassOf,
-                    model.createResource(SDA_NS + "Capability")),
-            "sda:OfferedCapability must be a sub-class of sda:Capability");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "UseCaseRequirement")),
+            "Ontology must contain sda:UseCaseRequirement class");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "UseCaseRequirementConstraint")),
+            "Ontology must contain sda:UseCaseRequirementConstraint class");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "UseCaseRequirementParameter")),
+            "Ontology must contain sda:UseCaseRequirementParameter class");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "Capability")),
+            "Ontology must contain sda:Capability class");
 
-        assertTrue(model.containsResource(model.createResource(SDA_NS + "functionClass")),
-            "Ontology must contain sda:functionClass property");
-        assertTrue(model.containsResource(model.createResource(SDA_NS + "engineeringUnit")),
-            "Ontology must contain sda:engineeringUnit property");
-        assertTrue(model.containsResource(model.createResource(SDA_NS + "nominalRange_min")),
-            "Ontology must contain sda:nominalRange_min property");
-        assertTrue(model.containsResource(model.createResource(SDA_NS + "nominalRange_max")),
-            "Ontology must contain sda:nominalRange_max property");
-        assertTrue(model.containsResource(model.createResource(SDA_NS + "safetyIntegrityLevel")),
-            "Ontology must contain sda:safetyIntegrityLevel property");
-        assertTrue(model.containsResource(model.createResource(SDA_NS + "networkZone")),
-            "Ontology must contain sda:networkZone property");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "capabilityID")),
+            "Ontology must contain sda:capabilityID property");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "capabilityName")),
+            "Ontology must contain sda:capabilityName property");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "capabilityDescription")),
+            "Ontology must contain sda:capabilityDescription property");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "capabilityVersion")),
+            "Ontology must contain sda:capabilityVersion property");
         assertTrue(model.containsResource(model.createResource(SDA_NS + "protocol")),
             "Ontology must contain sda:protocol property");
-        assertTrue(model.containsResource(model.createResource(SDA_NS + "endpointUrl")),
-            "Ontology must contain sda:endpointUrl property");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "accessMode")),
+            "Ontology must contain sda:accessMode property");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "reportedRecall")),
+            "Ontology must contain sda:reportedRecall property");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "reportedLatency")),
+            "Ontology must contain sda:reportedLatency property");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "onPlantNetwork")),
+            "Ontology must contain sda:onPlantNetwork property");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "determinismClass")),
+            "Ontology must contain sda:determinismClass property");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "safetyIntegrityLevel")),
+            "Ontology must contain sda:safetyIntegrityLevel property");
+        assertTrue(model.containsResource(model.createResource(SDA_NS + "isHardConstraint")),
+            "Ontology must contain sda:isHardConstraint property");
     }
 
     @Test

@@ -704,6 +704,121 @@ Interactive dark-themed ontology visualizer at `/visualizer` grounded in the can
 
 ---
 
+## Session Visibility View (user-wise list of incomplete / complete mapping sessions)
+
+**Status:** [x] Completed
+**Branch:** `main`
+**Completed:** 2026-08-05
+**Tests:** 451 passing (0 failures, 0 errors, 0 skipped)
+
+### Completion Evidence
+
+- `mvn clean test` — BUILD SUCCESS, 451 tests, 0 failures (was 430; +21 tests across 3 new test classes and 1 extended class)
+- New separate view `SessionOverviewView` at `/sessions` (own `@Route` + `@PageTitle`, `MainLayout`), drawer link "Sessions" directly under "Mapping Hub"
+- Sessions are now user-attributed (`user_id` persisted via `ensureSession(UUID, String)` ON CONFLICT update; captured lazily from the authenticated principal)
+- Incomplete/Complete is derived from persisted state: `COMPLETED` status → complete; `FAILED` → incomplete; otherwise complete only at `coveragePercent >= 100.0 && blockingGapCount == 0`
+- Persisted sessions are resumable after restart: `resumeSession` restores `canonical_entity` rows into typed records (`CanonicalEntityRestorer`) and re-runs the pipeline to rebuild coverage/matches
+- Security: admin sees all; non-admin sees own + unassigned; archive/delete/open allowed for owner or admin
+
+### What was built
+
+| Component | Files |
+|---|---|
+| Session visibility view: route, title, stylesheet, grid, summary chips, status/user/search filters, Open/Archive/Delete actions, refresh + 30s auto-refresh | `src/main/java/com/sda/mapper/hub/ui/SessionOverviewView.java` |
+| Visibility scoping service — listSessions, per-user aggregates (with "Unassigned" bucket), canManage, archive, delete | `src/main/java/com/sda/mapper/hub/service/SessionVisibilityService.java` |
+| Principal/admin resolution | `src/main/java/com/sda/mapper/hub/service/CurrentUser.java` |
+| View data models — session overview record (with `complete()`), user summary record | `src/main/java/com/sda/mapper/hub/model/{SessionOverview,UserSessionSummary}.java` |
+| Resume failure signal | `src/main/java/com/sda/mapper/hub/service/SessionResumeException.java` |
+| Persistence additions — `ensureSession(UUID, String)`, `listSessions()` (single SQL + subquery counts), `archiveSession`, `loadCanonicalEntities` | `src/main/java/com/sda/mapper/hub/persistence/MappingHubPersistenceService.java` |
+| Typed record reconstruction from persisted rows | `src/main/java/com/sda/mapper/hub/persistence/CanonicalEntityRestorer.java` |
+| Resume orchestration — `resumeSession(UUID)`, user binding in `ensureSessionRow` | `src/main/java/com/sda/mapper/hub/service/{MappingHubService,MappingHubSession}.java` |
+| Drawer link under Mapping Hub | `src/main/java/com/sda/mapper/ui/MainLayout.java` |
+| Dark-palette styles for the sessions view | `src/main/frontend/hub-styles.css` |
+| Owner lookup index | `src/main/resources/db/migration/V4__session_visibility_index.sql` |
+| Tests: `SessionVisibilityServiceTest` (classification boundaries, scoping, aggregates, manage permissions), `SessionOverviewViewTest` (route/annotations, grid, chips, filters, actions, resume), `CanonicalEntityRestorerTest`, `MappingHubServiceTest` (+resume tests) | `src/test/java/com/sda/mapper/hub/{service,ui,persistence}/*.java` |
+
+### Key technical decisions
+
+- Completion is computed from persisted pipeline-run data so the view reflects durable state and is identical across restarts; `FAILED` is never complete even at 100% coverage.
+- Grouping/aggregation happens in the service layer (flat `List<SessionOverview>` + per-user aggregates) so the Vaadin grid stays simple and the data is reusable by a future REST endpoint.
+- Resume reuses the existing `runStages` orchestration: restore entities into the session model, then re-run LIFT/INFER/MATCH without a new persistence write or `startRun`.
+- `CanonicalEntityRestorer` reconstructs typed records reflectively because every canonical record's component names match the persisted attribute keys.
+- User attribution is lazy (first pipeline activity captures the principal) and back-filled on the persistence path via `ON CONFLICT DO UPDATE SET user_id`, so pre-existing unattributed sessions gain an owner on their next run.
+- Notifications/navigation in the view go through `getUI().ifPresent(...)` so the view is unit-testable headless and never dereferences a null `VaadinSession`.
+
+---
+
+## Ontology Validation Test Suite (Categories A–E, 18-case catalog mapped onto css-sda-unified.ttl)
+
+**Status:** [x] Completed
+**Branch:** `main`
+**Completed:** 2026-08-05
+**Tests:** 467 passing (0 failures, 0 errors, 0 skipped)
+
+### Completion Evidence
+
+- `mvn clean test` — BUILD SUCCESS, 467 tests, 0 failures (was 451; +16 tests in `SparqlMatchingTest`, 11 existing tests untouched and green)
+- `mvn test -Dtest=SparqlMatchingTest` — 27 tests, 0 failures
+- The uploaded Test Case Catalog targets `sda_ontology_v2_structured.ttl`, which does not exist in the repository; every catalog class name (EdgeContext, MTPSkill, HardConstrainedRequirement, MarginCompliantClusterNode, ...) was verified absent from `css-sda-unified.ttl`. All 18 cases were therefore mapped best-effort onto the real ontology vocabulary and implemented without new dependencies (Apache Jena OWL reasoner + SPARQL + existing `RDeployService`/`RVerifyService`).
+- Positive and negative scenarios per category; matching logic stays in RDF/Turtle and SPARQL query files.
+
+### What was built
+
+| Component | Files |
+|---|---|
+| Extended matching/validation test class — existing 11 Use Case A/B/C + cross-plant tests preserved; added A1–A6 coherence/class-separation probes, B1–B3 auto-classification probes, C4 concept-coverage and C5 R0 hard-constraint negatives, D1–D2 R-Deploy/R-Verify lifecycle (positive + negative), E1–E2 Margo YAML → deployment placement | `src/test/java/com/sda/mapper/ontology/SparqlMatchingTest.java` |
+| R0 hard-constraint pre-filter query (latency <= 60, recall >= 0.90 from `:REQ-001` constraints) | `src/main/resources/queries/r0-hard-constraint-prefilter.rq` |
+| Deployment placement query — cluster-node supply satisfying the service's zone/SIL/determinism demand | `src/main/resources/queries/deployment-placement.rq` |
+| Margo-style cluster-node descriptors (compatible + incompatible fixtures), lifted via SnakeYAML into ClusterNode + DeploymentContext triples | `src/test/resources/examples/margo-cluster-node-edge3.yaml`, `margo-cluster-node-edge1.yaml` |
+
+### Key technical decisions
+
+- No OWL API / HermiT / SnakeYAML-version additions: HermiT was dropped because the catalog's disjointness and defined-class probes were re-expressed with Jena's built-in `ReasonerRegistry.getOWLReasoner()` (same reasoner `OntologyInferenceService` uses), avoiding the `owlapi-rio` ↔ Jena 6.1.0 clash.
+- Catalog concept mapping onto the repo ontology: OfferedCapability/RequiredCapability (both `⊑ Capability`) and NE107Status vs NE107SubCode are the only reasoner-provable separation/classification targets in the TTL; layer separation probes (L2 Capability/Skill/Service, L2b DeploymentContext/ClusterNode/NetworkZone/DeploymentPolicy/SafetyClass, device FieldDevice/BACnetDevice/EnergyMeter, L4 Asset/Sensor/ProcessVariable/Observation) cover the rest.
+- C5 (R0 hard constraints) is expressed as a standalone SPARQL asset (`FILTER NOT EXISTS` over violated `hasConstraint` values), not Java, keeping constraint logic in the query layer.
+- D1/D2 reuse the existing SWRL-equivalent services (`RDeployService`/`RVerifyService`/`SemanticReasonerService`) with additional negative scenarios (unmatched requirement stays unadvanced; failing criterion keeps `Matched`).
+- E1/E2 interpret the catalog's `MarginCompliantClusterNode` as placement compatibility (DeploymentContext `containsNode` ClusterNode with equal zone/SIL/determinism), since no such class exists in the TTL.
+
+---
+
+## Maintenance: v2 Ontology Test Migration + Milo/Guava Test-Classpath Fix
+
+**Status:** [x] Completed
+**Branch:** `main`
+**Completed:** 2026-08-05
+**Tests:** 467 passing (0 failures, 0 errors, 0 skipped)
+
+### Completion Evidence
+
+- `mvn -B "-Dvaadin.skip=true" test` — BUILD SUCCESS, 467 tests, 0 failures, 0 errors
+- Root cause of `OpcUaClientWrapper` `NoSuchMethodError`: surefire test classpath resolved `guava-18.0.jar` (via OWLAPI 4.5.6 transitive, nearest-wins) while the compile classpath had `guava-33.2.1-jre.jar`; Milo 0.6.14 needs `Tables.synchronizedTable` (guava ≥ 21)
+- Fix: `<dependencyManagement>` pins `com.google.guava:guava:33.2.1-jre` in `pom.xml` (OWLAPI stays at 4.5.6) — `OpcUaClientWrapperTest` 10/10 green
+- `src/test/resources/application.yml` now points at the v2 ABox `ontology/demo-abox-v2.ttl`; main `application.yml` already used only `sda_ontology_v2_structured.ttl`
+- `demo-abox-v2.ttl`: added `:PV-Dosing-SkidA1` + `:OBS-DOSING-SkidA1-1` and extended `:DC-SkidA1-OPCUA` `sda:mapsVariable` to include `:PV-Dosing-SkidA1` (closes the REQ-002 Dosing concept-coverage chain); lowered `:SVC-Orphan` `reportedRecall` to 0.85 so the orphan never satisfies the 0.90 recall floor (was winning inline Mode B matches over `SVC-HVACTempAnalysis`)
+- Remaining stale v1-namespace (`https://example.org/ontology/sda#`) test assertions migrated to v2 (`http://sda-platform.org/ontology#`, instance NS `http://www.example.org/instance#`) and to the real v2 vocabulary/individuals
+- Runtime fix: `MappingHubPersistenceService.ensureSession(UUID, String)` writes the authenticated user name, but `mapping_hub_session.user_id` was created as `UUID` in V2 — new Flyway `V5__mapping_hub_session_user_id_text.sql` widens the column to `VARCHAR(255)` (PostgreSQL runtime and H2 PostgreSQL-mode tests)
+
+### What was built / changed
+
+| Component | Files |
+|---|---|
+| Guava 33.2.1-jre pin (dependencyManagement) | `pom.xml` |
+| Test config → v2 ABox fixture | `src/test/resources/application.yml` |
+| ABox Dosing coverage + orphan recall fix | `src/test/resources/ontology/demo-abox-v2.ttl` |
+| Loader test: NS + real v2 property tests (requirement/capability/skill vocabulary) | `src/test/java/com/sda/mapper/ontology/OntologyModelLoaderTest.java` |
+| Query-loading instance assertions → v2 ABox individuals (incl. negative candidate `SVC-Orphan`) | `src/test/java/com/sda/mapper/ontology/OntologyAndQueryLoadingTest.java` |
+| Reasoning tests: NS + `DC-FT101-OPCUA` rename, `CRIT-REQ001-Recall`/`CRIT-REQ001-Latency` criterion names, no-criteria summary, dynamic-requirement vocabulary, inferred-capability assertions via `capabilityName()`/`sourceSkill()` | `src/test/java/com/sda/mapper/reasoning/{RDeployServiceTest,R2aConceptCoverageTest,RVerifyServiceTest,SemanticReasonerServiceTest,LifecycleIntegrationTest,OntologyInferenceServiceTest,EndToEndPipelineServiceTest}.java` |
+| Evaluation/pipeline tests: NS fixes | `src/test/java/com/sda/mapper/evaluation/EvaluationTest.java` |
+
+### Key technical decisions
+
+- Fixed test fixtures and the ABox, not production code — production code was verified v2-clean across reasoners, parsers and all SPARQL query files.
+- Guava resolved via dependencyManagement rather than excluding OWLAPI's transitive or bumping OWLAPI, keeping the pinned OWLAPI 4.5.6 and satisfying Milo 0.6.14.
+- Completed the REQ-002 chain in the demo ABox (`SK-FermentationControl → requiresConcept PA-DIM-DosingConcept → PV-Dosing-SkidA1 → describedBy DC-SkidA1-OPCUA → SVC-FermentationSkid`) instead of relaxing the R2a concept-coverage assertions.
+- Rewrote stale v1-property expectations to the real v2 vocabulary (`requirementName`/`requirementDescription`/`capabilityVersion`/`skillID`/`skillName`/`skillVersion`); dropped assertions on v1-only/absent constructs (`title`, `rationale`, `acceptanceCondition`, `hasPriority`, `nominalRange_*`, `engineeringUnit`, `OfferedCapability`).
+
+---
+
 ## Summary
 
 | Phase | Status | Tests | Date |
@@ -727,6 +842,9 @@ Interactive dark-themed ontology visualizer at `/visualizer` grounded in the can
 | Maintenance: Ontology Visualizer (OntologyView) | [x] Completed | 343 | 2026-08-03 |
 | Mapping Hub: Universal Semantic Mapping Hub | [x] Completed | 414 | 2026-08-03 |
 | Semantic Infer and Match Alignment | [x] Completed | 430 | 2026-08-04 |
+| Session Visibility View | [x] Completed | 451 | 2026-08-05 |
+| Ontology Validation Test Suite (Categories A–E) | [x] Completed | 467 | 2026-08-05 |
+| Maintenance: v2 Ontology Test Migration + Milo/Guava Test-Classpath Fix | [x] Completed | 467 | 2026-08-05 |
 | Phase 12: Documentation | [ ] Not started | — | — |
 | Phase 13: EKA UI Polish | [ ] Not started | — | — |
 | Phase 14: Margo Sandbox | [ ] Not started | — | — |

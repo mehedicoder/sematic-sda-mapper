@@ -31,7 +31,7 @@ class EndToEndPipelineServiceTest {
             new OpcUaNodeSetParser(), new AasParser());
         UploadService uploadService = new UploadService(parserFactory);
         OntologyModelLoader ontologyModelLoader = new OntologyModelLoader();
-        ontologyModelLoader.setFilePath("ontology/css-sda-unified.ttl");
+        ontologyModelLoader.setFilePath("ontology/sda_ontology_v2_structured.ttl");
         ontologyModelLoader.loadOntology();
         DemoAboxBuilder.apply(ontologyModelLoader.getModel());
         OntologyInferenceService inferenceService = new OntologyInferenceService(ontologyModelLoader);
@@ -115,7 +115,7 @@ class EndToEndPipelineServiceTest {
 
             long skillCount = result.model().listSubjectsWithProperty(
                 result.model().createProperty("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-                result.model().createResource("https://example.org/ontology/sda#Skill")
+                result.model().createResource("http://sda-platform.org/ontology#Skill")
             ).toList().size();
             assertTrue(skillCount > 0, "Model should contain Skill instances");
         } catch (Exception e) {
@@ -135,7 +135,7 @@ class EndToEndPipelineServiceTest {
 
             long connectorCount = result.model().listSubjectsWithProperty(
                 result.model().createProperty("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-                result.model().createResource("https://example.org/ontology/sda#DataConnector")
+                result.model().createResource("http://sda-platform.org/ontology#DataConnector")
             ).toList().size();
             assertTrue(connectorCount > 0, "Model should contain DataConnector instances");
         } catch (Exception e) {
@@ -147,7 +147,7 @@ class EndToEndPipelineServiceTest {
     @DisplayName("Parsed Model can be merged into base ontology and queried")
     void shouldMergeParsedModelAndQuery() {
         var loader = new OntologyModelLoader();
-        loader.setFilePath("ontology/css-sda-unified.ttl");
+        loader.setFilePath("ontology/sda_ontology_v2_structured.ttl");
         loader.loadOntology();
 
         try (InputStream input = getClass().getClassLoader()
@@ -168,7 +168,7 @@ class EndToEndPipelineServiceTest {
     @DisplayName("Match result should include connector and deploymentContext labels")
     void shouldReturnConnectorAndDeploymentContext() {
         var loader = new OntologyModelLoader();
-        loader.setFilePath("ontology/css-sda-unified.ttl");
+        loader.setFilePath("ontology/sda_ontology_v2_structured.ttl");
         loader.loadOntology();
         DemoAboxBuilder.apply(loader.getModel());
         var queryLoader = new SparqlQueryLoader();

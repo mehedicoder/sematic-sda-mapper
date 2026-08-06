@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class RDeployServiceTest {
 
     private static final String INST_NS = "http://www.example.org/instance#";
-    private static final String SDA_NS = "https://example.org/ontology/sda#";
+    private static final String SDA_NS = "http://sda-platform.org/ontology#";
 
     private static OntologyModelLoader loader;
     private static RDeployService service;
@@ -23,7 +23,7 @@ class RDeployServiceTest {
     @BeforeAll
     static void setUp() {
         loader = new OntologyModelLoader();
-        loader.setFilePath("ontology/css-sda-unified.ttl");
+        loader.setFilePath("ontology/sda_ontology_v2_structured.ttl");
         loader.loadOntology();
         DemoAboxBuilder.apply(loader.getModel());
         service = new RDeployService(loader);

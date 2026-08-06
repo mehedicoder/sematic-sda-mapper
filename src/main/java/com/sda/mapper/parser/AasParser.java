@@ -28,7 +28,7 @@ public class AasParser implements Parser {
     private static final Logger log = LoggerFactory.getLogger(AasParser.class);
 
     private static final String INST_NS = "http://www.example.org/instance#";
-    private static final String SDA_NS = "https://example.org/ontology/sda#";
+    private static final String SDA_NS = "http://sda-platform.org/ontology#";
     private static final String RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
     private static final String RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label";
 
@@ -70,14 +70,9 @@ public class AasParser implements Parser {
             Property protocol = model.createProperty(SDA_NS + "protocol");
             Property accessMode = model.createProperty(SDA_NS + "accessMode");
             Property securityMode = model.createProperty(SDA_NS + "securityMode");
-            Property informationModel = model.createProperty(SDA_NS + "informationModel");
-            Property engineeringUnit = model.createProperty(SDA_NS + "engineeringUnit");
-            Property nominalRangeMin = model.createProperty(SDA_NS + "nominalRange_min");
-            Property nominalRangeMax = model.createProperty(SDA_NS + "nominalRange_max");
             Property isImplementedBy = model.createProperty(SDA_NS + "isImplementedBy");
             Property hasBinding = model.createProperty(SDA_NS + "hasBinding");
             Property hasConnector = model.createProperty(SDA_NS + "hasConnector");
-            Property image = model.createProperty(SDA_NS + "image");
 
             List<String> details = new ArrayList<>();
             int tripleCount = 0;
@@ -97,8 +92,7 @@ public class AasParser implements Parser {
                                 protocol, accessMode, securityMode, details);
                         } else if ("Skills".equals(submodelIdShort)) {
                             tripleCount += parseSkillsSubmodel(
-                                submodel, idShort, model, rdfType, rdfsLabel, skillClass,
-                                engineeringUnit, nominalRangeMin, nominalRangeMax, details);
+                                submodel, idShort, model, rdfType, rdfsLabel, skillClass, details);
                         }
                     }
                 }
@@ -107,7 +101,7 @@ public class AasParser implements Parser {
                 JsonNode assetInfo = shell.path("assetInformation");
                 if (assetInfo.isObject()) {
                     tripleCount += parseAssetIdentification(
-                        assetInfo, shell, model, rdfType, rdfsLabel, image, details);
+                        assetInfo, shell, model, rdfType, rdfsLabel, details);
                 }
             }
 
@@ -118,8 +112,7 @@ public class AasParser implements Parser {
                     String submodelIdShort = submodel.path("idShort").asText("");
                     if ("ProcessValues".equals(submodelIdShort)) {
                         tripleCount += parseProcessValuesSubmodel(
-                            submodel, model, rdfType, rdfsLabel, connectorClass,
-                            informationModel, details);
+                            submodel, model, rdfType, rdfsLabel, connectorClass, details);
                     }
                 }
             }
@@ -210,9 +203,7 @@ public class AasParser implements Parser {
 
     private int parseSkillsSubmodel(JsonNode submodel, String aasIdShort,
                                      Model model, Property rdfType, Property rdfsLabel,
-                                     Resource skillClass, Property engineeringUnit,
-                                     Property nominalRangeMin, Property nominalRangeMax,
-                                     List<String> details) {
+                                     Resource skillClass, List<String> details) {
         int tripleCount = 0;
         int skillIndex = 0;
 
@@ -245,21 +236,6 @@ public class AasParser implements Parser {
                 skillRes.addProperty(rdfsLabel, idShort);
                 tripleCount += 2;
 
-                if (!engUnitVal.isBlank()) {
-                    skillRes.addProperty(engineeringUnit, engUnitVal);
-                    tripleCount++;
-                }
-                if (!minVal.isBlank()) {
-                    skillRes.addProperty(nominalRangeMin,
-                        model.createTypedLiteral(Double.parseDouble(minVal)));
-                    tripleCount++;
-                }
-                if (!maxVal.isBlank()) {
-                    skillRes.addProperty(nominalRangeMax,
-                        model.createTypedLiteral(Double.parseDouble(maxVal)));
-                    tripleCount++;
-                }
-
                 details.add("Skill: " + INST_NS + skillLocalName
                     + " [" + idShort + "]"
                     + " (unit=" + engUnitVal
@@ -274,7 +250,7 @@ public class AasParser implements Parser {
 
     private int parseAssetIdentification(JsonNode assetInfo, JsonNode shell,
                                           Model model, Property rdfType, Property rdfsLabel,
-                                          Property image, List<String> details) {
+                                          List<String> details) {
         int tripleCount = 0;
 
         String globalAssetId = assetInfo.path("globalAssetId").asText("");
@@ -289,16 +265,6 @@ public class AasParser implements Parser {
         serviceRes.addProperty(rdfsLabel, globalAssetId);
         tripleCount += 2;
 
-        // Set image from thumbnail if available
-        JsonNode thumbnail = assetInfo.path("defaultThumbnail");
-        if (thumbnail.isObject()) {
-            String thumbPath = thumbnail.path("path").asText("");
-            if (!thumbPath.isBlank()) {
-                serviceRes.addProperty(image, thumbPath);
-                tripleCount++;
-            }
-        }
-
         details.add("Identification: assetId=" + globalAssetId
             + ", version=" + version + "." + revision);
 
@@ -307,16 +273,14 @@ public class AasParser implements Parser {
 
     private int parseProcessValuesSubmodel(JsonNode submodel, Model model,
                                             Property rdfType, Property rdfsLabel,
-                                            Resource connectorClass, Property informationModel,
-                                            List<String> details) {
+                                            Resource connectorClass, List<String> details) {
         int tripleCount = 0;
 
         String connectorLocalName = "DC-AAS-0";
         Resource connectorRes = model.createResource(INST_NS + connectorLocalName);
         connectorRes.addProperty(rdfType, connectorClass);
         connectorRes.addProperty(rdfsLabel, "AAS connector 0");
-        connectorRes.addProperty(informationModel, "AAS");
-        tripleCount += 3;
+        tripleCount += 2;
 
         // Extract process value names as details
         JsonNode elements = submodel.path("submodelElements");

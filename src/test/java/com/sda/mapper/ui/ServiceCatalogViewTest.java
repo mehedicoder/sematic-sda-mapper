@@ -18,6 +18,7 @@ class ServiceCatalogViewTest {
 
     private ServiceCatalogView createView() {
         OntologyModelLoader ontologyModelLoader = new OntologyModelLoader();
+        ontologyModelLoader.setFilePath("ontology/sda_ontology_v2_structured.ttl");
         ontologyModelLoader.loadOntology();
         DemoAboxBuilder.apply(ontologyModelLoader.getModel());
         SparqlQueryLoader sparqlQueryLoader = new SparqlQueryLoader();

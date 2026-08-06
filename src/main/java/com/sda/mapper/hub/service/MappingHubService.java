@@ -205,6 +205,35 @@ public class MappingHubService {
         return graphService.hydrateUnifiedGraph(session.getId());
     }
 
+    /**
+     * Restores a persisted Mapping Hub session into the current session-scoped
+     * state and re-runs the dynamic pipeline stages so coverage and matches are
+     * rebuilt from the restored base data.
+     *
+     * @param sessionId persisted session id
+     * @return the rebuilt pipeline result
+     * @throws SessionResumeException when persistence is unavailable or the
+     *                                session has no persisted entities
+     */
+    public PipelineResult resumeSession(UUID sessionId) {
+        if (persistenceService == null) {
+            throw new SessionResumeException("Persistence is not available to resume session " + sessionId);
+        }
+        List<CanonicalEntity> restored = persistenceService.loadCanonicalEntities(sessionId);
+        if (restored.isEmpty()) {
+            throw new SessionResumeException("No persisted entities found for session " + sessionId);
+        }
+        session.reset();
+        session.bindUser(CurrentUser.username().orElse(null));
+        CanonicalAssetModel model = session.getModel();
+        for (CanonicalEntity entity : restored) {
+            model.addEntity(entity);
+        }
+        List<String> logs = new ArrayList<>();
+        logs.add("[RESTORE] Restored " + restored.size() + " persisted entities from session " + sessionId);
+        return runStages(null, logs, null, restored);
+    }
+
     private PipelineResult runStages(UploadedFileInfo file, List<String> logs,
                                      UUID fileId, List<CanonicalEntity> parsedEntities) {
         return runStages(file, logs, fileId, parsedEntities, startRun());
@@ -266,6 +295,7 @@ public class MappingHubService {
         if (persistenceService == null) {
             return UUID.randomUUID();
         }
+        ensureSessionRow();
         return persistenceService.startPipelineRun(session.getId());
     }
 
@@ -273,7 +303,13 @@ public class MappingHubService {
         if (persistenceService == null) {
             return null;
         }
+        ensureSessionRow();
         return persistenceService.saveUploadedFile(session.getId(), info, content);
+    }
+
+    private void ensureSessionRow() {
+        session.bindUser(CurrentUser.username().orElse(null));
+        persistenceService.ensureSession(session.getId(), session.getUserId());
     }
 
     private void markUploadedFileParsed(UUID fileId) {

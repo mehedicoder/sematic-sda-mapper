@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class R2aConceptCoverageTest {
 
     private static final String INST_NS = "http://www.example.org/instance#";
-    private static final String SDA_NS = "https://example.org/ontology/sda#";
+    private static final String SDA_NS = "http://sda-platform.org/ontology#";
 
     private OntologyModelLoader loader;
     private SemanticReasonerService reasoner;
@@ -24,7 +24,7 @@ class R2aConceptCoverageTest {
     @BeforeEach
     void setUp() {
         loader = new OntologyModelLoader();
-        loader.setFilePath("ontology/css-sda-unified.ttl");
+        loader.setFilePath("ontology/sda_ontology_v2_structured.ttl");
         loader.loadOntology();
         DemoAboxBuilder.apply(loader.getModel());
         var queryLoader = new SparqlQueryLoader();
@@ -33,7 +33,7 @@ class R2aConceptCoverageTest {
     }
 
     @Test
-    @DisplayName("REQ-001 should match when DC-Flowmeter-FT101 covers required concept")
+    @DisplayName("REQ-001 should match when DC-FT101-OPCUA covers required concept")
     void shouldMatchWhenConceptIsProvided() {
         Model model = loader.getModel();
 
@@ -43,31 +43,31 @@ class R2aConceptCoverageTest {
             model.createResource(INST_NS + "PA-DIM-FlowConcept"));
 
         boolean hasConceptCoverage = hasConceptCoverage(model,
-            INST_NS + "DC-Flowmeter-FT101", INST_NS + "PA-DIM-FlowConcept");
+            INST_NS + "DC-FT101-OPCUA", INST_NS + "PA-DIM-FlowConcept");
 
         assertTrue(hasRequiresConcept, "SK-FlowmeterDiagnostics should requireConcept :PA-DIM-FlowConcept");
         assertTrue(hasConceptCoverage,
-            "DC-Flowmeter-FT101 should cover :PA-DIM-FlowConcept via mapsVariable + describedBy");
+            "DC-FT101-OPCUA should cover :PA-DIM-FlowConcept via mapsVariable + describedBy");
 
         ServiceMatchResult result = reasoner.matchByRequirementId("REQ-001");
         assertTrue(result.matched(),
-            "REQ-001 should match because DC-Flowmeter-FT101 maps a ProcessVariable described by the concept SK-FlowmeterDiagnostics requires");
+            "REQ-001 should match because DC-FT101-OPCUA maps a ProcessVariable described by the concept SK-FlowmeterDiagnostics requires");
     }
 
     @Test
-    @DisplayName("REQ-001 should NOT match when DC-Flowmeter-FT101 no longer covers required concept")
+    @DisplayName("REQ-001 should NOT match when DC-FT101-OPCUA no longer covers required concept")
     void shouldNotMatchWhenConceptIsRemoved() {
         Model model = loader.getModel();
 
         assertTrue(hasConceptCoverage(model,
-            INST_NS + "DC-Flowmeter-FT101", INST_NS + "PA-DIM-FlowConcept"),
-            "Pre-condition: DC-Flowmeter-FT101 should cover the concept before removal");
+            INST_NS + "DC-FT101-OPCUA", INST_NS + "PA-DIM-FlowConcept"),
+            "Pre-condition: DC-FT101-OPCUA should cover the concept before removal");
 
-        removeConceptCoverage(model, INST_NS + "DC-Flowmeter-FT101", INST_NS + "PA-DIM-FlowConcept");
+        removeConceptCoverage(model, INST_NS + "DC-FT101-OPCUA", INST_NS + "PA-DIM-FlowConcept");
 
         assertFalse(hasConceptCoverage(model,
-            INST_NS + "DC-Flowmeter-FT101", INST_NS + "PA-DIM-FlowConcept"),
-            "DC-Flowmeter-FT101 should no longer cover the concept after removal");
+            INST_NS + "DC-FT101-OPCUA", INST_NS + "PA-DIM-FlowConcept"),
+            "DC-FT101-OPCUA should no longer cover the concept after removal");
 
         ServiceMatchResult result = reasoner.matchByRequirementId("REQ-001");
         assertFalse(result.matched(),
@@ -104,17 +104,17 @@ class R2aConceptCoverageTest {
     void shouldMatchAgainAfterRestoringConcept() {
         Model model = loader.getModel();
 
-        removeConceptCoverage(model, INST_NS + "DC-Flowmeter-FT101", INST_NS + "PA-DIM-FlowConcept");
+        removeConceptCoverage(model, INST_NS + "DC-FT101-OPCUA", INST_NS + "PA-DIM-FlowConcept");
         assertFalse(hasConceptCoverage(model,
-            INST_NS + "DC-Flowmeter-FT101", INST_NS + "PA-DIM-FlowConcept"),
+            INST_NS + "DC-FT101-OPCUA", INST_NS + "PA-DIM-FlowConcept"),
             "Removed concept coverage");
 
         ServiceMatchResult noMatch = reasoner.matchByRequirementId("REQ-001");
         assertFalse(noMatch.matched(), "Should not match after removing concept coverage");
 
-        restoreConceptCoverage(model, INST_NS + "DC-Flowmeter-FT101", INST_NS + "PA-DIM-FlowConcept");
+        restoreConceptCoverage(model, INST_NS + "DC-FT101-OPCUA", INST_NS + "PA-DIM-FlowConcept");
         assertTrue(hasConceptCoverage(model,
-            INST_NS + "DC-Flowmeter-FT101", INST_NS + "PA-DIM-FlowConcept"),
+            INST_NS + "DC-FT101-OPCUA", INST_NS + "PA-DIM-FlowConcept"),
             "Restored concept coverage");
 
         loader.loadOntology();

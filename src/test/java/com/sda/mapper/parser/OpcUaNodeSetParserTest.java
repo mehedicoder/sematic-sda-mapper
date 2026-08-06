@@ -55,7 +55,7 @@ class OpcUaNodeSetParserTest {
         assertTrue(result.details().stream().anyMatch(d -> d.contains("DataConnector")));
         assertTrue(result.model().contains(null,
             result.model().createProperty("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-            result.model().createResource("https://example.org/ontology/sda#DataConnector")));
+            result.model().createResource("http://sda-platform.org/ontology#DataConnector")));
     }
 
     @Test
@@ -87,7 +87,7 @@ class OpcUaNodeSetParserTest {
         ParseResult result = parser.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
 
         assertTrue(result.model().contains(null,
-            result.model().createProperty("https://example.org/ontology/sda#protocol"),
+            result.model().createProperty("http://sda-platform.org/ontology#protocol"),
             result.model().createTypedLiteral("OPC-UA")));
     }
 
@@ -105,7 +105,7 @@ class OpcUaNodeSetParserTest {
         ParseResult result = parser.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
 
         assertTrue(result.model().contains(null,
-            result.model().createProperty("https://example.org/ontology/sda#dataType"),
+            result.model().createProperty("http://sda-platform.org/ontology#dataType"),
             result.model().createTypedLiteral("i=11")));
     }
 

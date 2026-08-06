@@ -31,7 +31,7 @@ public class EndToEndPipelineService {
     private static final Logger log = LoggerFactory.getLogger(EndToEndPipelineService.class);
 
     private static final String INST_NS = "http://www.example.org/instance#";
-    private static final String SDA_NS = "https://example.org/ontology/sda#";
+    private static final String SDA_NS = "http://sda-platform.org/ontology#";
     private static final String RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
     private final com.sda.mapper.parser.UploadService uploadService;
@@ -134,8 +134,8 @@ public class EndToEndPipelineService {
     }
 
     /**
-     * Creates a new {@code sda:Requirement} resource in the ontology model
-     * from the provided form parameters.
+     * Creates a new {@code sda:UseCaseRequirement} resource in the ontology
+     * model from the provided form parameters.
      *
      * @param params form parameters (title, description, protocol, accessMode, etc.)
      * @return the generated requirement ID (e.g. "REQ-a1b2c3d4"), or null if creation failed
@@ -149,7 +149,7 @@ public class EndToEndPipelineService {
             Resource requirement = model.createResource(resourceUri);
             requirement.addProperty(
                 model.createProperty(RDF_TYPE),
-                model.createResource(SDA_NS + "Requirement"));
+                model.createResource(SDA_NS + "UseCaseRequirement"));
 
             requirement.addProperty(model.createProperty(SDA_NS + "requirementID"), requirementId);
 
@@ -157,9 +157,6 @@ public class EndToEndPipelineService {
             putIfPresent(model, requirement, params, "description");
             putIfPresent(model, requirement, params, "protocol");
             putIfPresent(model, requirement, params, "accessMode");
-            putIfPresent(model, requirement, params, "networkZone");
-            putIfPresent(model, requirement, params, "determinismClass");
-            putIfPresent(model, requirement, params, "safetyIntegrityLevel");
 
             // Create constraints for recall and latency
             if (params.containsKey("minRecall")) {
@@ -167,10 +164,14 @@ public class EndToEndPipelineService {
                 Resource constraint = model.createResource(constraintUri);
                 constraint.addProperty(
                     model.createProperty(RDF_TYPE),
-                    model.createResource(SDA_NS + "RequirementConstraint"));
+                    model.createResource(SDA_NS + "UseCaseRequirementConstraint"));
                 constraint.addProperty(model.createProperty(SDA_NS + "constraintType"), "recall");
-                constraint.addProperty(model.createProperty(SDA_NS + "constraintValue"), params.get("minRecall"));
-                constraint.addProperty(model.createProperty(SDA_NS + "constraintOperator"), ">=");
+                constraint.addProperty(model.createProperty(SDA_NS + "expression"),
+                    "reportedRecall >= " + params.get("minRecall"));
+                constraint.addProperty(model.createProperty(SDA_NS + "value"),
+                    params.get("minRecall"));
+                constraint.addProperty(model.createProperty(SDA_NS + "isHardConstraint"),
+                    model.createTypedLiteral(true));
                 requirement.addProperty(model.createProperty(SDA_NS + "hasConstraint"), constraint);
             }
             if (params.containsKey("maxLatency")) {
@@ -178,10 +179,14 @@ public class EndToEndPipelineService {
                 Resource constraint = model.createResource(constraintUri);
                 constraint.addProperty(
                     model.createProperty(RDF_TYPE),
-                    model.createResource(SDA_NS + "RequirementConstraint"));
+                    model.createResource(SDA_NS + "UseCaseRequirementConstraint"));
                 constraint.addProperty(model.createProperty(SDA_NS + "constraintType"), "latency");
-                constraint.addProperty(model.createProperty(SDA_NS + "constraintValue"), params.get("maxLatency"));
-                constraint.addProperty(model.createProperty(SDA_NS + "constraintOperator"), "<=");
+                constraint.addProperty(model.createProperty(SDA_NS + "expression"),
+                    "reportedLatency <= " + params.get("maxLatency"));
+                constraint.addProperty(model.createProperty(SDA_NS + "value"),
+                    params.get("maxLatency"));
+                constraint.addProperty(model.createProperty(SDA_NS + "isHardConstraint"),
+                    model.createTypedLiteral(true));
                 requirement.addProperty(model.createProperty(SDA_NS + "hasConstraint"), constraint);
             }
 

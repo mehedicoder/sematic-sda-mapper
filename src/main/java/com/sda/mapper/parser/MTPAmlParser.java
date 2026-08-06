@@ -30,7 +30,7 @@ public class MTPAmlParser implements Parser {
     private static final Logger log = LoggerFactory.getLogger(MTPAmlParser.class);
 
     private static final String INST_NS = "http://www.example.org/instance#";
-    private static final String SDA_NS = "https://example.org/ontology/sda#";
+    private static final String SDA_NS = "http://sda-platform.org/ontology#";
     private static final String RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
     private static final String RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label";
 
@@ -66,16 +66,12 @@ public class MTPAmlParser implements Parser {
             Resource skillClass = model.createResource(SDA_NS + "Skill");
             Resource bindingClass = model.createResource(SDA_NS + "CommunicationBinding");
             Resource connectorClass = model.createResource(SDA_NS + "DataConnector");
-            Property engineeringUnit = model.createProperty(SDA_NS + "engineeringUnit");
-            Property nominalRangeMin = model.createProperty(SDA_NS + "nominalRange_min");
-            Property nominalRangeMax = model.createProperty(SDA_NS + "nominalRange_max");
             Property protocol = model.createProperty(SDA_NS + "protocol");
             Property accessMode = model.createProperty(SDA_NS + "accessMode");
             Property securityMode = model.createProperty(SDA_NS + "securityMode");
             Property isImplementedBy = model.createProperty(SDA_NS + "isImplementedBy");
             Property hasBinding = model.createProperty(SDA_NS + "hasBinding");
             Property hasConnector = model.createProperty(SDA_NS + "hasConnector");
-            Property informationModel = model.createProperty(SDA_NS + "informationModel");
 
             List<String> details = new ArrayList<>();
             int tripleCount = 0;
@@ -115,18 +111,7 @@ public class MTPAmlParser implements Parser {
                 Resource skillRes = model.createResource(INST_NS + skillLocalName);
                 skillRes.addProperty(rdfType, skillClass);
                 skillRes.addProperty(rdfsLabel, name);
-                if (!engineeringUnitVal.isBlank()) {
-                    skillRes.addProperty(engineeringUnit, engineeringUnitVal);
-                }
-                if (!nominalRangeMinVal.isBlank()) {
-                    skillRes.addProperty(nominalRangeMin, model.createTypedLiteral(
-                        Double.parseDouble(nominalRangeMinVal)));
-                }
-                if (!nominalRangeMaxVal.isBlank()) {
-                    skillRes.addProperty(nominalRangeMax, model.createTypedLiteral(
-                        Double.parseDouble(nominalRangeMaxVal)));
-                }
-                tripleCount += 3;
+                tripleCount += 2;
                 skillResources.add(skillRes);
 
                 details.add("Skill: " + INST_NS + skillLocalName + " (unit=" + engineeringUnitVal
@@ -182,14 +167,13 @@ public class MTPAmlParser implements Parser {
                 Resource connectorRes = model.createResource(INST_NS + connectorLocalName);
                 connectorRes.addProperty(rdfType, connectorClass);
                 connectorRes.addProperty(rdfsLabel, "MTP connector " + i);
-                connectorRes.addProperty(informationModel, "OPC-UA");
 
                 // Wire service → connector via hasConnector
                 if (i < serviceResources.size()) {
                     serviceResources.get(i).addProperty(hasConnector, connectorRes);
                 }
 
-                tripleCount += 3; // rdf:type + label + informationModel
+                tripleCount += 2; // rdf:type + label
 
                 details.add("DataConnector: " + INST_NS + connectorLocalName
                     + " (nodeId=" + nodeId + ")");

@@ -74,7 +74,7 @@ class MTPAmlParserTest {
 
         assertNotNull(result);
         assertEquals("MTP-AML", result.fileType());
-        assertEquals(3, result.tripleCount(), "One service with rdf:type + unit + range = 3 triples");
+        assertEquals(2, result.tripleCount(), "One service with rdf:type + label = 2 triples");
     }
 
     @Test

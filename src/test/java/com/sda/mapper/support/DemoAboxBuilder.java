@@ -8,17 +8,18 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Test-support helper that merges the demo ABox fixture
- * ({@code ontology/demo-abox.ttl}) into a Jena model that already holds the
- * TBox-only {@code css-sda-unified.ttl} ontology.
+ * Test-support helper that merges the v2 demo ABox fixture
+ * ({@code ontology/demo-abox-v2.ttl}) into a Jena model that already holds the
+ * TBox-only {@code sda_ontology_v2_structured.ttl} ontology.
  * <p>
- * The demo ABox is the faithful migration of the former combined ontology's
- * instance data onto the canonical {@code https://example.org/ontology/sda#}
- * vocabulary (see {@code src/test/resources/ontology/demo-abox.ttl}).
+ * The demo ABox uses the canonical v2 vocabulary
+ * {@code http://sda-platform.org/ontology#} with instance namespace
+ * {@code http://www.example.org/instance#} (see
+ * {@code src/test/resources/ontology/demo-abox-v2.ttl}).
  */
 public final class DemoAboxBuilder {
 
-    private static final String DEMO_ABOX_PATH = "ontology/demo-abox.ttl";
+    private static final String DEMO_ABOX_PATH = "ontology/demo-abox-v2.ttl";
 
     private DemoAboxBuilder() {
     }

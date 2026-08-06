@@ -6,8 +6,8 @@ package com.sda.mapper.reasoning;
  *
  * @param matched              whether a matching service was found
  * @param serviceName          rdfs:label of the matched Service
- * @param containerImage       sda:image container image reference
- * @param capabilityName       rdfs:label of the matched OfferedCapability
+ * @param containerImage       container image reference (not populated by v2 ontology)
+ * @param capabilityName       rdfs:label of the matched Capability
  * @param skillName            rdfs:label of the matched Skill
  * @param protocol             sda:protocol from the CommunicationBinding
  * @param accessMode           sda:accessMode from the CommunicationBinding
@@ -19,9 +19,9 @@ package com.sda.mapper.reasoning;
  * @param explanation          human-readable explanation of the match result
  * @param lifecycleStatus      current lifecycle status (Defined/Matched/Verified)
  * @param requirementId        the requirement ID that was matched
- * @param safetyIntegrityLevel sda:safetyIntegrityLevel from the DeploymentContext (e.g. "SIL-2")
+ * @param safetyIntegrityLevel sda:safetyIntegrityLevel from the linked SafetyClass (e.g. "SIL-2")
  * @param determinismClass     sda:determinismClass from the DeploymentContext (e.g. "HardRealTime")
- * @param networkZone          sda:networkZone from the DeploymentContext (e.g. "OT-Zone-3")
+ * @param networkZone          rdfs:label of the NetworkZone hosting the DeploymentContext (e.g. "OT-Zone-3")
  */
 public record ServiceMatchResult(boolean matched, String serviceName, String containerImage,
                                   String capabilityName, String skillName,

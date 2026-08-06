@@ -7,7 +7,6 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.reasoner.Reasoner;
 import org.apache.jena.reasoner.ReasonerRegistry;
-import org.apache.jena.vocabulary.RDFS;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -32,8 +31,7 @@ public class OntologyInferenceService {
 
     private static final Logger log = LoggerFactory.getLogger(OntologyInferenceService.class);
 
-    private static final String SDA_NS = "https://example.org/ontology/sda#";
-    private static final String INST_NS = "http://www.example.org/instance#";
+    private static final String SDA_NS = "http://sda-platform.org/ontology#";
 
     private final OntologyModelLoader ontologyModelLoader;
     private boolean enabled = true;
@@ -106,8 +104,9 @@ public class OntologyInferenceService {
     }
 
     /**
-     * Returns capabilities derived from Skill instances that carry
-     * engineering unit and nominal range data properties.
+     * Returns capabilities derived from the CSS-SDA capability chain
+     * ({@code sda:Capability} linked to {@code sda:Skill} via
+     * {@code sda:realisedBy}).
      *
      * @return list of inferred capabilities
      */
@@ -127,58 +126,25 @@ public class OntologyInferenceService {
         Model model = ontologyModelLoader.getModel();
         List<InferredCapability> result = new ArrayList<>();
 
-        var skills = model.listSubjectsWithProperty(
-            org.apache.jena.vocabulary.RDF.type,
-            model.createResource(SDA_NS + "Skill")).toList();
+        var capProp = model.createProperty(SDA_NS + "realisedBy");
+        var capabilities = model.listSubjectsWithProperty(capProp).toList();
 
-        for (Resource skill : skills) {
-            var engUnitStmt = skill.getProperty(model.createProperty(SDA_NS + "engineeringUnit"));
-            var minStmt = skill.getProperty(model.createProperty(SDA_NS + "nominalRange_min"));
-            var maxStmt = skill.getProperty(model.createProperty(SDA_NS + "nominalRange_max"));
-
-            if (engUnitStmt == null || minStmt == null || maxStmt == null) {
+        for (Resource capability : capabilities) {
+            if (!capability.hasProperty(org.apache.jena.vocabulary.RDF.type,
+                model.createResource(SDA_NS + "Capability"))) {
                 continue;
             }
-
-            String engUnit = engUnitStmt.getString();
-            double minRange = minStmt.getDouble();
-            double maxRange = maxStmt.getDouble();
-            String skillLocalName = getLocalName(skill);
-
-            // Find if an OfferedCapability already links to this skill via sda:realisedBy
-            String functionClass = "Unknown";
-            String capName = "Inferred-" + skillLocalName;
-            boolean explicitExists = false;
-
-            var capProp = model.createProperty(SDA_NS + "realisedBy");
-            var capabilities = model.listSubjectsWithProperty(capProp, skill).toList();
-            for (Resource cap : capabilities) {
-                if (cap.hasProperty(org.apache.jena.vocabulary.RDF.type,
-                    model.createResource(SDA_NS + "OfferedCapability"))) {
-                    explicitExists = true;
-                    var nameStmt = cap.getProperty(model.createProperty(SDA_NS + "capabilityName"));
-                    if (nameStmt != null) {
-                        functionClass = nameStmt.getString();
-                        capName = functionClass;
-                    }
-                    break;
-                }
+            Resource skill = capability.getPropertyResourceValue(capProp);
+            String skillLocalName = skill != null ? getLocalName(skill) : "Unknown";
+            String capName = getLocalName(capability);
+            var nameStmt = capability.getProperty(model.createProperty(SDA_NS + "capabilityName"));
+            if (nameStmt != null) {
+                capName = nameStmt.getString();
             }
 
             result.add(new InferredCapability(
-                capName, functionClass, engUnit, minRange, maxRange, skillLocalName));
-
-            // If no explicit OfferedCapability links to this skill, add inferred triple
-            if (!explicitExists) {
-                String inferredUri = INST_NS + "InfCap-" + skillLocalName;
-                Resource inferredCap = model.createResource(inferredUri);
-                inferredCap.addProperty(org.apache.jena.vocabulary.RDF.type,
-                    model.createResource(SDA_NS + "OfferedCapability"));
-                inferredCap.addProperty(RDFS.label, "Inferred Capability for " + skillLocalName);
-                inferredCap.addProperty(model.createProperty(SDA_NS + "capabilityName"), capName);
-                inferredCap.addProperty(model.createProperty(SDA_NS + "realisedBy"), skill);
-                log.debug("Added inferred OfferedCapability: {}", inferredUri);
-            }
+                capName, capName, "", Double.NaN, Double.NaN, skillLocalName));
+            log.debug("Inferred Capability: {} (realisedBy {})", capName, skillLocalName);
         }
 
         return result;

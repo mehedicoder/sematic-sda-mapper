@@ -687,6 +687,28 @@
   color: var(--hub-accent);
 }
 
+.hub-session-view {
+  color: var(--hub-text-1);
+  background: var(--hub-bg);
+}
+
+.hub-session-chips {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hub-session-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--hub-text-2);
+  background: var(--hub-drop-bg);
+  border: 1px solid var(--hub-border);
+}
+
 @media (max-width: 900px) {
   .hub-body {
     flex-direction: column;

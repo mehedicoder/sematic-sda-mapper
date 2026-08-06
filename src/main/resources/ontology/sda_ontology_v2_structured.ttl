@@ -1,0 +1,1842 @@
+@prefix : <http://sda-platform.org/ontology#> .
+# ----------------------------------------------------------------------------
+# CATEGORY C/D READINESS FIXES (this update, v2 only -- v1 untouched):
+#   Category C (SPARQL chain) was PARTIAL:
+#     - determinismClass was used in worked instance data (Kubernetes
+#       node-selector generation, paper Sec. 4.4) but never declared.
+#       Added: DeploymentContext.determinismClass (dp, xsd:string).
+#     - safetyIntegrityLevel "type/location changed" -- NOT a bug. It lives
+#       on SafetyClass by deliberate design (Layer 2b), not directly on
+#       DeploymentContext, and SafetyCriticalDeploymentContext already
+#       reasons over exactly that path. No property added here -- adding a
+#       second direct copy would recreate the redundant-property pattern
+#       dropped elsewhere (UseCase.determines, DataConnector.informationModel).
+#   Category D (SWRL lifecycle) was NOT READY -- 8 properties referenced only
+#     in SWRL rule text, never declared as real OWL properties. All 8 added
+#     with explicit domain/range: matchedCandidate, boundService,
+#     boundBinding, boundConnector, boundContext, candidateBlocked,
+#     satisfiesConstraint, allCriteriaSatisfied.
+#   One correctness bug fixed along the way: R0-HardConstraint's rule text
+#     wrote candidateBlocked as a ternary atom, candidateBlocked(?s,?cap,true)
+#     -- not valid SWRL (unary/binary atoms only). Corrected to binary
+#     candidateBlocked(?s,?cap); the triple's existence already means blocked.
+#   One stale-reference bug fixed: R-Deploy's rule text still called Skill's
+#     old 'uses' property (uses(?sk,?cb), uses(?sk,?dc)), split into
+#     usesBinding/usesConnector during the Layer 2/3 naming pass. The rule
+#     text had never been updated to match -- now says usesBinding/usesConnector.
+#   Now 48 classes, 9 declared "reasoning-bookkeeping" properties (the 8
+#   above + determinismClass), 11/11 validation checks still passing.
+# ----------------------------------------------------------------------------
+
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+: a owl:Ontology ;
+    rdfs:label "SDA Prototype Ontology"^^xsd:string ;
+    rdfs:comment "Necessary class set (Tier 1 + Tier 2) for SDA prototype development, aligned to the published CSS-SDA paper and the Margo device/application specifications."^^xsd:string ;
+    owl:versionInfo "1.0.0-prototype"^^xsd:string .
+
+:AutoLiftedMTPSkill a owl:Class ;
+    rdfs:subClassOf :Skill ;
+    owl:equivalentClass [ a owl:Class ;
+            owl:intersectionOf ( :Skill [ a owl:Restriction ;
+                        owl:minCardinality "1"^^xsd:nonNegativeInteger ;
+                        owl:onProperty :mtpDescriptorURI ] ) ] .
+
+:HardConstrainedRequirement a owl:Class ;
+    rdfs:subClassOf :UseCaseRequirement ;
+    owl:equivalentClass [ a owl:Class ;
+            owl:intersectionOf ( :UseCaseRequirement [ a owl:Restriction ;
+                        owl:onProperty :hasConstraint ;
+                        owl:someValuesFrom [ a owl:Class ;
+                                owl:intersectionOf ( :UseCaseRequirementConstraint [ a owl:Restriction ;
+                                            owl:hasValue true ;
+                                            owl:onProperty :isHardConstraint ] ) ] ] ) ] .
+
+:MarginCompliantClusterNode a owl:Class ;
+    rdfs:subClassOf :ClusterNode ;
+    owl:equivalentClass [ a owl:Class ;
+            owl:intersectionOf ( :ClusterNode [ a owl:Restriction ;
+                        owl:hasValue "StandaloneCluster"^^xsd:string ;
+                        owl:onProperty :marginDeviceRole ] [ a owl:Restriction ;
+                        owl:hasValue true ;
+                        owl:onProperty :hasOTELCollector ] [ a owl:Restriction ;
+                        owl:hasValue true ;
+                        owl:onProperty :ociRuntimeCompliant ] ) ] .
+
+:SafetyCriticalDeploymentContext a owl:Class ;
+    rdfs:subClassOf :DeploymentContext ;
+    owl:equivalentClass [ a owl:Class ;
+            owl:intersectionOf ( :DeploymentContext [ a owl:Restriction ;
+                        owl:onProperty :contextConstrainedBy ;
+                        owl:someValuesFrom [ a owl:Class ;
+                                owl:intersectionOf ( :SafetyClass [ a owl:Restriction ;
+                                            owl:onProperty :safetyIntegrityLevel ;
+                                            owl:someValuesFrom [ a rdfs:Datatype ;
+                                                    owl:onDatatype xsd:integer ;
+                                                    owl:withRestrictions ( [ xsd:minInclusive 2 ] ) ] ] ) ] ] ) ] .
+
+:aasSubmodelRef a owl:DatatypeProperty ;
+    rdfs:label "aasSubmodelRef"^^xsd:string ;
+    rdfs:comment "Used as: Skill → xsd:string"^^xsd:string ;
+    rdfs:domain :Skill ;
+    rdfs:range xsd:string .
+
+:accessMode a owl:DatatypeProperty ;
+    rdfs:label "accessMode"^^xsd:string ;
+    rdfs:comment "Used as: CommunicationBinding → xsd:string"^^xsd:string ;
+    rdfs:domain :CommunicationBinding ;
+    rdfs:range xsd:string .
+
+:addressMapping a owl:DatatypeProperty ;
+    rdfs:label "addressMapping"^^xsd:string ;
+    rdfs:comment "Used as: DataConnector → xsd:string"^^xsd:string ;
+    rdfs:domain :DataConnector ;
+    rdfs:range xsd:string .
+
+:affinityLabel a owl:DatatypeProperty ;
+    rdfs:label "affinityLabel"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentPolicy → xsd:string"^^xsd:string ;
+    rdfs:domain :DeploymentPolicy ;
+    rdfs:range xsd:string .
+
+:allCriteriaSatisfied a owl:DatatypeProperty ;
+    rdfs:comment "Write target checked by R-Verify: true once every VerificationCriterion for this Requirement has passed."^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range xsd:boolean .
+
+:allowEmpty a owl:DatatypeProperty ;
+    rdfs:label "allowEmpty"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirementParameter → xsd:boolean"^^xsd:string ;
+    rdfs:domain :UseCaseRequirementParameter ;
+    rdfs:range xsd:boolean .
+
+:appliesToOrchestrator a owl:DatatypeProperty ;
+    rdfs:label "appliesToOrchestrator"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentPolicy → xsd:string"^^xsd:string ;
+    rdfs:domain :DeploymentPolicy ;
+    rdfs:range xsd:string .
+
+:assetID a owl:DatatypeProperty ;
+    rdfs:label "assetID"^^xsd:string ;
+    rdfs:comment "Used as: Asset → xsd:string"^^xsd:string ;
+    rdfs:domain :Asset ;
+    rdfs:range xsd:string .
+
+:assetName a owl:DatatypeProperty ;
+    rdfs:label "assetName"^^xsd:string ;
+    rdfs:comment "Used as: Asset → xsd:string"^^xsd:string ;
+    rdfs:domain :Asset ;
+    rdfs:range xsd:string .
+
+:attestationSupported a owl:DatatypeProperty ;
+    rdfs:label "attestationSupported"^^xsd:string ;
+    rdfs:comment "Used as: ClusterNode → xsd:boolean"^^xsd:string ;
+    rdfs:domain :ClusterNode ;
+    rdfs:range xsd:boolean .
+
+:bindingEndpointUri a owl:DatatypeProperty ;
+    rdfs:label "bindingEndpointUri"^^xsd:string ;
+    rdfs:comment "Used as: CommunicationBinding → xsd:string"^^xsd:string ;
+    rdfs:domain :CommunicationBinding ;
+    rdfs:range xsd:string .
+
+:bindingID a owl:DatatypeProperty ;
+    rdfs:label "bindingID"^^xsd:string ;
+    rdfs:comment "Used as: CommunicationBinding → xsd:string"^^xsd:string ;
+    rdfs:domain :CommunicationBinding ;
+    rdfs:range xsd:string .
+
+:boundBinding a owl:ObjectProperty ;
+    rdfs:comment "Write target of R-Deploy: the CommunicationBinding committed to this Requirement."^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range :CommunicationBinding .
+
+:boundConnector a owl:ObjectProperty ;
+    rdfs:comment "Write target of R-Deploy: the DataConnector committed to this Requirement."^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range :DataConnector .
+
+:boundContext a owl:ObjectProperty ;
+    rdfs:comment "Write target of R-Deploy: the DeploymentContext committed to this Requirement."^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range :DeploymentContext .
+
+:boundService a owl:ObjectProperty ;
+    rdfs:comment "Write target of R-Deploy: the Service committed to this Requirement."^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range :Service .
+
+:businessGoal a owl:DatatypeProperty ;
+    rdfs:label "businessGoal"^^xsd:string ;
+    rdfs:comment "Used as: UseCase → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCase ;
+    rdfs:range xsd:string .
+
+:candidateBlocked a owl:ObjectProperty ;
+    rdfs:comment "Write target of R0-HardConstraint. FIXED during this pass: the rule text originally wrote this as a ternary atom, candidateBlocked(?s,?cap,true) — not valid SWRL, which only supports unary/binary atoms. Corrected to a binary relation (Capability -> Service); the triple's existence means 'blocked', so the trailing boolean was redundant as well as invalid."^^xsd:string ;
+    rdfs:domain :Capability ;
+    rdfs:range :Service .
+
+:capabilityDescription a owl:DatatypeProperty ;
+    rdfs:label "capabilityDescription"^^xsd:string ;
+    rdfs:comment "Used as: Capability → xsd:string"^^xsd:string ;
+    rdfs:domain :Capability ;
+    rdfs:range xsd:string .
+
+:capabilityID a owl:DatatypeProperty ;
+    rdfs:label "capabilityID"^^xsd:string ;
+    rdfs:comment "Used as: Capability → xsd:string"^^xsd:string ;
+    rdfs:domain :Capability ;
+    rdfs:range xsd:string .
+
+:capabilityName a owl:DatatypeProperty ;
+    rdfs:label "capabilityName"^^xsd:string ;
+    rdfs:comment "Used as: Capability → xsd:string"^^xsd:string ;
+    rdfs:domain :Capability ;
+    rdfs:range xsd:string .
+
+:capabilityVersion a owl:DatatypeProperty ;
+    rdfs:label "capabilityVersion"^^xsd:string ;
+    rdfs:comment "Used as: Capability → xsd:string"^^xsd:string ;
+    rdfs:domain :Capability ;
+    rdfs:range xsd:string .
+
+:certificationRequired a owl:DatatypeProperty ;
+    rdfs:label "certificationRequired"^^xsd:string ;
+    rdfs:comment "Used as: SafetyClass → xsd:boolean"^^xsd:string ;
+    rdfs:domain :SafetyClass ;
+    rdfs:range xsd:boolean .
+
+:classID a owl:DatatypeProperty ;
+    rdfs:label "classID"^^xsd:string ;
+    rdfs:comment "Used as: SafetyClass → xsd:string"^^xsd:string ;
+    rdfs:domain :SafetyClass ;
+    rdfs:range xsd:string .
+
+:classNumber a owl:AnnotationProperty ;
+    rdfs:label "Class number as used in SDA_Prototype_Ontology.docx (e.g. 2.2)"^^xsd:string .
+
+:composePackageLocation a owl:DatatypeProperty ;
+    rdfs:label "composePackageLocation"^^xsd:string ;
+    rdfs:comment "Used as: Service → xsd:string"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range xsd:string .
+
+:conceptDataType a owl:DatatypeProperty ;
+    rdfs:label "conceptDataType"^^xsd:string ;
+    rdfs:comment "Used as: SemanticConcept → xsd:string"^^xsd:string ;
+    rdfs:domain :SemanticConcept ;
+    rdfs:range xsd:string .
+
+:conceptID a owl:DatatypeProperty ;
+    rdfs:label "conceptID"^^xsd:string ;
+    rdfs:comment "Used as: SemanticConcept → xsd:string"^^xsd:string ;
+    rdfs:domain :SemanticConcept ;
+    rdfs:range xsd:string .
+
+:conceptName a owl:DatatypeProperty ;
+    rdfs:label "conceptName"^^xsd:string ;
+    rdfs:comment "Used as: SemanticConcept → xsd:string"^^xsd:string ;
+    rdfs:domain :SemanticConcept ;
+    rdfs:range xsd:string .
+
+:conceptUnit a owl:DatatypeProperty ;
+    rdfs:label "conceptUnit"^^xsd:string ;
+    rdfs:comment "Used as: SemanticConcept → xsd:string"^^xsd:string ;
+    rdfs:domain :SemanticConcept ;
+    rdfs:range xsd:string .
+
+:connectorID a owl:DatatypeProperty ;
+    rdfs:label "connectorID"^^xsd:string ;
+    rdfs:comment "Used as: DataConnector → xsd:string"^^xsd:string ;
+    rdfs:domain :DataConnector ;
+    rdfs:range xsd:string .
+
+:connectorSemanticIRI a owl:DatatypeProperty ;
+    rdfs:label "connectorSemanticIRI"^^xsd:string ;
+    rdfs:comment "Used as: DataConnector → xsd:string"^^xsd:string ;
+    rdfs:domain :DataConnector ;
+    rdfs:range xsd:string .
+
+:connectorType a owl:DatatypeProperty ;
+    rdfs:label "connectorType"^^xsd:string ;
+    rdfs:comment "Used as: DataConnector → xsd:string"^^xsd:string ;
+    rdfs:domain :DataConnector ;
+    rdfs:range xsd:string .
+
+:constraintID a owl:DatatypeProperty ;
+    rdfs:label "constraintID"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirementConstraint → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCaseRequirementConstraint ;
+    rdfs:range xsd:string .
+
+:constraintType a owl:DatatypeProperty ;
+    rdfs:label "constraintType"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirementConstraint → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCaseRequirementConstraint ;
+    rdfs:range xsd:string .
+
+:contactInfo a owl:DatatypeProperty ;
+    rdfs:label "contactInfo"^^xsd:string ;
+    rdfs:comment "Used as: Stakeholder → xsd:string"^^xsd:string ;
+    rdfs:domain :Stakeholder ;
+    rdfs:range xsd:string .
+
+:contextID a owl:DatatypeProperty ;
+    rdfs:label "contextID"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentContext → xsd:string"^^xsd:string ;
+    rdfs:domain :DeploymentContext ;
+    rdfs:range xsd:string .
+
+:cpuArchitectures a owl:DatatypeProperty ;
+    rdfs:label "cpuArchitectures"^^xsd:string ;
+    rdfs:comment "Used as: Service → xsd:string"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range xsd:string .
+
+:cpuCores a owl:DatatypeProperty ;
+    rdfs:label "cpuCores"^^xsd:string ;
+    rdfs:comment "Used as: ClusterNode → xsd:integer"^^xsd:string ;
+    rdfs:domain :ClusterNode ;
+    rdfs:range xsd:integer .
+
+:cpuRequest a owl:DatatypeProperty ;
+    rdfs:label "cpuRequest"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentPolicy → xsd:string"^^xsd:string ;
+    rdfs:domain :DeploymentPolicy ;
+    rdfs:range xsd:string .
+
+:creationDate a owl:DatatypeProperty ;
+    rdfs:label "creationDate"^^xsd:string ;
+    rdfs:comment "Used as: UseCase → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCase ;
+    rdfs:range xsd:string .
+
+:criterionDescription a owl:DatatypeProperty ;
+    rdfs:label "criterionDescription"^^xsd:string ;
+    rdfs:comment "Used as: VerificationCriterion → xsd:string"^^xsd:string ;
+    rdfs:domain :VerificationCriterion ;
+    rdfs:range xsd:string .
+
+:criterionID a owl:DatatypeProperty ;
+    rdfs:label "criterionID"^^xsd:string ;
+    rdfs:comment "Used as: VerificationCriterion → xsd:string"^^xsd:string ;
+    rdfs:domain :VerificationCriterion ;
+    rdfs:range xsd:string .
+
+:dataType a owl:DatatypeProperty ;
+    rdfs:label "dataType"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirementParameter → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCaseRequirementParameter ;
+    rdfs:range xsd:string .
+
+:deployStatus a owl:DatatypeProperty ;
+    rdfs:label "deployStatus"^^xsd:string ;
+    rdfs:comment "Used as: ServiceInstance → xsd:string"^^xsd:string ;
+    rdfs:domain :ServiceInstance ;
+    rdfs:range xsd:string .
+
+:deploymentArtifactType a owl:DatatypeProperty ;
+    rdfs:label "deploymentArtifactType"^^xsd:string ;
+    rdfs:comment "Used as: Service → xsd:string"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range xsd:string .
+
+:deploymentMethod a owl:DatatypeProperty ;
+    rdfs:label "deploymentMethod"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentContext → xsd:string"^^xsd:string ;
+    rdfs:domain :DeploymentContext ;
+    rdfs:range xsd:string .
+
+:description a owl:DatatypeProperty ;
+    rdfs:label "description"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirement → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range xsd:string .
+
+:determinismClass a owl:DatatypeProperty ;
+    rdfs:comment "SoftRealTime | HardRealTime | NonRealTime — used by the Deployment Manager's Kubernetes node-selector generation step (paper Sec. 4.4). Added post-test-case-validation; previously used in worked examples but never declared."^^xsd:string ;
+    rdfs:domain :DeploymentContext ;
+    rdfs:range xsd:string .
+
+:endpointURI a owl:DatatypeProperty ;
+    rdfs:label "endpointURI"^^xsd:string ;
+    rdfs:comment "Used as: ServiceInstance → xsd:string"^^xsd:string ;
+    rdfs:domain :ServiceInstance ;
+    rdfs:range xsd:string .
+
+:expression a owl:DatatypeProperty ;
+    rdfs:label "expression"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirementConstraint → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCaseRequirementConstraint ;
+    rdfs:range xsd:string .
+
+:hasFleetManagementClient a owl:DatatypeProperty ;
+    rdfs:label "hasFleetManagementClient"^^xsd:string ;
+    rdfs:comment "Used as: ClusterNode → xsd:boolean"^^xsd:string ;
+    rdfs:domain :ClusterNode ;
+    rdfs:range xsd:boolean .
+
+:hasHSM a owl:DatatypeProperty ;
+    rdfs:label "hasHSM"^^xsd:string ;
+    rdfs:comment "Used as: ClusterNode → xsd:boolean"^^xsd:string ;
+    rdfs:domain :ClusterNode ;
+    rdfs:range xsd:boolean .
+
+:hasPolicyAgent a owl:DatatypeProperty ;
+    rdfs:label "hasPolicyAgent"^^xsd:string ;
+    rdfs:comment "Used as: ClusterNode → xsd:boolean"^^xsd:string ;
+    rdfs:domain :ClusterNode ;
+    rdfs:range xsd:boolean .
+
+:helmChartApiVersion a owl:DatatypeProperty ;
+    rdfs:label "helmChartApiVersion"^^xsd:string ;
+    rdfs:comment "Used as: ClusterNode → xsd:string"^^xsd:string ;
+    rdfs:domain :ClusterNode ;
+    rdfs:range xsd:string .
+
+:helmChartRepository a owl:DatatypeProperty ;
+    rdfs:label "helmChartRepository"^^xsd:string ;
+    rdfs:comment "Used as: Service → xsd:string"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range xsd:string .
+
+:helmChartRevision a owl:DatatypeProperty ;
+    rdfs:label "helmChartRevision"^^xsd:string ;
+    rdfs:comment "Used as: Service → xsd:string"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range xsd:string .
+
+:hostType a owl:DatatypeProperty ;
+    rdfs:label "hostType"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentContext → xsd:string"^^xsd:string ;
+    rdfs:domain :DeploymentContext ;
+    rdfs:range xsd:string .
+
+:hostname a owl:DatatypeProperty ;
+    rdfs:label "hostname"^^xsd:string ;
+    rdfs:comment "Used as: ClusterNode → xsd:string"^^xsd:string ;
+    rdfs:domain :ClusterNode ;
+    rdfs:range xsd:string .
+
+:hostsService a owl:ObjectProperty ;
+    rdfs:label "hostsService"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentContext → :ServiceInstance"^^xsd:string ;
+    rdfs:domain :DeploymentContext ;
+    rdfs:range :ServiceInstance .
+
+:iec62443Level a owl:DatatypeProperty ;
+    rdfs:label "iec62443Level"^^xsd:string ;
+    rdfs:comment "Used as: NetworkZone → xsd:string"^^xsd:string ;
+    rdfs:domain :NetworkZone ;
+    rdfs:range xsd:string .
+
+:instanceID a owl:DatatypeProperty ;
+    rdfs:label "instanceID"^^xsd:string ;
+    rdfs:comment "Used as: ServiceInstance → xsd:string"^^xsd:string ;
+    rdfs:domain :ServiceInstance ;
+    rdfs:range xsd:string .
+
+:internetReachable a owl:DatatypeProperty ;
+    rdfs:label "internetReachable"^^xsd:string ;
+    rdfs:comment "Used as: NetworkZone → xsd:boolean"^^xsd:string ;
+    rdfs:domain :NetworkZone ;
+    rdfs:range xsd:boolean .
+
+:isa95Alignment a owl:AnnotationProperty ;
+    rdfs:label "Corresponding ISA-95 level, or 'No ISA-95 equivalent'"^^xsd:string .
+
+:lifecycleStatus a owl:DatatypeProperty ;
+    rdfs:label "lifecycleStatus"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirement → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range xsd:string .
+
+:locatedIn a owl:DatatypeProperty ;
+    rdfs:label "locatedIn"^^xsd:string ;
+    rdfs:comment "Used as: Asset → xsd:string"^^xsd:string ;
+    rdfs:domain :Asset ;
+    rdfs:range xsd:string .
+
+:mapsToDeploymentContext a owl:ObjectProperty ;
+    rdfs:label "mapsToDeploymentContext"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirement → :DeploymentContext"^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range :DeploymentContext .
+
+:marginCompliant a owl:DatatypeProperty ;
+    rdfs:label "marginCompliant"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentContext → xsd:boolean"^^xsd:string ;
+    rdfs:domain :DeploymentContext ;
+    rdfs:range xsd:boolean .
+
+:matchedCandidate a owl:ObjectProperty ;
+    rdfs:comment "The SPARQL-selected candidate service (output of R1-R3), the input R-Deploy commits."^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range :Service .
+
+:maxLength a owl:DatatypeProperty ;
+    rdfs:label "maxLength"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirementParameter → xsd:integer"^^xsd:string ;
+    rdfs:domain :UseCaseRequirementParameter ;
+    rdfs:range xsd:integer .
+
+:maxReplicas a owl:DatatypeProperty ;
+    rdfs:label "maxReplicas"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentPolicy → xsd:integer"^^xsd:string ;
+    rdfs:domain :DeploymentPolicy ;
+    rdfs:range xsd:integer .
+
+:maxValue a owl:DatatypeProperty ;
+    rdfs:label "maxValue"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirementParameter → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCaseRequirementParameter ;
+    rdfs:range xsd:string .
+
+:memRequest a owl:DatatypeProperty ;
+    rdfs:label "memRequest"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentPolicy → xsd:string"^^xsd:string ;
+    rdfs:domain :DeploymentPolicy ;
+    rdfs:range xsd:string .
+
+:minLength a owl:DatatypeProperty ;
+    rdfs:label "minLength"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirementParameter → xsd:integer"^^xsd:string ;
+    rdfs:domain :UseCaseRequirementParameter ;
+    rdfs:range xsd:integer .
+
+:minReplicas a owl:DatatypeProperty ;
+    rdfs:label "minReplicas"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentPolicy → xsd:integer"^^xsd:string ;
+    rdfs:domain :DeploymentPolicy ;
+    rdfs:range xsd:integer .
+
+:minValue a owl:DatatypeProperty ;
+    rdfs:label "minValue"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirementParameter → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCaseRequirementParameter ;
+    rdfs:range xsd:string .
+
+:modelID a owl:DatatypeProperty ;
+    rdfs:label "modelID"^^xsd:string ;
+    rdfs:comment "Used as: InformationModel → xsd:string"^^xsd:string ;
+    rdfs:domain :InformationModel ;
+    rdfs:range xsd:string .
+
+:modelName a owl:DatatypeProperty ;
+    rdfs:label "modelName"^^xsd:string ;
+    rdfs:comment "Used as: InformationModel → xsd:string"^^xsd:string ;
+    rdfs:domain :InformationModel ;
+    rdfs:range xsd:string .
+
+:modelURI a owl:DatatypeProperty ;
+    rdfs:label "modelURI"^^xsd:string ;
+    rdfs:comment "Used as: InformationModel → xsd:string"^^xsd:string ;
+    rdfs:domain :InformationModel ;
+    rdfs:range xsd:string .
+
+:modelVersion a owl:DatatypeProperty ;
+    rdfs:label "modelVersion"^^xsd:string ;
+    rdfs:comment "Used as: InformationModel → xsd:string"^^xsd:string ;
+    rdfs:domain :InformationModel ;
+    rdfs:range xsd:string .
+
+:nodeID a owl:DatatypeProperty ;
+    rdfs:label "nodeID"^^xsd:string ;
+    rdfs:comment "Used as: ClusterNode → xsd:string"^^xsd:string ;
+    rdfs:domain :ClusterNode ;
+    rdfs:range xsd:string .
+
+:observationID a owl:DatatypeProperty ;
+    rdfs:label "observationID"^^xsd:string ;
+    rdfs:comment "Used as: Observation → xsd:string"^^xsd:string ;
+    rdfs:domain :Observation ;
+    rdfs:range xsd:string .
+
+:onPlantNetwork a owl:DatatypeProperty ;
+    rdfs:label "onPlantNetwork"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentContext → xsd:boolean"^^xsd:string ;
+    rdfs:domain :DeploymentContext ;
+    rdfs:range xsd:boolean .
+
+:ontologyLayer a owl:AnnotationProperty ;
+    rdfs:label "Which of the six ontology layers a class belongs to"^^xsd:string .
+
+:orchestrationPlatform a owl:DatatypeProperty ;
+    rdfs:label "orchestrationPlatform"^^xsd:string ;
+    rdfs:comment "Used as: ClusterNode → xsd:string"^^xsd:string ;
+    rdfs:domain :ClusterNode ;
+    rdfs:range xsd:string .
+
+:organization a owl:DatatypeProperty ;
+    rdfs:label "organization"^^xsd:string ;
+    rdfs:comment "Used as: Stakeholder → xsd:string"^^xsd:string ;
+    rdfs:domain :Stakeholder ;
+    rdfs:range xsd:string .
+
+:paramDataType a owl:DatatypeProperty ;
+    rdfs:label "paramDataType"^^xsd:string ;
+    rdfs:comment "Used as: SkillParameter → xsd:string"^^xsd:string ;
+    rdfs:domain :SkillParameter ;
+    rdfs:range xsd:string .
+
+:paramID a owl:DatatypeProperty ;
+    rdfs:label "paramID"^^xsd:string ;
+    rdfs:comment "Used as: SkillParameter → xsd:string"^^xsd:string ;
+    rdfs:domain :SkillParameter ;
+    rdfs:range xsd:string .
+
+:paramImmutable a owl:DatatypeProperty ;
+    rdfs:label "paramImmutable"^^xsd:string ;
+    rdfs:comment "Used as: SkillParameter → xsd:boolean"^^xsd:string ;
+    rdfs:domain :SkillParameter ;
+    rdfs:range xsd:boolean .
+
+:paramMaxValue a owl:DatatypeProperty ;
+    rdfs:label "paramMaxValue"^^xsd:string ;
+    rdfs:comment "Used as: SkillParameter → xsd:string"^^xsd:string ;
+    rdfs:domain :SkillParameter ;
+    rdfs:range xsd:string .
+
+:paramMinValue a owl:DatatypeProperty ;
+    rdfs:label "paramMinValue"^^xsd:string ;
+    rdfs:comment "Used as: SkillParameter → xsd:string"^^xsd:string ;
+    rdfs:domain :SkillParameter ;
+    rdfs:range xsd:string .
+
+:paramName a owl:DatatypeProperty ;
+    rdfs:label "paramName"^^xsd:string ;
+    rdfs:comment "Used as: SkillParameter → xsd:string"^^xsd:string ;
+    rdfs:domain :SkillParameter ;
+    rdfs:range xsd:string .
+
+:paramUnit a owl:DatatypeProperty ;
+    rdfs:label "paramUnit"^^xsd:string ;
+    rdfs:comment "Used as: SkillParameter → xsd:string"^^xsd:string ;
+    rdfs:domain :SkillParameter ;
+    rdfs:range xsd:string .
+
+:parameterID a owl:DatatypeProperty ;
+    rdfs:label "parameterID"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirementParameter → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCaseRequirementParameter ;
+    rdfs:range xsd:string .
+
+:parameterName a owl:DatatypeProperty ;
+    rdfs:label "parameterName"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirementParameter → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCaseRequirementParameter ;
+    rdfs:range xsd:string .
+
+:passThreshold a owl:DatatypeProperty ;
+    rdfs:label "passThreshold"^^xsd:string ;
+    rdfs:comment "Used as: VerificationCriterion → xsd:string"^^xsd:string ;
+    rdfs:domain :VerificationCriterion ;
+    rdfs:range xsd:string .
+
+:policyID a owl:DatatypeProperty ;
+    rdfs:label "policyID"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentPolicy → xsd:string"^^xsd:string ;
+    rdfs:domain :DeploymentPolicy ;
+    rdfs:range xsd:string .
+
+:priority a owl:DatatypeProperty ;
+    rdfs:label "priority"^^xsd:string ;
+    rdfs:comment "Used as: UseCase → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCase ;
+    rdfs:range xsd:string .
+
+:protocol a owl:DatatypeProperty ;
+    rdfs:label "protocol"^^xsd:string ;
+    rdfs:comment "Used as: CommunicationBinding → xsd:string"^^xsd:string ;
+    rdfs:domain :CommunicationBinding ;
+    rdfs:range xsd:string .
+
+:ramGB a owl:DatatypeProperty ;
+    rdfs:label "ramGB"^^xsd:string ;
+    rdfs:comment "Used as: ClusterNode → xsd:double"^^xsd:string ;
+    rdfs:domain :ClusterNode ;
+    rdfs:range xsd:double .
+
+:regexMatch a owl:DatatypeProperty ;
+    rdfs:label "regexMatch"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirementParameter → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCaseRequirementParameter ;
+    rdfs:range xsd:string .
+
+:reportedLatency a owl:DatatypeProperty ;
+    rdfs:label "reportedLatency"^^xsd:string ;
+    rdfs:comment "Used as: Service → xsd:integer"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range xsd:integer .
+
+:reportedRecall a owl:DatatypeProperty ;
+    rdfs:label "reportedRecall"^^xsd:string ;
+    rdfs:comment "Used as: Service → xsd:decimal"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range xsd:decimal .
+
+:requiredCpuCores a owl:DatatypeProperty ;
+    rdfs:label "requiredCpuCores"^^xsd:string ;
+    rdfs:comment "Used as: Service → xsd:double"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range xsd:double .
+
+:requiredInterfaces a owl:DatatypeProperty ;
+    rdfs:label "requiredInterfaces"^^xsd:string ;
+    rdfs:comment "Used as: Service → xsd:string"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range xsd:string .
+
+:requiredMemory a owl:DatatypeProperty ;
+    rdfs:label "requiredMemory"^^xsd:string ;
+    rdfs:comment "Used as: Service → xsd:string"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range xsd:string .
+
+:requiredPeripherals a owl:DatatypeProperty ;
+    rdfs:label "requiredPeripherals"^^xsd:string ;
+    rdfs:comment "Used as: Service → xsd:string"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range xsd:string .
+
+:requiredStorage a owl:DatatypeProperty ;
+    rdfs:label "requiredStorage"^^xsd:string ;
+    rdfs:comment "Used as: Service → xsd:string"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range xsd:string .
+
+:requirementID a owl:DatatypeProperty ;
+    rdfs:label "requirementID"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirement → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range xsd:string .
+
+:requirementType a owl:DatatypeProperty ;
+    rdfs:label "requirementType"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirement → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range xsd:string .
+
+:role a owl:DatatypeProperty ;
+    rdfs:label "role"^^xsd:string ;
+    rdfs:comment "Used as: Stakeholder → xsd:string"^^xsd:string ;
+    rdfs:domain :Stakeholder ;
+    rdfs:range xsd:string .
+
+:safetyStandard a owl:DatatypeProperty ;
+    rdfs:label "safetyStandard"^^xsd:string ;
+    rdfs:comment "Used as: SafetyClass → xsd:string"^^xsd:string ;
+    rdfs:domain :SafetyClass ;
+    rdfs:range xsd:string .
+
+:safetyZone a owl:DatatypeProperty ;
+    rdfs:label "safetyZone"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentContext → xsd:string"^^xsd:string ;
+    rdfs:domain :DeploymentContext ;
+    rdfs:range xsd:string .
+
+:satisfiesConstraint a owl:ObjectProperty ;
+    rdfs:comment "Used in R0-HardConstraint's NOT EXISTS pattern: whether a candidate Service satisfies a given UseCaseRequirementConstraint."^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range :UseCaseRequirementConstraint .
+
+:secureBootEnabled a owl:DatatypeProperty ;
+    rdfs:label "secureBootEnabled"^^xsd:string ;
+    rdfs:comment "Used as: ClusterNode → xsd:boolean"^^xsd:string ;
+    rdfs:domain :ClusterNode ;
+    rdfs:range xsd:boolean .
+
+:securityMode a owl:DatatypeProperty ;
+    rdfs:label "securityMode"^^xsd:string ;
+    rdfs:comment "Used as: CommunicationBinding → xsd:string"^^xsd:string ;
+    rdfs:domain :CommunicationBinding ;
+    rdfs:range xsd:string .
+
+:semanticIRI a owl:DatatypeProperty ;
+    rdfs:label "semanticIRI"^^xsd:string ;
+    rdfs:comment "Used as: SemanticConcept → xsd:string"^^xsd:string ;
+    rdfs:domain :SemanticConcept ;
+    rdfs:range xsd:string .
+
+:sensorID a owl:DatatypeProperty ;
+    rdfs:label "sensorID"^^xsd:string ;
+    rdfs:comment "Used as: Sensor → xsd:string"^^xsd:string ;
+    rdfs:domain :Sensor ;
+    rdfs:range xsd:string .
+
+:sensorType a owl:DatatypeProperty ;
+    rdfs:label "sensorType"^^xsd:string ;
+    rdfs:comment "Used as: Sensor → xsd:string"^^xsd:string ;
+    rdfs:domain :Sensor ;
+    rdfs:range xsd:string .
+
+:serviceID a owl:DatatypeProperty ;
+    rdfs:label "serviceID"^^xsd:string ;
+    rdfs:comment "Used as: Service → xsd:string"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range xsd:string .
+
+:serviceName a owl:DatatypeProperty ;
+    rdfs:label "serviceName"^^xsd:string ;
+    rdfs:comment "Used as: Service → xsd:string"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range xsd:string .
+
+:serviceType a owl:DatatypeProperty ;
+    rdfs:label "serviceType"^^xsd:string ;
+    rdfs:comment "Used as: Service → xsd:string"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range xsd:string .
+
+:serviceVersion a owl:DatatypeProperty ;
+    rdfs:label "serviceVersion"^^xsd:string ;
+    rdfs:comment "Used as: Service → xsd:string"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range xsd:string .
+
+:skillID a owl:DatatypeProperty ;
+    rdfs:label "skillID"^^xsd:string ;
+    rdfs:comment "Used as: Skill → xsd:string"^^xsd:string ;
+    rdfs:domain :Skill ;
+    rdfs:range xsd:string .
+
+:skillName a owl:DatatypeProperty ;
+    rdfs:label "skillName"^^xsd:string ;
+    rdfs:comment "Used as: Skill → xsd:string"^^xsd:string ;
+    rdfs:domain :Skill ;
+    rdfs:range xsd:string .
+
+:skillType a owl:DatatypeProperty ;
+    rdfs:label "skillType"^^xsd:string ;
+    rdfs:comment "Used as: Skill → xsd:string"^^xsd:string ;
+    rdfs:domain :Skill ;
+    rdfs:range xsd:string .
+
+:stakeholderID a owl:DatatypeProperty ;
+    rdfs:label "stakeholderID"^^xsd:string ;
+    rdfs:comment "Used as: Stakeholder → xsd:string"^^xsd:string ;
+    rdfs:domain :Stakeholder ;
+    rdfs:range xsd:string .
+
+:stakeholderName a owl:DatatypeProperty ;
+    rdfs:label "stakeholderName"^^xsd:string ;
+    rdfs:comment "Used as: Stakeholder → xsd:string"^^xsd:string ;
+    rdfs:domain :Stakeholder ;
+    rdfs:range xsd:string .
+
+:standardRef a owl:DatatypeProperty ;
+    rdfs:label "standardRef"^^xsd:string ;
+    rdfs:comment "Used as: InformationModel → xsd:string"^^xsd:string ;
+    rdfs:domain :InformationModel ;
+    rdfs:range xsd:string .
+
+:startTime a owl:DatatypeProperty ;
+    rdfs:label "startTime"^^xsd:string ;
+    rdfs:comment "Used as: ServiceInstance → xsd:dateTime"^^xsd:string ;
+    rdfs:domain :ServiceInstance ;
+    rdfs:range xsd:dateTime .
+
+:status a owl:DatatypeProperty ;
+    rdfs:label "status"^^xsd:string ;
+    rdfs:comment "Used as: Skill → xsd:string"^^xsd:string ;
+    rdfs:domain :Skill ;
+    rdfs:range xsd:string .
+
+:swrlRule a owl:AnnotationProperty ;
+    rdfs:label "Human-readable SWRL rule text attached to this class (see closing comment block for full rule set)"^^xsd:string .
+
+:targetsAsset a owl:ObjectProperty ;
+    rdfs:label "targetsAsset"^^xsd:string ;
+    rdfs:comment "Used as: UseCase → :Asset"^^xsd:string ;
+    rdfs:domain :UseCase ;
+    rdfs:range :Asset .
+
+:testMethod a owl:DatatypeProperty ;
+    rdfs:label "testMethod"^^xsd:string ;
+    rdfs:comment "Used as: VerificationCriterion → xsd:string"^^xsd:string ;
+    rdfs:domain :VerificationCriterion ;
+    rdfs:range xsd:string .
+
+:timestamp a owl:DatatypeProperty ;
+    rdfs:label "timestamp"^^xsd:string ;
+    rdfs:comment "Used as: Observation → xsd:dateTime"^^xsd:string ;
+    rdfs:domain :Observation ;
+    rdfs:range xsd:dateTime .
+
+:title a owl:DatatypeProperty ;
+    rdfs:label "title"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirement → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range xsd:string .
+
+:unit a owl:DatatypeProperty ;
+    rdfs:label "unit"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirementParameter → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCaseRequirementParameter ;
+    rdfs:range xsd:string .
+
+:useCaseID a owl:DatatypeProperty ;
+    rdfs:label "useCaseID"^^xsd:string ;
+    rdfs:comment "Used as: UseCase → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCase ;
+    rdfs:range xsd:string .
+
+:useCaseName a owl:DatatypeProperty ;
+    rdfs:label "useCaseName"^^xsd:string ;
+    rdfs:comment "Used as: UseCase → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCase ;
+    rdfs:range xsd:string .
+
+:value a owl:DatatypeProperty ;
+    rdfs:label "value"^^xsd:string ;
+    rdfs:comment "Used as: Observation → xsd:string"^^xsd:string ;
+    rdfs:domain :Observation ;
+    rdfs:range xsd:string .
+
+:variableID a owl:DatatypeProperty ;
+    rdfs:label "variableID"^^xsd:string ;
+    rdfs:comment "Used as: ProcessVariable → xsd:string"^^xsd:string ;
+    rdfs:domain :ProcessVariable ;
+    rdfs:range xsd:string .
+
+:variableName a owl:DatatypeProperty ;
+    rdfs:label "variableName"^^xsd:string ;
+    rdfs:comment "Used as: ProcessVariable → xsd:string"^^xsd:string ;
+    rdfs:domain :ProcessVariable ;
+    rdfs:range xsd:string .
+
+:variableUnit a owl:DatatypeProperty ;
+    rdfs:label "variableUnit"^^xsd:string ;
+    rdfs:comment "Used as: ProcessVariable → xsd:string"^^xsd:string ;
+    rdfs:domain :ProcessVariable ;
+    rdfs:range xsd:string .
+
+:zoneID a owl:DatatypeProperty ;
+    rdfs:label "zoneID"^^xsd:string ;
+    rdfs:comment "Used as: NetworkZone → xsd:string"^^xsd:string ;
+    rdfs:domain :NetworkZone ;
+    rdfs:range xsd:string .
+
+:zoneName a owl:DatatypeProperty ;
+    rdfs:label "zoneName"^^xsd:string ;
+    rdfs:comment "Used as: NetworkZone → xsd:string"^^xsd:string ;
+    rdfs:domain :NetworkZone ;
+    rdfs:range xsd:string .
+
+:zoneType a owl:DatatypeProperty ;
+    rdfs:label "zoneType"^^xsd:string ;
+    rdfs:comment "Used as: NetworkZone → xsd:string"^^xsd:string ;
+    rdfs:domain :NetworkZone ;
+    rdfs:range xsd:string .
+
+:AASSkill a owl:Class ;
+    rdfs:subClassOf :Skill .
+
+:AnalyticsService a owl:Class ;
+    rdfs:subClassOf :Service .
+
+:CPCService a owl:Class ;
+    rdfs:subClassOf :Service .
+
+:CloudContext a owl:Class ;
+    rdfs:subClassOf :DeploymentContext .
+
+:CloudZone a owl:Class ;
+    rdfs:subClassOf :NetworkZone .
+
+:ControlLogicSkill a owl:Class ;
+    rdfs:subClassOf :Skill .
+
+:DMZZone a owl:Class ;
+    rdfs:subClassOf :NetworkZone .
+
+:EdgeContext a owl:Class ;
+    rdfs:subClassOf :DeploymentContext .
+
+:EdgeZone a owl:Class ;
+    rdfs:subClassOf :NetworkZone .
+
+:FunctionalRequirement a owl:Class ;
+    rdfs:subClassOf :UseCaseRequirement .
+
+:HybridContext a owl:Class ;
+    rdfs:subClassOf :DeploymentContext .
+
+:ITZone a owl:Class ;
+    rdfs:subClassOf :NetworkZone .
+
+:MOService a owl:Class ;
+    rdfs:subClassOf :Service .
+
+:MTPSkill a owl:Class ;
+    rdfs:subClassOf :Skill .
+
+:OTZone a owl:Class ;
+    rdfs:subClassOf :NetworkZone .
+
+:OnPremContext a owl:Class ;
+    rdfs:subClassOf :DeploymentContext .
+
+:OrganisationalSkill a owl:Class ;
+    rdfs:subClassOf :Skill .
+
+:PerformanceRequirement a owl:Class ;
+    rdfs:subClassOf :UseCaseRequirement .
+
+:SafetyRequirement a owl:Class ;
+    rdfs:subClassOf :UseCaseRequirement .
+
+:SecurityRequirement a owl:Class ;
+    rdfs:subClassOf :UseCaseRequirement .
+
+:appliesTo a owl:ObjectProperty ;
+    rdfs:label "appliesTo"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentPolicy → :Service"^^xsd:string ;
+    rdfs:domain :DeploymentPolicy ;
+    rdfs:range :Service ;
+    owl:inverseOf :governedByPolicy .
+
+:belongsToUseCaseRequirement a owl:ObjectProperty ;
+    rdfs:label "belongsToUseCaseRequirement"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirementParameter → :UseCaseRequirement"^^xsd:string ;
+    rdfs:domain :UseCaseRequirementParameter ;
+    rdfs:range :UseCaseRequirement ;
+    owl:inverseOf :hasParameter .
+
+:bindsService a owl:ObjectProperty ;
+    rdfs:label "bindsService"^^xsd:string ;
+    rdfs:comment "Used as: CommunicationBinding → :Service"^^xsd:string ;
+    rdfs:domain :CommunicationBinding ;
+    rdfs:range :Service ;
+    owl:inverseOf :hasBinding .
+
+:connectorMapsToInformationModel a owl:ObjectProperty ;
+    rdfs:label "connectorMapsToInformationModel"^^xsd:string ;
+    rdfs:comment "Used as: DataConnector → :InformationModel"^^xsd:string ;
+    rdfs:domain :DataConnector ;
+    rdfs:range :InformationModel ;
+    owl:inverseOf :mappedByConnector .
+
+:connectorUsesBinding a owl:ObjectProperty ;
+    rdfs:label "connectorUsesBinding"^^xsd:string ;
+    rdfs:comment "Used as: DataConnector → :CommunicationBinding"^^xsd:string ;
+    rdfs:domain :DataConnector ;
+    rdfs:range :CommunicationBinding ;
+    owl:inverseOf :usedByConnector .
+
+:connectsService a owl:ObjectProperty ;
+    rdfs:label "connectsService"^^xsd:string ;
+    rdfs:comment "Used as: DataConnector → :Service"^^xsd:string ;
+    rdfs:domain :DataConnector ;
+    rdfs:range :Service ;
+    owl:inverseOf :hasConnector .
+
+:constrains a owl:ObjectProperty ;
+    rdfs:label "constrains"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirementConstraint → :UseCaseRequirement"^^xsd:string ;
+    rdfs:domain :UseCaseRequirementConstraint ;
+    rdfs:range :UseCaseRequirement ;
+    owl:inverseOf :hasConstraint .
+
+:constrainsContext a owl:ObjectProperty ;
+    rdfs:label "constrainsContext"^^xsd:string ;
+    rdfs:comment "Used as: SafetyClass → :DeploymentContext"^^xsd:string ;
+    rdfs:domain :SafetyClass ;
+    rdfs:range :DeploymentContext ;
+    owl:inverseOf :contextConstrainedBy .
+
+:constrainsPolicy a owl:ObjectProperty ;
+    rdfs:label "constrainsPolicy"^^xsd:string ;
+    rdfs:comment "Used as: SafetyClass → :DeploymentPolicy"^^xsd:string ;
+    rdfs:domain :SafetyClass ;
+    rdfs:range :DeploymentPolicy ;
+    owl:inverseOf :policyConstrainedBy .
+
+:consumesInformationModel a owl:ObjectProperty ;
+    rdfs:label "consumesInformationModel"^^xsd:string ;
+    rdfs:comment "Used as: Service → :InformationModel"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range :InformationModel ;
+    owl:inverseOf :usedBy .
+
+:contains a owl:ObjectProperty ;
+    rdfs:label "contains"^^xsd:string ;
+    rdfs:comment "Used as: NetworkZone → :ClusterNode"^^xsd:string ;
+    rdfs:domain :NetworkZone ;
+    rdfs:range :ClusterNode ;
+    owl:inverseOf :locatedInNetworkZone .
+
+:containsDeploymentContext a owl:ObjectProperty ;
+    rdfs:label "containsDeploymentContext"^^xsd:string ;
+    rdfs:comment "Used as: NetworkZone → :DeploymentContext"^^xsd:string ;
+    rdfs:domain :NetworkZone ;
+    rdfs:range :DeploymentContext ;
+    owl:inverseOf :locatedInZone .
+
+:containsNode a owl:ObjectProperty ;
+    rdfs:label "containsNode"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentContext → :ClusterNode"^^xsd:string ;
+    rdfs:domain :DeploymentContext ;
+    rdfs:range :ClusterNode ;
+    owl:inverseOf :partOf .
+
+:contextForAsset a owl:ObjectProperty ;
+    rdfs:label "contextForAsset"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentContext → :Asset"^^xsd:string ;
+    rdfs:domain :DeploymentContext ;
+    rdfs:range :Asset ;
+    owl:inverseOf :hasContext .
+
+:definedByModel a owl:ObjectProperty ;
+    rdfs:label "definedByModel"^^xsd:string ;
+    rdfs:comment "Used as: SemanticConcept → :InformationModel"^^xsd:string ;
+    rdfs:domain :SemanticConcept ;
+    rdfs:range :InformationModel ;
+    owl:inverseOf :mappedTo .
+
+:definesUseCase a owl:ObjectProperty ;
+    rdfs:label "definesUseCase"^^xsd:string ;
+    rdfs:comment "Used as: Stakeholder → :UseCase"^^xsd:string ;
+    rdfs:domain :Stakeholder ;
+    rdfs:range :UseCase ;
+    owl:inverseOf :initiatedBy .
+
+:deployedOn a owl:ObjectProperty ;
+    rdfs:label "deployedOn"^^xsd:string ;
+    rdfs:comment "Used as: ServiceInstance → :ClusterNode"^^xsd:string ;
+    rdfs:domain :ServiceInstance ;
+    rdfs:range :ClusterNode ;
+    owl:inverseOf :hostsServiceInstance .
+
+:deploysService a owl:ObjectProperty ;
+    rdfs:label "deploysService"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentContext → :Service"^^xsd:string ;
+    rdfs:domain :DeploymentContext ;
+    rdfs:range :Service ;
+    owl:inverseOf :isDeployedBy .
+
+:derivedFromUseCase a owl:ObjectProperty ;
+    rdfs:label "derivedFromUseCase"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirement → :UseCase"^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range :UseCase ;
+    owl:inverseOf :hasRequirement .
+
+:describedBy a owl:ObjectProperty ;
+    rdfs:label "describedBy"^^xsd:string ;
+    rdfs:comment "Used as: ProcessVariable → :SemanticConcept"^^xsd:string ;
+    rdfs:domain :ProcessVariable ;
+    rdfs:range :SemanticConcept ;
+    owl:inverseOf :describesConcept .
+
+:describesConcept a owl:ObjectProperty ;
+    rdfs:label "describesConcept"^^xsd:string ;
+    rdfs:comment "Used as: SemanticConcept → :ProcessVariable"^^xsd:string ;
+    rdfs:domain :SemanticConcept ;
+    rdfs:range :ProcessVariable ;
+    owl:inverseOf :describedBy .
+
+:exposedAs a owl:ObjectProperty ;
+    rdfs:label "exposedAs"^^xsd:string ;
+    rdfs:comment "Used as: Capability → :Service"^^xsd:string ;
+    rdfs:domain :Capability ;
+    rdfs:range :Service ;
+    owl:inverseOf :exposesCapability .
+
+:exposesCapability a owl:ObjectProperty ;
+    rdfs:label "exposesCapability"^^xsd:string ;
+    rdfs:comment "Used as: Service → :Capability"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range :Capability ;
+    owl:inverseOf :exposedAs .
+
+:governedByPolicy a owl:ObjectProperty ;
+    rdfs:label "governedByPolicy"^^xsd:string ;
+    rdfs:comment "Used as: Service → :DeploymentPolicy"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range :DeploymentPolicy ;
+    owl:inverseOf :appliesTo .
+
+:governsContext a owl:ObjectProperty ;
+    rdfs:label "governsContext"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentPolicy → :DeploymentContext"^^xsd:string ;
+    rdfs:domain :DeploymentPolicy ;
+    rdfs:range :DeploymentContext ;
+    owl:inverseOf :hasPolicy .
+
+:hasBinding a owl:ObjectProperty ;
+    rdfs:label "hasBinding"^^xsd:string ;
+    rdfs:comment "Used as: Service → :CommunicationBinding"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range :CommunicationBinding ;
+    owl:inverseOf :bindsService .
+
+:hasCapability a owl:ObjectProperty ;
+    rdfs:label "hasCapability"^^xsd:string ;
+    rdfs:comment "Used as: Asset → :Capability"^^xsd:string ;
+    rdfs:domain :Asset ;
+    rdfs:range :Capability ;
+    owl:inverseOf :operatesOn .
+
+:hasConnector a owl:ObjectProperty ;
+    rdfs:label "hasConnector"^^xsd:string ;
+    rdfs:comment "Used as: Service → :DataConnector"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range :DataConnector ;
+    owl:inverseOf :connectsService .
+
+:hasContext a owl:ObjectProperty ;
+    rdfs:label "hasContext"^^xsd:string ;
+    rdfs:comment "Used as: Asset → :DeploymentContext"^^xsd:string ;
+    rdfs:domain :Asset ;
+    rdfs:range :DeploymentContext ;
+    owl:inverseOf :contextForAsset .
+
+:hasOTELCollector a owl:DatatypeProperty ;
+    rdfs:label "hasOTELCollector"^^xsd:string ;
+    rdfs:comment "Used as: ClusterNode → xsd:boolean"^^xsd:string ;
+    rdfs:domain :ClusterNode ;
+    rdfs:range xsd:boolean .
+
+:hasObservation a owl:ObjectProperty ;
+    rdfs:label "hasObservation"^^xsd:string ;
+    rdfs:comment "Used as: ProcessVariable → :Observation"^^xsd:string ;
+    rdfs:domain :ProcessVariable ;
+    rdfs:range :Observation ;
+    owl:inverseOf :observes .
+
+:hasParameter a owl:ObjectProperty ;
+    rdfs:label "hasParameter"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirement → :UseCaseRequirementParameter"^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range :UseCaseRequirementParameter ;
+    owl:inverseOf :belongsToUseCaseRequirement .
+
+:hasPolicy a owl:ObjectProperty ;
+    rdfs:label "hasPolicy"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentContext → :DeploymentPolicy"^^xsd:string ;
+    rdfs:domain :DeploymentContext ;
+    rdfs:range :DeploymentPolicy ;
+    owl:inverseOf :governsContext .
+
+:hasRequirement a owl:ObjectProperty ;
+    rdfs:label "hasRequirement"^^xsd:string ;
+    rdfs:comment "Used as: UseCase → :UseCaseRequirement"^^xsd:string ;
+    rdfs:domain :UseCase ;
+    rdfs:range :UseCaseRequirement ;
+    owl:inverseOf :derivedFromUseCase .
+
+:hasSensor a owl:ObjectProperty ;
+    rdfs:label "hasSensor"^^xsd:string ;
+    rdfs:comment "Used as: Asset → :Sensor"^^xsd:string ;
+    rdfs:domain :Asset ;
+    rdfs:range :Sensor ;
+    owl:inverseOf :locatedOn .
+
+:hasSkillParameter a owl:ObjectProperty ;
+    rdfs:label "hasSkillParameter"^^xsd:string ;
+    rdfs:comment "Used as: Skill → :SkillParameter"^^xsd:string ;
+    rdfs:domain :Skill ;
+    rdfs:range :SkillParameter ;
+    owl:inverseOf :parameterisesSkill .
+
+:hostsServiceInstance a owl:ObjectProperty ;
+    rdfs:label "hostsServiceInstance"^^xsd:string ;
+    rdfs:comment "Used as: ClusterNode → :ServiceInstance"^^xsd:string ;
+    rdfs:domain :ClusterNode ;
+    rdfs:range :ServiceInstance ;
+    owl:inverseOf :deployedOn .
+
+:implementsSkill a owl:ObjectProperty ;
+    rdfs:label "implementsSkill"^^xsd:string ;
+    rdfs:comment "Used as: Service → :Skill"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range :Skill ;
+    owl:inverseOf :isImplementedBy .
+
+:initiatedBy a owl:ObjectProperty ;
+    rdfs:label "initiatedBy"^^xsd:string ;
+    rdfs:comment "Used as: UseCase → :Stakeholder"^^xsd:string ;
+    rdfs:domain :UseCase ;
+    rdfs:range :Stakeholder ;
+    owl:inverseOf :definesUseCase .
+
+:instantiatedAs a owl:ObjectProperty ;
+    rdfs:label "instantiatedAs"^^xsd:string ;
+    rdfs:comment "Used as: Service → :ServiceInstance"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range :ServiceInstance ;
+    owl:inverseOf :instantiates .
+
+:instantiates a owl:ObjectProperty ;
+    rdfs:label "instantiates"^^xsd:string ;
+    rdfs:comment "Used as: ServiceInstance → :Service"^^xsd:string ;
+    rdfs:domain :ServiceInstance ;
+    rdfs:range :Service ;
+    owl:inverseOf :instantiatedAs .
+
+:isDeployedBy a owl:ObjectProperty ;
+    rdfs:label "isDeployedBy"^^xsd:string ;
+    rdfs:comment "Used as: Service → :DeploymentContext"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range :DeploymentContext ;
+    owl:inverseOf :deploysService .
+
+:isHardConstraint a owl:DatatypeProperty ;
+    rdfs:label "isHardConstraint"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirementConstraint → xsd:boolean"^^xsd:string ;
+    rdfs:domain :UseCaseRequirementConstraint ;
+    rdfs:range xsd:boolean .
+
+:isImplementedBy a owl:ObjectProperty ;
+    rdfs:label "isImplementedBy"^^xsd:string ;
+    rdfs:comment "Used as: Skill → :Service"^^xsd:string ;
+    rdfs:domain :Skill ;
+    rdfs:range :Service ;
+    owl:inverseOf :implementsSkill .
+
+:locatedInNetworkZone a owl:ObjectProperty ;
+    rdfs:label "locatedInNetworkZone"^^xsd:string ;
+    rdfs:comment "Used as: ClusterNode → :NetworkZone"^^xsd:string ;
+    rdfs:domain :ClusterNode ;
+    rdfs:range :NetworkZone ;
+    owl:inverseOf :contains .
+
+:locatedInZone a owl:ObjectProperty ;
+    rdfs:label "locatedInZone"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentContext → :NetworkZone"^^xsd:string ;
+    rdfs:domain :DeploymentContext ;
+    rdfs:range :NetworkZone ;
+    owl:inverseOf :containsDeploymentContext .
+
+:locatedOn a owl:ObjectProperty ;
+    rdfs:label "locatedOn"^^xsd:string ;
+    rdfs:comment "Used as: Sensor → :Asset"^^xsd:string ;
+    rdfs:domain :Sensor ;
+    rdfs:range :Asset ;
+    owl:inverseOf :hasSensor .
+
+:mappedByConnector a owl:ObjectProperty ;
+    rdfs:label "mappedByConnector"^^xsd:string ;
+    rdfs:comment "Used as: InformationModel → :DataConnector"^^xsd:string ;
+    rdfs:domain :InformationModel ;
+    rdfs:range :DataConnector ;
+    owl:inverseOf :connectorMapsToInformationModel .
+
+:mappedTo a owl:ObjectProperty ;
+    rdfs:label "mappedTo"^^xsd:string ;
+    rdfs:comment "Used as: InformationModel → :SemanticConcept"^^xsd:string ;
+    rdfs:domain :InformationModel ;
+    rdfs:range :SemanticConcept ;
+    owl:inverseOf :definedByModel .
+
+:mapsTo a owl:ObjectProperty ;
+    rdfs:label "mapsTo"^^xsd:string ;
+    rdfs:comment "Used as: Capability → :UseCaseRequirement"^^xsd:string ;
+    rdfs:domain :Capability ;
+    rdfs:range :UseCaseRequirement ;
+    owl:inverseOf :mapsToCapability .
+
+:mapsToCapability a owl:ObjectProperty ;
+    rdfs:label "mapsToCapability"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirement → :Capability"^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range :Capability ;
+    owl:inverseOf :mapsTo .
+
+:mapsToInformationModel a owl:ObjectProperty ;
+    rdfs:label "mapsToInformationModel"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirement → :InformationModel"^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range :InformationModel ;
+    owl:inverseOf :requiredByRequirement .
+
+:mapsVariable a owl:ObjectProperty ;
+    rdfs:label "mapsVariable"^^xsd:string ;
+    rdfs:comment "Used as: DataConnector → :ProcessVariable"^^xsd:string ;
+    rdfs:domain :DataConnector ;
+    rdfs:range :ProcessVariable ;
+    owl:inverseOf :variableMappedByConnector .
+
+:marginDeviceRole a owl:DatatypeProperty ;
+    rdfs:label "marginDeviceRole"^^xsd:string ;
+    rdfs:comment "Used as: ClusterNode → xsd:string"^^xsd:string ;
+    rdfs:domain :ClusterNode ;
+    rdfs:range xsd:string .
+
+:measuredBy a owl:ObjectProperty ;
+    rdfs:label "measuredBy"^^xsd:string ;
+    rdfs:comment "Used as: ProcessVariable → :Sensor"^^xsd:string ;
+    rdfs:domain :ProcessVariable ;
+    rdfs:range :Sensor ;
+    owl:inverseOf :measures .
+
+:measures a owl:ObjectProperty ;
+    rdfs:label "measures"^^xsd:string ;
+    rdfs:comment "Used as: Sensor → :ProcessVariable"^^xsd:string ;
+    rdfs:domain :Sensor ;
+    rdfs:range :ProcessVariable ;
+    owl:inverseOf :measuredBy .
+
+:mtpDescriptorURI a owl:DatatypeProperty ;
+    rdfs:label "mtpDescriptorURI"^^xsd:string ;
+    rdfs:comment "Used as: Skill → xsd:string"^^xsd:string ;
+    rdfs:domain :Skill ;
+    rdfs:range xsd:string .
+
+:observes a owl:ObjectProperty ;
+    rdfs:label "observes"^^xsd:string ;
+    rdfs:comment "Used as: Observation → :ProcessVariable"^^xsd:string ;
+    rdfs:domain :Observation ;
+    rdfs:range :ProcessVariable ;
+    owl:inverseOf :hasObservation .
+
+:ociRuntimeCompliant a owl:DatatypeProperty ;
+    rdfs:label "ociRuntimeCompliant"^^xsd:string ;
+    rdfs:comment "Used as: ClusterNode → xsd:boolean"^^xsd:string ;
+    rdfs:domain :ClusterNode ;
+    rdfs:range xsd:boolean .
+
+:operatesOn a owl:ObjectProperty ;
+    rdfs:label "operatesOn"^^xsd:string ;
+    rdfs:comment "Used as: Capability → :Asset"^^xsd:string ;
+    rdfs:domain :Capability ;
+    rdfs:range :Asset ;
+    owl:inverseOf :hasCapability .
+
+:ownedByStakeholder a owl:ObjectProperty ;
+    rdfs:label "ownedByStakeholder"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirement → :Stakeholder"^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range :Stakeholder ;
+    owl:inverseOf :ownsRequirement .
+
+:ownsRequirement a owl:ObjectProperty ;
+    rdfs:label "ownsRequirement"^^xsd:string ;
+    rdfs:comment "Used as: Stakeholder → :UseCaseRequirement"^^xsd:string ;
+    rdfs:domain :Stakeholder ;
+    rdfs:range :UseCaseRequirement ;
+    owl:inverseOf :ownedByStakeholder .
+
+:parameterisesSkill a owl:ObjectProperty ;
+    rdfs:label "parameterisesSkill"^^xsd:string ;
+    rdfs:comment "Used as: SkillParameter → :Skill"^^xsd:string ;
+    rdfs:domain :SkillParameter ;
+    rdfs:range :Skill ;
+    owl:inverseOf :hasSkillParameter .
+
+:partOf a owl:ObjectProperty ;
+    rdfs:label "partOf"^^xsd:string ;
+    rdfs:comment "Used as: ClusterNode → :DeploymentContext"^^xsd:string ;
+    rdfs:domain :ClusterNode ;
+    rdfs:range :DeploymentContext ;
+    owl:inverseOf :containsNode .
+
+:policyConstrainedBy a owl:ObjectProperty ;
+    rdfs:label "policyConstrainedBy"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentPolicy → :SafetyClass"^^xsd:string ;
+    rdfs:domain :DeploymentPolicy ;
+    rdfs:range :SafetyClass ;
+    owl:inverseOf :constrainsPolicy .
+
+:producedBy a owl:ObjectProperty ;
+    rdfs:label "producedBy"^^xsd:string ;
+    rdfs:comment "Used as: Observation → :Sensor"^^xsd:string ;
+    rdfs:domain :Observation ;
+    rdfs:range :Sensor ;
+    owl:inverseOf :produces .
+
+:produces a owl:ObjectProperty ;
+    rdfs:label "produces"^^xsd:string ;
+    rdfs:comment "Used as: Sensor → :Observation"^^xsd:string ;
+    rdfs:domain :Sensor ;
+    rdfs:range :Observation ;
+    owl:inverseOf :producedBy .
+
+:realisedBy a owl:ObjectProperty ;
+    rdfs:label "realisedBy"^^xsd:string ;
+    rdfs:comment "Used as: Capability → :Skill"^^xsd:string ;
+    rdfs:domain :Capability ;
+    rdfs:range :Skill ;
+    owl:inverseOf :realises .
+
+:realises a owl:ObjectProperty ;
+    rdfs:label "realises"^^xsd:string ;
+    rdfs:comment "Used as: Skill → :Capability"^^xsd:string ;
+    rdfs:domain :Skill ;
+    rdfs:range :Capability ;
+    owl:inverseOf :realisedBy .
+
+:referencedBySkill a owl:ObjectProperty ;
+    rdfs:label "referencedBySkill"^^xsd:string ;
+    rdfs:comment "Used as: DataConnector → :Skill"^^xsd:string ;
+    rdfs:domain :DataConnector ;
+    rdfs:range :Skill ;
+    owl:inverseOf :usesConnector .
+
+:requiredByRequirement a owl:ObjectProperty ;
+    rdfs:label "requiredByRequirement"^^xsd:string ;
+    rdfs:comment "Used as: InformationModel → :UseCaseRequirement"^^xsd:string ;
+    rdfs:domain :InformationModel ;
+    rdfs:range :UseCaseRequirement ;
+    owl:inverseOf :mapsToInformationModel .
+
+:requiredBySkill a owl:ObjectProperty ;
+    rdfs:label "requiredBySkill"^^xsd:string ;
+    rdfs:comment "Used as: SemanticConcept → :Skill"^^xsd:string ;
+    rdfs:domain :SemanticConcept ;
+    rdfs:range :Skill ;
+    owl:inverseOf :requiresConcept .
+
+:requiresConcept a owl:ObjectProperty ;
+    rdfs:label "requiresConcept"^^xsd:string ;
+    rdfs:comment "Used as: Skill → :SemanticConcept"^^xsd:string ;
+    rdfs:domain :Skill ;
+    rdfs:range :SemanticConcept ;
+    owl:inverseOf :requiredBySkill .
+
+:resolvedBy a owl:ObjectProperty ;
+    rdfs:label "resolvedBy"^^xsd:string ;
+    rdfs:comment "Used as: Capability → :ServiceInstance"^^xsd:string ;
+    rdfs:domain :Capability ;
+    rdfs:range :ServiceInstance ;
+    owl:inverseOf :resolves .
+
+:resolves a owl:ObjectProperty ;
+    rdfs:label "resolves"^^xsd:string ;
+    rdfs:comment "Used as: ServiceInstance → :Capability"^^xsd:string ;
+    rdfs:domain :ServiceInstance ;
+    rdfs:range :Capability ;
+    owl:inverseOf :resolvedBy .
+
+:safetyIntegrityLevel a owl:DatatypeProperty ;
+    rdfs:label "safetyIntegrityLevel"^^xsd:string ;
+    rdfs:comment "Used as: SafetyClass → xsd:integer"^^xsd:string ;
+    rdfs:domain :SafetyClass ;
+    rdfs:range xsd:integer .
+
+:satisfiedBy a owl:ObjectProperty ;
+    rdfs:label "satisfiedBy"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirement → :Service"^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range :Service ;
+    owl:inverseOf :satisfies .
+
+:satisfies a owl:ObjectProperty ;
+    rdfs:label "satisfies"^^xsd:string ;
+    rdfs:comment "Used as: Service → :UseCaseRequirement"^^xsd:string ;
+    rdfs:domain :Service ;
+    rdfs:range :UseCaseRequirement ;
+    owl:inverseOf :satisfiedBy .
+
+:scheduledByPolicy a owl:ObjectProperty ;
+    rdfs:label "scheduledByPolicy"^^xsd:string ;
+    rdfs:comment "Used as: ClusterNode → :DeploymentPolicy"^^xsd:string ;
+    rdfs:domain :ClusterNode ;
+    rdfs:range :DeploymentPolicy ;
+    owl:inverseOf :scheduledOn .
+
+:scheduledOn a owl:ObjectProperty ;
+    rdfs:label "scheduledOn"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentPolicy → :ClusterNode"^^xsd:string ;
+    rdfs:domain :DeploymentPolicy ;
+    rdfs:range :ClusterNode ;
+    owl:inverseOf :scheduledByPolicy .
+
+:usedBy a owl:ObjectProperty ;
+    rdfs:label "usedBy"^^xsd:string ;
+    rdfs:comment "Used as: InformationModel → :Service"^^xsd:string ;
+    rdfs:domain :InformationModel ;
+    rdfs:range :Service ;
+    owl:inverseOf :consumesInformationModel .
+
+:usedByConnector a owl:ObjectProperty ;
+    rdfs:label "usedByConnector"^^xsd:string ;
+    rdfs:comment "Used as: CommunicationBinding → :DataConnector"^^xsd:string ;
+    rdfs:domain :CommunicationBinding ;
+    rdfs:range :DataConnector ;
+    owl:inverseOf :connectorUsesBinding .
+
+:usedBySkill a owl:ObjectProperty ;
+    rdfs:label "usedBySkill"^^xsd:string ;
+    rdfs:comment "Used as: CommunicationBinding → :Skill"^^xsd:string ;
+    rdfs:domain :CommunicationBinding ;
+    rdfs:range :Skill ;
+    owl:inverseOf :usesBinding .
+
+:usesBinding a owl:ObjectProperty ;
+    rdfs:label "usesBinding"^^xsd:string ;
+    rdfs:comment "Used as: Skill → :CommunicationBinding"^^xsd:string ;
+    rdfs:domain :Skill ;
+    rdfs:range :CommunicationBinding ;
+    owl:inverseOf :usedBySkill .
+
+:usesConnector a owl:ObjectProperty ;
+    rdfs:label "usesConnector"^^xsd:string ;
+    rdfs:comment "Used as: Skill → :DataConnector"^^xsd:string ;
+    rdfs:domain :Skill ;
+    rdfs:range :DataConnector ;
+    owl:inverseOf :referencedBySkill .
+
+:validatedBy a owl:ObjectProperty ;
+    rdfs:label "validatedBy"^^xsd:string ;
+    rdfs:comment "Used as: VerificationCriterion → :Stakeholder"^^xsd:string ;
+    rdfs:domain :VerificationCriterion ;
+    rdfs:range :Stakeholder ;
+    owl:inverseOf :validates .
+
+:validates a owl:ObjectProperty ;
+    rdfs:label "validates"^^xsd:string ;
+    rdfs:comment "Used as: Stakeholder → :VerificationCriterion"^^xsd:string ;
+    rdfs:domain :Stakeholder ;
+    rdfs:range :VerificationCriterion ;
+    owl:inverseOf :validatedBy .
+
+:variableMappedByConnector a owl:ObjectProperty ;
+    rdfs:label "variableMappedByConnector"^^xsd:string ;
+    rdfs:comment "Used as: ProcessVariable → :DataConnector"^^xsd:string ;
+    rdfs:domain :ProcessVariable ;
+    rdfs:range :DataConnector ;
+    owl:inverseOf :mapsVariable .
+
+:verifiedBy a owl:ObjectProperty ;
+    rdfs:label "verifiedBy"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirement → :VerificationCriterion"^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range :VerificationCriterion ;
+    owl:inverseOf :verifies .
+
+:verifies a owl:ObjectProperty ;
+    rdfs:label "verifies"^^xsd:string ;
+    rdfs:comment "Used as: VerificationCriterion → :UseCaseRequirement"^^xsd:string ;
+    rdfs:domain :VerificationCriterion ;
+    rdfs:range :UseCaseRequirement ;
+    owl:inverseOf :verifiedBy .
+
+:contextConstrainedBy a owl:ObjectProperty ;
+    rdfs:label "contextConstrainedBy"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentContext → :SafetyClass"^^xsd:string ;
+    rdfs:domain :DeploymentContext ;
+    rdfs:range :SafetyClass ;
+    owl:inverseOf :constrainsContext .
+
+:hasConstraint a owl:ObjectProperty ;
+    rdfs:label "hasConstraint"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirement → :UseCaseRequirementConstraint"^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range :UseCaseRequirementConstraint ;
+    owl:inverseOf :constrains .
+
+:Observation a owl:Class ;
+    rdfs:label "Observation"^^xsd:string ;
+    :classNumber "4.4"^^xsd:string ;
+    :isa95Alignment "ISA-95 Level 1"^^xsd:string ;
+    :ontologyLayer "Layer 4 — Physical Plant (Minimal)"^^xsd:string ;
+    rdfs:comment "A timestamped measurement event — the atomic fact a diagnostics Skill (e.g. NE107 status) reads or writes."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:Sensor a owl:Class ;
+    rdfs:label "Sensor"^^xsd:string ;
+    :classNumber "4.2"^^xsd:string ;
+    :isa95Alignment "ISA-95 Level 1"^^xsd:string ;
+    :ontologyLayer "Layer 4 — Physical Plant (Minimal)"^^xsd:string ;
+    rdfs:comment "A measurement device on an Asset producing Observations of a ProcessVariable."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:UseCaseRequirementConstraint a owl:Class ;
+    rdfs:label "UseCaseRequirementConstraint"^^xsd:string ;
+    :classNumber "1.5"^^xsd:string ;
+    :isa95Alignment "ISA-95 Level 4"^^xsd:string ;
+    :ontologyLayer "Layer 1 — Application & Requirements"^^xsd:string ;
+    rdfs:comment "A boundary condition on a UseCaseRequirement, hard or soft — evaluated by the R0-HardConstraint pre-filter and R3's NOT EXISTS pattern. Renamed from 'RequirementConstraint' to match its owning class's new name."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:VerificationCriterion a owl:Class ;
+    rdfs:label "VerificationCriterion"^^xsd:string ;
+    :classNumber "1.6"^^xsd:string ;
+    :isa95Alignment "ISA-95 Level 4"^^xsd:string ;
+    :ontologyLayer "Layer 1 — Application & Requirements"^^xsd:string ;
+    rdfs:comment "The test and threshold that confirms a UseCaseRequirement's satisfaction after deployment — the trigger condition R-Verify checks."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:SafetyClass a owl:Class ;
+    rdfs:label "SafetyClass"^^xsd:string ;
+    :classNumber "2b.5"^^xsd:string ;
+    :isa95Alignment "No ISA-95 equivalent"^^xsd:string ;
+    :ontologyLayer "Layer 2b — Platform Infrastructure (Margo-Aligned)"^^xsd:string ;
+    rdfs:comment "A minimal safety/SIL classification carried by a DeploymentContext or DeploymentPolicy — enough to represent the SIL-2 fermentation-skid example without the full Langmann C0–C3 control-partitioning apparatus (deferred to the closed-loop control phase)."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:SkillParameter a owl:Class ;
+    rdfs:label "SkillParameter"^^xsd:string ;
+    :classNumber "2.3"^^xsd:string ;
+    :isa95Alignment "ISA-95 Level 3"^^xsd:string ;
+    :ontologyLayer "Layer 2 — Capability, Skill, Service"^^xsd:string ;
+    rdfs:comment "A typed configuration parameter quantifying how a Skill executes — the lift target for MTP <Parameter> elements (Example A), or for a Margo Application Description's parameters/configuration block when the skill is exposed as a Margo-deployed service. Uses the same Margo Parameter/Schema vocabulary as UseCaseRequirementParameter, but under its own 'param'-prefixed property names (matching this class's existing paramID/paramName convention) so the two classes' properties never collide."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:Asset a owl:Class ;
+    rdfs:label "Asset"^^xsd:string ;
+    :classNumber "4.1"^^xsd:string ;
+    :isa95Alignment "ISA-95 Level 1"^^xsd:string ;
+    :ontologyLayer "Layer 4 — Physical Plant (Minimal)"^^xsd:string ;
+    rdfs:comment "A physical or logical plant entity that is the subject of a Capability's operatesOn — the ground-truth anchor for the flowmeter, fermentation-skid, and HVAC examples."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:UseCase a owl:Class ;
+    rdfs:label "UseCase"^^xsd:string ;
+    :classNumber "1.2"^^xsd:string ;
+    :isa95Alignment "ISA-95 Level 4"^^xsd:string ;
+    :ontologyLayer "Layer 1 — Application & Requirements"^^xsd:string ;
+    rdfs:comment "Defines a named business scenario whose UseCaseRequirements drive Capability/Skill/Service matching. Requirements attach directly here — no intermediate RequirementSet."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:ProcessVariable a owl:Class ;
+    rdfs:label "ProcessVariable"^^xsd:string ;
+    :classNumber "4.3"^^xsd:string ;
+    :isa95Alignment "ISA-95 Level 1"^^xsd:string ;
+    :ontologyLayer "Layer 4 — Physical Plant (Minimal)"^^xsd:string ;
+    rdfs:comment "A named, typed, unit-annotated physical quantity — annotated by SemanticConcept, measured by Sensor."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:SemanticConcept a owl:Class ;
+    rdfs:label "SemanticConcept"^^xsd:string ;
+    :classNumber "3.2"^^xsd:string ;
+    :isa95Alignment "ISA-95 Level 2"^^xsd:string ;
+    :ontologyLayer "Layer 3 — Information & Connectivity"^^xsd:string ;
+    rdfs:comment "A named concept (IEC CDD IRI) a Skill declares via requiresConcept — R2a's NOT EXISTS check confirms a matching instance exists."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:ServiceInstance a owl:Class ;
+    rdfs:label "ServiceInstance"^^xsd:string ;
+    :classNumber "2.5"^^xsd:string ;
+    :isa95Alignment "ISA-95 Level 3"^^xsd:string ;
+    :ontologyLayer "Layer 2 — Capability, Skill, Service"^^xsd:string ;
+    rdfs:comment "A running container instance of a Service. deployStatus is the write-back target once R-Deploy commits a match."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:Stakeholder a owl:Class ;
+    rdfs:label "Stakeholder"^^xsd:string ;
+    :classNumber "1.1"^^xsd:string ;
+    :isa95Alignment "ISA-95 Level 4"^^xsd:string ;
+    :ontologyLayer "Layer 1 — Application & Requirements"^^xsd:string ;
+    rdfs:comment "Represents the person, role, or organization that owns a UseCaseRequirement and initiates a UseCase. Simplified from the full role taxonomy — captures identity and authority only."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:CommunicationBinding a owl:Class ;
+    rdfs:label "CommunicationBinding"^^xsd:string ;
+    :classNumber "3.3"^^xsd:string ;
+    :isa95Alignment "ISA-95 Level 2"^^xsd:string ;
+    :ontologyLayer "Layer 3 — Information & Connectivity"^^xsd:string ;
+    rdfs:comment "Protocol/transport descriptor bound to a Skill/Service — R2b's protocol-match check against the asset's host server."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:UseCaseRequirementParameter a owl:Class ;
+    rdfs:label "UseCaseRequirementParameter"^^xsd:string ;
+    :classNumber "1.4"^^xsd:string ;
+    :isa95Alignment "ISA-95 Level 4"^^xsd:string ;
+    :ontologyLayer "Layer 1 — Application & Requirements"^^xsd:string ;
+    rdfs:comment "A measurable, typed, unit-annotated attribute quantifying a UseCaseRequirement — read directly by R3's SPARQL FILTER clauses (e.g. recall ≥ 0.90, latency ≤ 60). dataType and the validation attributes below restate Margo's own Parameter/Schema vocabulary (Application Description spec) rather than inventing a separate one, so a parameter lifted from a UseCaseRequirement and one lifted from a Margo margo.yaml Parameter/Schema block are typed identically. Renamed from 'RequirementParameter' to match its owning class's new name."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:InformationModel a owl:Class ;
+    rdfs:label "InformationModel"^^xsd:string ;
+    :classNumber "3.1"^^xsd:string ;
+    :isa95Alignment "ISA-95 Level 2"^^xsd:string ;
+    :ontologyLayer "Layer 3 — Information & Connectivity"^^xsd:string ;
+    rdfs:comment "A semantic model describing device or process semantics (AAS submodel, PA-DIM namespace, MTP companion spec) — what R2a's concept-coverage check validates against."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:NetworkZone a owl:Class ;
+    rdfs:label "NetworkZone"^^xsd:string ;
+    :classNumber "2b.4"^^xsd:string ;
+    :isa95Alignment "No ISA-95 equivalent"^^xsd:string ;
+    :ontologyLayer "Layer 2b — Platform Infrastructure (Margo-Aligned)"^^xsd:string ;
+    rdfs:comment "A network segment (OT, DMZ, IT, Cloud, Edge) with its own latency and security profile — tags where a ClusterNode/DeploymentContext sits. Full latency-budget reasoning (matching a ControlCapability's maxLatencyMs against this zone) is deferred until the closed-loop control classes are in scope — kept here as a simple tagging class only."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:Capability a owl:Class ;
+    rdfs:label "Capability"^^xsd:string ;
+    :classNumber "2.1"^^xsd:string ;
+    :isa95Alignment "ISA-95 Level 3"^^xsd:string ;
+    :ontologyLayer "Layer 2 — Capability, Skill, Service"^^xsd:string ;
+    rdfs:comment "A named functional intent mapped from a UseCaseRequirement. R1 hop 1→2 (mapsToCapability → realisedBy)."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:DataConnector a owl:Class ;
+    rdfs:label "DataConnector"^^xsd:string ;
+    :classNumber "3.4"^^xsd:string ;
+    :isa95Alignment "ISA-95 Level 2"^^xsd:string ;
+    :ontologyLayer "Layer 3 — Information & Connectivity"^^xsd:string ;
+    rdfs:comment "Maps semantic variable names / IRDI identifiers to device channels — the lift target for MTP NodeSet references and OPC UA Server Datasheet content (Examples A & B), and feeds R2a's requiresConcept check. Dropped a redundant data property, 'informationModel' (a loose xsd:string reference to an InformationModel by name) — the proper object property below (connectorMapsToInformationModel) already links to the actual InformationModel individual; keeping both a string reference and a real link is the same duplicate-purpose pattern as UseCase.determines, dropped in the Layer 1 pass."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:DeploymentPolicy a owl:Class ;
+    rdfs:label "DeploymentPolicy"^^xsd:string ;
+    :classNumber "2b.3"^^xsd:string ;
+    :isa95Alignment "No ISA-95 equivalent"^^xsd:string ;
+    :ontologyLayer "Layer 2b — Platform Infrastructure (Margo-Aligned)"^^xsd:string ;
+    rdfs:comment "Scheduling policy per service class (replicas, resource requests, affinity). appliesToOrchestrator distinguishes Kubernetes-only fields from a Compose-based StandaloneDevice node."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:ClusterNode a owl:Class ;
+    rdfs:label "ClusterNode"^^xsd:string ;
+    :classNumber "2b.2"^^xsd:string ;
+    :isa95Alignment "No ISA-95 equivalent"^^xsd:string ;
+    :ontologyLayer "Layer 2b — Platform Infrastructure (Margo-Aligned)"^^xsd:string ;
+    rdfs:comment "A single schedulable node (edge device, on-prem server, cloud VM). Properties below are lifted directly from Margo's device-requirements specification — the same one-step lift as parsing an MTP <Communication> block."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:Skill a owl:Class ;
+    rdfs:label "Skill"^^xsd:string ;
+    :classNumber "2.2"^^xsd:string ;
+    :isa95Alignment "ISA-95 Level 3"^^xsd:string ;
+    :ontologyLayer "Layer 2 — Capability, Skill, Service"^^xsd:string ;
+    rdfs:comment "The functional offering of an MTP module or AAS submodel that can realise a Capability — the central bridge in R1 (realisedBy → isImplementedBy) and R2a/R2b (usesBinding/usesConnector → CommunicationBinding/DataConnector). Lifted at parse time from MTP AutomationML descriptors or AAS submodels (Examples A & B)."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:DeploymentContext a owl:Class ;
+    rdfs:label "DeploymentContext"^^xsd:string ;
+    :classNumber "2b.1"^^xsd:string ;
+    :isa95Alignment "No ISA-95 equivalent"^^xsd:string ;
+    :ontologyLayer "Layer 2b — Platform Infrastructure (Margo-Aligned)"^^xsd:string ;
+    rdfs:comment "Infrastructure context (edge node, on-premise cluster, cloud region) where a Service is deployed — R3's locality/SIL check and R-Deploy's boundContext target."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:UseCaseRequirement a owl:Class ;
+    rdfs:label "UseCaseRequirement"^^xsd:string ;
+    :classNumber "1.3"^^xsd:string ;
+    :isa95Alignment "ISA-95 Level 4"^^xsd:string ;
+    :ontologyLayer "Layer 1 — Application & Requirements"^^xsd:string ;
+    :swrlRule "R-Deploy (paper's R-REQ-1): UseCaseRequirement(?r) ∧ mapsToCapability(?r,?cap) ∧ realisedBy(?cap,?sk) ∧ isImplementedBy(?sk,?sv) ∧ usesBinding(?sk,?cb) ∧ CommunicationBinding(?cb) ∧ usesConnector(?sk,?dc) ∧ DataConnector(?dc) ∧ isDeployedBy(?sv,?dctx) ∧ DeploymentContext(?dctx) ∧ matchedCandidate(?r,?sv) → lifecycleStatus(?r,\"Matched\") ∧ boundService(?r,?sv) ∧ boundBinding(?r,?cb) ∧ boundConnector(?r,?dc) ∧ boundContext(?r,?dctx). Commits the SPARQL-selected candidate (R1-R3) back into the graph. FIXED (post-test-case pass): the rule previously referenced Skill's old 'uses' property (both atoms uses(?sk,?cb) and uses(?sk,?dc)), which was split into usesBinding/usesConnector during the Layer 2/3 naming pass -- this rule text had not been updated to match until now.",
+        "R-Verify: UseCaseRequirement(?r) ∧ verifiedBy(?r,?vc) ∧ allCriteriaSatisfied(?r,true) → lifecycleStatus(?r,\"Verified\")"^^xsd:string,
+        "R0-HardConstraint: UseCaseRequirementConstraint(?c) ∧ isHardConstraint(?c,true) ∧ constrains(?c,?req) ∧ mapsToCapability(?req,?cap) ∧ Service(?s) ∧ NOT satisfiesConstraint(?s,?c) → candidateBlocked(?s,?cap). Fires before R1. Renamed from the source ontology's own \"R-REQ-1\" to avoid colliding with the paper's rule of that name, below. FIXED (post-test-case pass): candidateBlocked was originally written as a ternary atom candidateBlocked(?s,?cap,true) -- not valid SWRL, which only supports unary/binary atoms -- corrected to a binary relation; the triple's existence already means \"blocked\"." ;
+    rdfs:comment "A single atomic expectation the platform must satisfy — the anchor of R1 (Capability match) and the write target of R-Deploy / R-Verify's lifecycleStatus. Traceability links (mapsToCapability, mapsToInformationModel, mapsToDeploymentContext) match the CSS-SDA tuple defined in the paper (Sec. 4.2) exactly. Renamed from 'Requirement' to 'UseCaseRequirement' to name the class after what it actually is — a requirement scoped to a UseCase — and to disambiguate it from the generic English word once the ontology grows past this layer. RequirementParameter and RequirementConstraint (its two structural children) were renamed to match: UseCaseRequirementParameter, UseCaseRequirementConstraint. This class's former 'determines' duplicate on UseCase (an alias of hasRequirement carried over from early paper-terminology matching) was dropped as redundant."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:Service a owl:Class ;
+    rdfs:label "Service"^^xsd:string ;
+    :classNumber "2.4"^^xsd:string ;
+    :isa95Alignment "ISA-95 Level 3"^^xsd:string ;
+    :ontologyLayer "Layer 2 — Capability, Skill, Service"^^xsd:string ;
+    rdfs:comment "A deployable software unit implementing a Skill. R1 hop 3 (isImplementedBy); its reportedRecall/reportedLatency are read directly by R3's SPARQL FILTER. Extended here with the demand-side properties from Margo's Application Description spec (RequiredResources, Component) — the counterpart to the supply-side properties already on ClusterNode/DeploymentContext, so R3 can check a Service's declared needs against a node's declared capacity, both sourced from Margo rather than invented on either end. serviceVersion follows Margo's registry tag convention (metadata.version), so a version lookup against a Margo Application Registry and this property never drift apart."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+[] a owl:AllDisjointClasses ;
+    owl:members ( :MTPSkill :AASSkill :ControlLogicSkill :OrganisationalSkill ) .
+
+[] a owl:AllDisjointClasses ;
+    owl:members ( :EdgeContext :OnPremContext :CloudContext :HybridContext ) .
+
+[] a owl:AllDisjointClasses ;
+    owl:members ( :FunctionalRequirement :PerformanceRequirement :SafetyRequirement :SecurityRequirement ) .
+
+[] a owl:AllDisjointClasses ;
+    owl:members ( :OTZone :DMZZone :ITZone :CloudZone :EdgeZone ) .
+
+[] a owl:AllDisjointClasses ;
+    owl:members ( :CPCService :MOService :AnalyticsService ) .

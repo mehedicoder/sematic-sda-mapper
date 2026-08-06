@@ -27,7 +27,7 @@ public class UaServerDatasheetParser implements Parser {
     private static final Logger log = LoggerFactory.getLogger(UaServerDatasheetParser.class);
 
     private static final String INST_NS = "http://www.example.org/instance#";
-    private static final String SDA_NS = "https://example.org/ontology/sda#";
+    private static final String SDA_NS = "http://sda-platform.org/ontology#";
     private static final String RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
     private static final String RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label";
 
@@ -62,12 +62,8 @@ public class UaServerDatasheetParser implements Parser {
             Property protocol = model.createProperty(SDA_NS + "protocol");
             Property accessMode = model.createProperty(SDA_NS + "accessMode");
             Property securityMode = model.createProperty(SDA_NS + "securityMode");
-            Property informationModel = model.createProperty(SDA_NS + "informationModel");
-            Property semanticID = model.createProperty(SDA_NS + "semanticID");
-            Property isGateway = model.createProperty(SDA_NS + "isGateway");
             Property hasBinding = model.createProperty(SDA_NS + "hasBinding");
             Property hasConnector = model.createProperty(SDA_NS + "hasConnector");
-            Property image = model.createProperty(SDA_NS + "image");
 
             List<String> details = new ArrayList<>();
             int tripleCount = 0;
@@ -115,10 +111,7 @@ public class UaServerDatasheetParser implements Parser {
                         Resource connectorRes = model.createResource(INST_NS + connectorLocalName);
                         connectorRes.addProperty(rdfType, connectorClass);
                         connectorRes.addProperty(rdfsLabel, "OPC-UA connector " + nodeSetCount);
-                        connectorRes.addProperty(informationModel, "OPC-UA");
-                        connectorRes.addProperty(isGateway, model.createTypedLiteral(false));
-
-                        tripleCount += 4; // rdf:type + label + informationModel + isGateway
+                        tripleCount += 2; // rdf:type + label
                         connectorResources.add(connectorRes);
 
                         details.add("DataConnector: " + INST_NS + connectorLocalName
@@ -134,7 +127,6 @@ public class UaServerDatasheetParser implements Parser {
             if (identification.isObject()) {
                 String productUri = identification.path("productUri").asText("");
                 String softwareVersion = identification.path("softwareVersion").asText("");
-                String serialNumber = identification.path("serialNumber").asText("");
 
                 if (!productUri.isBlank()) {
                     // Create a service resource representing the OPC UA server device
@@ -142,9 +134,6 @@ public class UaServerDatasheetParser implements Parser {
                     deviceRes = model.createResource(INST_NS + deviceLocalName);
                     deviceRes.addProperty(rdfType, model.createResource(SDA_NS + "Service"));
                     deviceRes.addProperty(rdfsLabel, productUri);
-                    if (!serialNumber.isBlank()) {
-                        deviceRes.addProperty(image, "opcua/" + serialNumber);
-                    }
                     tripleCount += 2; // rdf:type + label
 
                     details.add("Identification: productUri=" + productUri

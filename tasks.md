@@ -890,7 +890,7 @@ Interactive dark-themed ontology visualizer at `/visualizer` grounded in the can
 ## Maintenance: Ontology-Driven Manual Entry Forms + Derived Subclass Handling
 
 **Status:** [x] Completed
-**Branch:** `main`
+**Branch:** `feature/2026-08-06-hub-ontology-driven`
 **Completed:** 2026-08-06
 **Tests:** 479 passing (0 failures, 0 errors, 0 skipped)
 

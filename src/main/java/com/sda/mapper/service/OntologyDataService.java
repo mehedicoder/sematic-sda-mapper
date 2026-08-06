@@ -28,14 +28,17 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Grounded data holder for the ontology visualizer, derived at startup from the
  * v2 TBox ({@code ontology/sda_ontology_v2_structured.ttl}, namespace
  * {@code http://sda-platform.org/ontology#}). The five layers, the 24 numbered
- * owl:Class definitions and the labeled owl:ObjectProperty declarations with
- * their class domain/range are read from the loaded Jena model instead of being
- * hardcoded.
+ * owl:Class definitions, the 24 derived subclasses (via {@code rdfs:subClassOf})
+ * and the labeled owl:ObjectProperty declarations with their class
+ * domain/range are read from the loaded Jena model instead of being hardcoded.
+ * Derived subclasses inherit their numbered parent's layer, diagram numbering
+ * and declared relations.
  */
 @Service
 public class OntologyDataService {
@@ -70,6 +73,8 @@ public class OntologyDataService {
 
     private final List<OntologyLayer> layers;
     private final List<OntologyClass> classes;
+    private final List<OntologyClass> subClasses;
+    private final Map<String, String> parentByName;
     private final List<OntologyRelation> relations;
 
     /**
@@ -92,6 +97,9 @@ public class OntologyDataService {
     private OntologyDataService(Model model) {
         this.layers = deriveLayers(model);
         this.classes = deriveClasses(model);
+        this.subClasses = deriveSubClasses(model, this.classes);
+        this.parentByName = subClasses.stream()
+            .collect(Collectors.toUnmodifiableMap(OntologyClass::name, OntologyClass::parent));
         this.relations = deriveRelations(model, this.classes);
     }
 
@@ -135,9 +143,47 @@ public class OntologyDataService {
                     model.createProperty(SDA_NS + "ontologyLayer"));
                 String layerLabel = layerStmt == null
                     ? "" : layerStmt.getObject().asLiteral().getString();
-                result.add(new OntologyClass(code, name, layerIdOf(layerLabel)));
+                result.add(new OntologyClass(code, name, layerIdOf(layerLabel), false, null));
             });
         result.sort(Comparator.comparing(OntologyClass::code));
+        return List.copyOf(result);
+    }
+
+    private static List<OntologyClass> deriveSubClasses(Model model, List<OntologyClass> classes) {
+        Map<String, OntologyClass> resolved = new LinkedHashMap<>();
+        classes.forEach(c -> resolved.put(c.name(), c));
+
+        List<Statement> subClassStatements = new ArrayList<>();
+        model.listStatements(null, RDFS.subClassOf, (RDFNode) null)
+            .forEachRemaining(subClassStatements::add);
+
+        List<OntologyClass> result = new ArrayList<>();
+        boolean changed;
+        do {
+            changed = false;
+            for (Statement st : subClassStatements) {
+                String subName = localName(st.getSubject());
+                RDFNode parentNode = st.getObject();
+                if (subName == null || !parentNode.isResource()) {
+                    continue;
+                }
+                String parentName = localName(parentNode.asResource());
+                if (parentName == null || parentName.equals(subName)
+                    || resolved.containsKey(subName)) {
+                    continue;
+                }
+                OntologyClass parent = resolved.get(parentName);
+                if (parent == null) {
+                    continue;
+                }
+                resolved.put(subName, new OntologyClass(parent.code(), subName,
+                    parent.layerId(), true, parent.name()));
+                result.add(resolved.get(subName));
+                changed = true;
+            }
+        } while (changed);
+
+        result.sort(Comparator.comparing(OntologyClass::name));
         return List.copyOf(result);
     }
 
@@ -169,7 +215,7 @@ public class OntologyDataService {
                 inverse = localName(inverseRes);
             }
             result.add(new OntologyRelation(from, to, label,
-                CORE_PROPERTIES.contains(label) ? "core" : "supporting", inverse));
+                CORE_PROPERTIES.contains(label) ? "core" : "supporting", inverse, false));
         });
         result.sort(Comparator.comparing(OntologyRelation::label));
         return List.copyOf(result);
@@ -203,13 +249,37 @@ public class OntologyDataService {
     }
 
     /**
-     * Returns all ontology classes derived from the {@code :classNumber}
-     * annotations of the v2 TBox.
+     * Returns the numbered ontology classes derived from the {@code :classNumber}
+     * annotations of the v2 TBox. Derived subclasses are excluded here and are
+     * exposed via {@link #getSubClasses()} and {@link #getSubClassesOf(String)}.
      *
      * @return all 24 numbered classes in diagram order
      */
     public List<OntologyClass> getClasses() {
         return classes;
+    }
+
+    /**
+     * Returns all derived subclasses grouped out of the {@code rdfs:subClassOf}
+     * hierarchy of the v2 TBox.
+     *
+     * @return all derived subclasses sorted by name
+     */
+    public List<OntologyClass> getSubClasses() {
+        return subClasses;
+    }
+
+    /**
+     * Returns the derived subclasses of the given numbered parent.
+     *
+     * @param parentName name of the parent class (e.g. {@code "Skill"})
+     * @return derived subclasses sorted by name, or an empty list if the parent has none
+     */
+    public List<OntologyClass> getSubClassesOf(String parentName) {
+        return subClasses.stream()
+            .filter(c -> parentName.equals(c.parent()))
+            .sorted(Comparator.comparing(OntologyClass::name))
+            .toList();
     }
 
     /**
@@ -235,39 +305,81 @@ public class OntologyDataService {
     }
 
     /**
-     * Returns the relations that originate from the given class.
+     * Returns the relations that originate from the given class. Derived classes
+     * inherit the relations declared on their parent (walking the
+     * {@code subClassOf} chain); inherited relations are marked
+     * {@code inherited = true}.
      *
-     * @param className class name (e.g. {@code "UseCaseRequirement"})
+     * @param className class name (e.g. {@code "Service"} or {@code "AASSkill"})
      * @return outgoing relations sorted by property name
      */
     public List<OntologyRelation> getRelationsFrom(String className) {
-        return relations.stream()
+        List<OntologyRelation> declared = relations.stream()
             .filter(r -> r.from().equals(className))
+            .toList();
+        return Stream.concat(declared.stream(), inheritedOutgoing(className).stream())
             .sorted(Comparator.comparing(OntologyRelation::label))
             .toList();
     }
 
     /**
-     * Returns the relations that target the given class.
+     * Returns the relations that target the given class. Derived classes inherit
+     * the relations targeting their parent (walking the {@code subClassOf} chain);
+     * inherited relations are marked {@code inherited = true}.
      *
-     * @param className class name (e.g. {@code "UseCaseRequirement"})
+     * @param className class name (e.g. {@code "Service"} or {@code "AASSkill"})
      * @return incoming relations sorted by property name
      */
     public List<OntologyRelation> getRelationsTo(String className) {
-        return relations.stream()
+        List<OntologyRelation> declared = relations.stream()
             .filter(r -> r.to().equals(className))
+            .toList();
+        return Stream.concat(declared.stream(), inheritedIncoming(className).stream())
             .sorted(Comparator.comparing(OntologyRelation::label))
             .toList();
     }
 
+    private List<OntologyRelation> inheritedOutgoing(String className) {
+        String parent = parentByName.get(className);
+        if (parent == null) {
+            return List.of();
+        }
+        List<OntologyRelation> direct = relations.stream()
+            .filter(r -> r.from().equals(parent))
+            .map(r -> new OntologyRelation(className, r.to(), r.label(), r.kind(),
+                r.inverse(), true))
+            .toList();
+        return Stream.concat(direct.stream(), inheritedOutgoing(parent).stream()).toList();
+    }
+
+    private List<OntologyRelation> inheritedIncoming(String className) {
+        String parent = parentByName.get(className);
+        if (parent == null) {
+            return List.of();
+        }
+        List<OntologyRelation> direct = relations.stream()
+            .filter(r -> r.to().equals(parent))
+            .map(r -> new OntologyRelation(r.from(), className, r.label(), r.kind(),
+                r.inverse(), true))
+            .toList();
+        return Stream.concat(direct.stream(), inheritedIncoming(parent).stream()).toList();
+    }
+
     /**
-     * Finds a class by its exact name.
+     * Finds a class by its exact name, searching numbered classes first and then
+     * derived subclasses.
      *
-     * @param name class name (e.g. {@code "Service"})
+     * @param name class name (e.g. {@code "Service"} or {@code "AASSkill"})
      * @return the matching class, or empty if unknown
      */
     public Optional<OntologyClass> getClassByName(String name) {
-        return classes.stream()
+        Optional<OntologyClass> found = classes.stream()
+            .filter(c -> c.name().equals(name))
+            .findFirst();
+        if (found.isPresent()) {
+            return found;
+        }
+        return subClasses.stream()
             .filter(c -> c.name().equals(name))
             .findFirst();
     }

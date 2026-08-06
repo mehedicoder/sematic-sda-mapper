@@ -105,6 +105,34 @@
     box-shadow: inset 3px 0 0 #3b82f6;
 }
 
+/* Derived subclasses are nested under their numbered parent */
+.ontology-class-item--derived {
+    padding-left: 34px;
+    border-bottom-style: dashed;
+}
+
+.ontology-subclass-badge {
+    margin-left: auto;
+    color: #a855f7;
+    font-size: var(--lumo-font-size-xs);
+    border: 1px dashed #a855f7;
+    border-radius: 999px;
+    padding: 0 8px;
+    white-space: nowrap;
+}
+
+.ontology-subclass-note {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background-color: #0f172a;
+    border: 1px dashed #a855f7;
+    border-radius: var(--lumo-border-radius-m);
+    padding: 8px 12px;
+    color: #94a3b8;
+    font-size: var(--lumo-font-size-s);
+}
+
 .ontology-class-code {
     color: #64748b;
     font-size: var(--lumo-font-size-xs);
@@ -186,6 +214,11 @@
     color: #3b82f6;
 }
 
+.graph-edge--inherited {
+    border-bottom: 1px dashed #64748b;
+    padding-bottom: 1px;
+}
+
 .node {
     display: inline-flex;
     align-items: center;
@@ -221,6 +254,10 @@
 .ontology-card--supporting {
     border-color: #94a3b8;
     border-left: 3px solid #94a3b8;
+}
+
+.ontology-card--inherited {
+    border-style: dashed;
 }
 
 /* Layer tints */

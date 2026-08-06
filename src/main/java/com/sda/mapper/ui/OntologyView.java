@@ -106,12 +106,15 @@ public class OntologyView extends VerticalLayout {
         long supporting = total - core;
 
         var layersPill = createStatPill("Layers", String.valueOf(dataService.getLayers().size()));
-        var classesPill = createStatPill("Classes", String.valueOf(dataService.getClasses().size()));
+        var classesPill = createStatPill("Classes", String.valueOf(
+            dataService.getClasses().size() + dataService.getSubClasses().size()));
+        var derivedPill = createStatPill("Derived", String.valueOf(dataService.getSubClasses().size()));
         var relationsPill = createStatPill("Relations", String.valueOf(total));
         var corePill = createStatPill("Core", String.valueOf(core));
         var supportingPill = createStatPill("Supporting", String.valueOf(supporting));
 
-        var stats = new HorizontalLayout(layersPill, classesPill, relationsPill, corePill, supportingPill);
+        var stats = new HorizontalLayout(layersPill, classesPill, derivedPill,
+            relationsPill, corePill, supportingPill);
         stats.addClassName("ontology-stats");
         stats.setPadding(false);
         stats.setSpacing(true);
@@ -206,14 +209,19 @@ public class OntologyView extends VerticalLayout {
         if (ALL_LAYERS.equals(selectedLayerId)) {
             for (OntologyLayer layer : dataService.getLayers()) {
                 classItemsPanel.add(createLayerHeader(layer));
-                for (OntologyClass clazz : dataService.getClassesByLayer(layer.id())) {
-                    classItemsPanel.add(createClassItem(clazz));
-                }
+                renderLayerClasses(layer.id());
             }
         } else {
-            dataService.getClassesByLayer(selectedLayerId).stream()
-                .map(this::createClassItem)
-                .forEach(classItemsPanel::add);
+            renderLayerClasses(selectedLayerId);
+        }
+    }
+
+    private void renderLayerClasses(String layerId) {
+        for (OntologyClass clazz : dataService.getClassesByLayer(layerId)) {
+            classItemsPanel.add(createClassItem(clazz));
+            for (OntologyClass sub : dataService.getSubClassesOf(clazz.name())) {
+                classItemsPanel.add(createClassItem(sub));
+            }
         }
     }
 
@@ -233,6 +241,9 @@ public class OntologyView extends VerticalLayout {
         var item = new Div();
         item.addClassName("ontology-class-item");
         item.getStyle().set("font-family", "var(--lumo-font-family)");
+        if (clazz.derived()) {
+            item.addClassName("ontology-class-item--derived");
+        }
 
         var code = new Span(clazz.code());
         code.addClassName("ontology-class-code");
@@ -240,6 +251,11 @@ public class OntologyView extends VerticalLayout {
         name.getStyle().set("font-weight", "600");
 
         item.add(code, name);
+        if (clazz.derived()) {
+            var badge = new Span("subclass of " + clazz.parent());
+            badge.addClassName("ontology-subclass-badge");
+            item.add(badge);
+        }
 
         dataService.getLayerById(clazz.layerId()).ifPresent(layer -> {
             item.addClassName("ontology-class-item--" + layer.cssKey());
@@ -284,6 +300,10 @@ public class OntologyView extends VerticalLayout {
         }
         detailPanel.add(headerRow);
 
+        if (clazz.derived()) {
+            detailPanel.add(createSubclassNote(clazz));
+        }
+
         detailPanel.add(new H3("Neighborhood Graph"));
         detailPanel.add(createGraph(clazz, layer));
 
@@ -320,6 +340,18 @@ public class OntologyView extends VerticalLayout {
         return pill;
     }
 
+    private Div createSubclassNote(OntologyClass clazz) {
+        var note = new Div();
+        note.addClassName("ontology-subclass-note");
+        var parent = new Span(clazz.parent());
+        parent.getStyle().set("font-weight", "600").set("color", "#e2e8f0");
+        var text = new Span("Subclass of ");
+        var inherited = new Span(" — inherits the parent's layer and relations.");
+        inherited.getStyle().set("color", "#64748b").set("font-size", "var(--lumo-font-size-s)");
+        note.add(text, parent, inherited);
+        return note;
+    }
+
     private Div createGraph(OntologyClass clazz, OntologyLayer layer) {
         var graph = new Div();
         graph.addClassName("ontology-graph");
@@ -354,6 +386,9 @@ public class OntologyView extends VerticalLayout {
         edge.addClassName("graph-edge");
         if ("core".equals(relation.kind())) {
             edge.addClassName("graph-edge--core");
+        }
+        if (relation.inherited()) {
+            edge.addClassName("graph-edge--inherited");
         }
         edge.setText(incoming ? "\u2192 " + relation.label() : relation.label() + " \u2192");
         return edge;
@@ -420,6 +455,9 @@ public class OntologyView extends VerticalLayout {
         card.addClassName("core".equals(relation.kind())
             ? "ontology-card--core"
             : "ontology-card--supporting");
+        if (relation.inherited()) {
+            card.addClassName("ontology-card--inherited");
+        }
         card.getStyle().set("width", "100%");
 
         var labelRow = new Div();
@@ -442,6 +480,17 @@ public class OntologyView extends VerticalLayout {
             .set("border-radius", "999px")
             .set("padding", "0 8px");
         labelRow.add(kindBadge);
+
+        if (relation.inherited()) {
+            var inheritedBadge = new Span("INHERITED");
+            inheritedBadge.getStyle()
+                .set("font-size", "var(--lumo-font-size-xs)")
+                .set("color", "#a855f7")
+                .set("border", "1px dashed #a855f7")
+                .set("border-radius", "999px")
+                .set("padding", "0 8px");
+            labelRow.add(inheritedBadge);
+        }
 
         var path = new Span(relation.from() + "  \u2192  " + relation.to());
         path.getStyle().set("color", "#94a3b8");

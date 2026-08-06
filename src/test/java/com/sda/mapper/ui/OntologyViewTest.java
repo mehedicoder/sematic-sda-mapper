@@ -1,5 +1,6 @@
 package com.sda.mapper.ui;
 
+import com.sda.mapper.model.OntologyClass;
 import com.sda.mapper.model.OntologyLayer;
 import com.sda.mapper.model.OntologyRelation;
 import com.sda.mapper.service.OntologyDataService;
@@ -68,12 +69,78 @@ class OntologyViewTest {
     }
 
     @Test
-    @DisplayName("Should expose all 24 classes of the canonical TBox")
+    @DisplayName("Should expose all 24 numbered classes of the canonical TBox")
     void shouldExposeAllClasses() {
         OntologyDataService service = new OntologyDataService();
         assertEquals(24, service.getClasses().size());
         assertEquals("1.1", service.getClasses().get(0).code());
         assertEquals("Observation", service.getClasses().get(23).name());
+        assertTrue(service.getClasses().stream().noneMatch(OntologyClass::derived),
+            "Numbered classes must never be flagged as derived");
+    }
+
+    @Test
+    @DisplayName("Should expose the 24 derived subclasses grouped under their numbered parents")
+    void shouldExposeDerivedSubclasses() {
+        OntologyDataService service = new OntologyDataService();
+        assertEquals(24, service.getSubClasses().size());
+        assertTrue(service.getSubClasses().stream()
+            .allMatch(c -> c.derived() && c.parent() != null));
+
+        assertEquals(List.of("AASSkill", "AutoLiftedMTPSkill", "ControlLogicSkill",
+                "MTPSkill", "OrganisationalSkill"),
+            service.getSubClassesOf("Skill").stream().map(OntologyClass::name).toList());
+        assertEquals(List.of("FunctionalRequirement", "HardConstrainedRequirement",
+                "PerformanceRequirement", "SafetyRequirement", "SecurityRequirement"),
+            service.getSubClassesOf("UseCaseRequirement").stream()
+                .map(OntologyClass::name).toList());
+        assertEquals(List.of("CloudZone", "DMZZone", "EdgeZone", "ITZone", "OTZone"),
+            service.getSubClassesOf("NetworkZone").stream().map(OntologyClass::name).toList());
+        assertEquals(List.of("CloudContext", "EdgeContext", "HybridContext", "OnPremContext",
+                "SafetyCriticalDeploymentContext"),
+            service.getSubClassesOf("DeploymentContext").stream()
+                .map(OntologyClass::name).toList());
+        assertEquals(List.of("AnalyticsService", "CPCService", "MOService"),
+            service.getSubClassesOf("Service").stream().map(OntologyClass::name).toList());
+        assertEquals(List.of("MarginCompliantClusterNode"),
+            service.getSubClassesOf("ClusterNode").stream().map(OntologyClass::name).toList());
+
+        assertTrue(service.getSubClassesOf("Stakeholder").isEmpty());
+        assertTrue(service.getSubClassesOf("NotAClass").isEmpty());
+    }
+
+    @Test
+    @DisplayName("Should inherit layer and diagram numbering from the parent for derived classes")
+    void shouldInheritParentLayerAndCode() {
+        OntologyDataService service = new OntologyDataService();
+        OntologyClass skill = service.getClassByName("Skill").orElseThrow();
+        OntologyClass autoLifted = service.getClassByName("AutoLiftedMTPSkill").orElseThrow();
+
+        assertTrue(autoLifted.derived());
+        assertEquals("Skill", autoLifted.parent());
+        assertEquals(skill.code(), autoLifted.code());
+        assertEquals(skill.layerId(), autoLifted.layerId());
+        assertFalse(skill.derived());
+    }
+
+    @Test
+    @DisplayName("Should inherit the parent's relations for derived classes and mark them inherited")
+    void shouldInheritParentRelations() {
+        OntologyDataService service = new OntologyDataService();
+        List<OntologyRelation> outgoing = service.getRelationsFrom("AASSkill");
+        assertFalse(outgoing.isEmpty(), "Derived class must inherit its parent's outgoing relations");
+        assertTrue(outgoing.stream().allMatch(r -> r.inherited()),
+            "Relations of a derived class must be marked inherited");
+        assertTrue(outgoing.stream().anyMatch(r -> "realises".equals(r.label())));
+        assertTrue(outgoing.stream().anyMatch(r -> "requiresConcept".equals(r.label())));
+
+        List<OntologyRelation> incoming = service.getRelationsTo("AASSkill");
+        assertFalse(incoming.isEmpty(), "Derived class must inherit its parent's incoming relations");
+        assertTrue(incoming.stream().allMatch(r -> r.inherited()));
+
+        List<OntologyRelation> parentOutgoing = service.getRelationsFrom("Skill");
+        assertTrue(parentOutgoing.stream().noneMatch(r -> r.inherited()),
+            "Declared relations of a numbered parent must not be marked inherited");
     }
 
     @Test
@@ -141,7 +208,7 @@ class OntologyViewTest {
         OntologyView view = createView();
         VerticalLayout classItemsPanel = getField(view, "classItemsPanel", VerticalLayout.class);
         long items = classItemsPanel.getChildren().filter(c -> c instanceof Div).count();
-        assertEquals(24, items, "All layers tab should list all 24 classes");
+        assertEquals(48, items, "All layers tab should list the 24 numbered classes plus their 24 derived subclasses");
     }
 
     @Test
@@ -190,6 +257,21 @@ class OntologyViewTest {
         String text = fullText(detailPanel.getElement());
         assertTrue(text.contains("requiresConcept"));
         assertTrue(text.contains("realises"));
+    }
+
+    @Test
+    @DisplayName("Should show subclass note and inherited relation cards for derived classes")
+    void shouldShowSubclassInspectorForDerivedClasses() throws Exception {
+        OntologyView view = createView();
+        view.selectClass("AASSkill");
+        VerticalLayout detailPanel = getField(view, "detailPanel", VerticalLayout.class);
+        String text = fullText(detailPanel.getElement());
+        assertTrue(text.contains("Subclass of"), "Derived inspector should show a subclass note");
+        assertTrue(text.contains("Skill"), "Subclass note should name the parent class");
+        assertTrue(text.contains("INHERITED"),
+            "Inherited relation cards must be marked as INHERITED");
+        assertTrue(hasClass(detailPanel.getElement(), "ontology-card--inherited"),
+            "Inherited relations must render as inherited cards");
     }
 
     @SuppressWarnings("unchecked")

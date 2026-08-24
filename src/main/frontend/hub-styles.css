@@ -426,6 +426,36 @@
   border-color: var(--hub-accent);
 }
 
+.hub-class-item--derived {
+  padding-left: 24px;
+  border-left-style: dashed;
+  border-bottom: 1px dashed var(--hub-border);
+}
+
+.hub-derived-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #a855f7;
+  background: rgba(168, 85, 247, 0.15);
+  flex-shrink: 0;
+}
+
+.hub-subclass-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #a855f7;
+  border: 1px dashed #a855f7;
+  background: rgba(168, 85, 247, 0.1);
+}
+
 .hub-class-item--l1 {
   border-left-color: #f59e0b;
 }

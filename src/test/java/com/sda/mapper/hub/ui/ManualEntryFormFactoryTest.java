@@ -1,6 +1,7 @@
 package com.sda.mapper.hub.ui;
 
 import com.sda.mapper.hub.model.ManualEntity;
+import com.sda.mapper.service.OntologyDataService;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
@@ -18,8 +19,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@DisplayName("Manual entry form factory")
+@DisplayName("Ontology-driven manual entry form factory")
 class ManualEntryFormFactoryTest {
+
+    private final ManualEntryFormFactory factory =
+        new ManualEntryFormFactory(new OntologyDataService());
 
     @Test
     @DisplayName("Should support all six L1 classes and the other manually editable classes")
@@ -28,7 +32,7 @@ class ManualEntryFormFactoryTest {
             "UseCaseRequirementParameter", "UseCaseRequirementConstraint", "VerificationCriterion",
             "Capability", "Sensor", "ServiceInstance", "DeploymentContext",
             "ClusterNode", "NetworkZone")) {
-            assertTrue(ManualEntryFormFactory.supports(className),
+            assertTrue(factory.supports(className),
                 "Expected manual entry support for " + className);
         }
     }
@@ -36,21 +40,35 @@ class ManualEntryFormFactoryTest {
     @Test
     @DisplayName("Should return null for unsupported classes")
     void shouldRejectUnsupportedClass() {
-        assertNull(ManualEntryFormFactory.create("InformationModel", Map.of(), entity -> { }));
+        assertNull(factory.create("InformationModel", Map.of(), entity -> { }));
     }
 
     @Test
-    @DisplayName("Should build a UseCaseRequirement form with a free-text name and a priority suggestion ComboBox")
-    void shouldBuildRequirementFormWithSuggestionComboBox() {
-        VerticalLayout form = ManualEntryFormFactory.create("UseCaseRequirement", Map.of(), entity -> { });
+    @DisplayName("Should derive the UseCaseRequirement fields from the ontology")
+    void shouldBuildRequirementFormFromOntology() {
+        VerticalLayout form = factory.create("UseCaseRequirement", Map.of(), entity -> { });
         assertNotNull(form);
 
         TextField nameField = childById(form, "hub-field-usecaserequirement-name", TextField.class);
-        assertNotNull(nameField);
+        assertNotNull(nameField, "UseCaseRequirement must expose its ontology name property");
         assertEquals("Name", nameField.getLabel());
 
-        ComboBox<String> priority = childById(form, "hub-field-usecaserequirement-priority", ComboBox.class);
-        assertNotNull(priority);
+        TextField description = childById(form,
+            "hub-field-usecaserequirement-description", TextField.class);
+        assertNotNull(description, "UseCaseRequirement must expose its ontology description property");
+
+        TextField requirementType = childById(form,
+            "hub-field-usecaserequirement-requirementType", TextField.class);
+        assertNotNull(requirementType,
+            "UseCaseRequirement must expose its ontology requirementType property");
+    }
+
+    @Test
+    @DisplayName("Should show the priority suggestion ComboBox on the UseCase form")
+    void shouldBuildUseCaseFormWithPriorityComboBox() {
+        VerticalLayout form = factory.create("UseCase", Map.of(), entity -> { });
+        ComboBox<String> priority = childById(form, "hub-field-usecase-priority", ComboBox.class);
+        assertNotNull(priority, "UseCase must expose its ontology priority property");
         assertEquals(List.of("Critical", "High", "Medium", "Low"),
             priority.getListDataView().getItems().toList());
         assertTrue(priority.isAllowCustomValue());
@@ -64,12 +82,12 @@ class ManualEntryFormFactoryTest {
             "targetAsset", List.of("Pump FT101"),
             "verifiesRequirement", List.of("Pump must deliver 0-100 l/min"));
 
-        VerticalLayout useCaseForm = ManualEntryFormFactory.create("UseCase", options, entity -> { });
+        VerticalLayout useCaseForm = factory.create("UseCase", options, entity -> { });
         ComboBox<String> targetAsset = childById(useCaseForm, "hub-field-usecase-targetAsset", ComboBox.class);
         assertNotNull(targetAsset);
         assertEquals(List.of("Pump FT101"), targetAsset.getListDataView().getItems().toList());
 
-        VerticalLayout criterionForm = ManualEntryFormFactory.create(
+        VerticalLayout criterionForm = factory.create(
             "VerificationCriterion", options, entity -> { });
         ComboBox<String> verifies = childById(criterionForm,
             "hub-field-verificationcriterion-verifiesRequirement", ComboBox.class);
@@ -82,7 +100,7 @@ class ManualEntryFormFactoryTest {
     @DisplayName("Should save a typed ManualEntity carrying the entered field values")
     void shouldSaveManualEntityWithValues() {
         AtomicReference<ManualEntity> saved = new AtomicReference<>();
-        VerticalLayout form = ManualEntryFormFactory.create(
+        VerticalLayout form = factory.create(
             "Stakeholder", Map.of(), entity -> saved.set((ManualEntity) entity));
         setText(childById(form, "hub-field-stakeholder-role", TextField.class), "Maintenance Engineer");
         setText(childById(form, "hub-field-stakeholder-organization", TextField.class), "Siemens");
@@ -104,7 +122,7 @@ class ManualEntryFormFactoryTest {
     @DisplayName("Should fall back to the class name when the name attribute is blank")
     void shouldFallBackToClassNameForBlankName() {
         AtomicReference<ManualEntity> saved = new AtomicReference<>();
-        VerticalLayout form = ManualEntryFormFactory.create(
+        VerticalLayout form = factory.create(
             "UseCase", Map.of(), entity -> saved.set((ManualEntity) entity));
         Button save = childByClass(form, "hub-manual-save", Button.class);
         save.click();
@@ -112,6 +130,13 @@ class ManualEntryFormFactoryTest {
         ManualEntity entity = saved.get();
         assertNotNull(entity);
         assertEquals("UseCase", entity.name());
+    }
+
+    @Test
+    @DisplayName("Should reject a binding that references an undeclared ontology property")
+    void shouldFailOnUndeclaredBinding() {
+        // A class with no datatype properties in the ontology must not be manually editable.
+        assertNull(factory.create("Observation", Map.of(), entity -> { }));
     }
 
     private static <T extends Component> T childById(VerticalLayout form, String id, Class<T> type) {

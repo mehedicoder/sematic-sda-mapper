@@ -9,6 +9,7 @@ import com.sda.mapper.hub.parser.ParsingException;
 import com.sda.mapper.hub.service.MappingHubService;
 import com.sda.mapper.hub.service.PipelineResult;
 import com.sda.mapper.model.OntologyClass;
+import com.sda.mapper.model.OntologyLayer;
 import com.sda.mapper.service.OntologyDataService;
 import com.sda.mapper.ui.MainLayout;
 import com.vaadin.flow.component.UI;
@@ -27,6 +28,7 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 
@@ -61,10 +63,12 @@ public class MappingHubView extends VerticalLayout {
     /**
      * Creates the mapping hub view.
      *
-     * @param hubService          the mapping hub pipeline service
-     * @param ontologyDataService the ontology data service
+     * @param hubService                the mapping hub pipeline service
+     * @param ontologyDataService       the ontology data service
+     * @param manualEntryFormFactory    the ontology-driven manual entry form factory
      */
-    public MappingHubView(MappingHubService hubService, OntologyDataService ontologyDataService) {
+    public MappingHubView(MappingHubService hubService, OntologyDataService ontologyDataService,
+                          ManualEntryFormFactory manualEntryFormFactory) {
         this.hubService = hubService;
         this.ontologyDataService = ontologyDataService;
 
@@ -106,7 +110,7 @@ public class MappingHubView extends VerticalLayout {
         add(layerTabs);
 
         classListPanel = new ClassListPanel(this::selectClass);
-        detailPanel = new ClassDetailPanel(ontologyDataService,
+        detailPanel = new ClassDetailPanel(ontologyDataService, manualEntryFormFactory,
             this::onSupplementaryUpload,
             this::showError,
             this::onManualSave);
@@ -262,10 +266,35 @@ public class MappingHubView extends VerticalLayout {
 
     private void renderClassList() {
         List<OntologyClass> classes = "ALL".equals(selectedLayerId)
-            ? ontologyDataService.getClasses()
-            : ontologyDataService.getClassesByLayer(selectedLayerId);
+            ? classesForAllLayers()
+            : classesForLayer(selectedLayerId);
         classListPanel.update(classes, ontologyDataService, lastResult.gapReport(),
             selectedClassName, lastResult.model());
+    }
+
+    /**
+     * Flattens the hierarchy for the All Layers tab: every numbered class in
+     * diagram order followed by its derived subclasses.
+     */
+    private List<OntologyClass> classesForAllLayers() {
+        List<OntologyClass> classes = new ArrayList<>();
+        for (OntologyLayer layer : ontologyDataService.getLayers()) {
+            classes.addAll(classesForLayer(layer.id()));
+        }
+        return classes;
+    }
+
+    /**
+     * Flattens the hierarchy for one layer: the layer's numbered classes in
+     * diagram order, each followed by its derived subclasses.
+     */
+    private List<OntologyClass> classesForLayer(String layerId) {
+        List<OntologyClass> classes = new ArrayList<>();
+        for (OntologyClass clazz : ontologyDataService.getClassesByLayer(layerId)) {
+            classes.add(clazz);
+            classes.addAll(ontologyDataService.getSubClassesOf(clazz.name()));
+        }
+        return classes;
     }
 
     private void renderDetail() {

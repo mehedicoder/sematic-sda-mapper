@@ -16,7 +16,9 @@ import java.util.function.Consumer;
 /**
  * Class browser rows for the selected layer: one row per class with a status
  * dot, a diagram code, an explicit entity count and an "inferred" pill when
- * the class is only covered by inference.
+ * the class is only covered by inference. Derived subclasses are rendered as
+ * indented rows under their numbered parent and reuse the parent's coverage
+ * status, since instances are typed at the numbered class level.
  */
 public class ClassListPanel extends VerticalLayout {
 
@@ -39,7 +41,7 @@ public class ClassListPanel extends VerticalLayout {
     /**
      * Re-renders the rows for the given classes.
      *
-     * @param classes      the classes to show
+     * @param classes      the classes to show (numbered classes and their derived subclasses)
      * @param ontologyData the ontology data service (for layer colors)
      * @param report       the current coverage report
      * @param selectedName the currently selected class name
@@ -57,11 +59,15 @@ public class ClassListPanel extends VerticalLayout {
                           GapReport report, String selectedName, CanonicalAssetModel model) {
         Div row = new Div();
         row.addClassName("hub-class-item");
+        if (clazz.derived()) {
+            row.addClassName("hub-class-item--derived");
+        }
 
         ontologyData.getLayerById(clazz.layerId()).ifPresent(layer ->
             row.addClassName("hub-class-item--" + layer.cssKey()));
 
-        CoverageStatus status = report.forClass(clazz.name())
+        String coverageClass = clazz.derived() ? clazz.parent() : clazz.name();
+        CoverageStatus status = report.forClass(coverageClass)
             .map(CoverageEntry::status)
             .orElse(CoverageStatus.MISSING);
 
@@ -77,7 +83,15 @@ public class ClassListPanel extends VerticalLayout {
 
         row.add(dot, code, name);
 
-        int explicitCount = model.countForClass(clazz.name());
+        if (clazz.derived()) {
+            Span pill = new Span("derived");
+            pill.addClassName("hub-derived-pill");
+            pill.getElement().setAttribute("title",
+                "Derived subclass of " + clazz.parent() + " \u2014 instances are typed on the parent");
+            row.add(pill);
+        }
+
+        int explicitCount = model.countForClass(coverageClass);
         if (explicitCount > 0) {
             Span countBadge = new Span(String.valueOf(explicitCount));
             countBadge.addClassName("hub-class-count");

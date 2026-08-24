@@ -887,6 +887,44 @@ Interactive dark-themed ontology visualizer at `/visualizer` grounded in the can
 
 ---
 
+## Maintenance: Ontology-Driven Manual Entry Forms + Derived Subclass Handling
+
+**Status:** [x] Completed
+**Branch:** `feature/2026-08-06-hub-ontology-driven`
+**Completed:** 2026-08-06
+**Tests:** 479 passing (0 failures, 0 errors, 0 skipped)
+
+### Completion Evidence
+
+- `mvn -B clean "-Dvaadin.skip=true" test` — BUILD SUCCESS, 479 tests, 0 failures, 0 errors (was 468; +11 tests)
+- Manual entry forms are now derived from the v2 TBox (`owl:DatatypeProperty` domains + object-property domains) instead of hardcoded per-class field lists
+- All v2 derived subclasses (AASSkill, AARequirement, ...) render in the class browser indented under their numbered parent with a "derived" pill and a "subclass of <parent>" badge
+
+### What was built / changed
+
+| Component | Files |
+|---|---|
+| Datatype property derivation from the v2 TBox (`owl:DatatypeProperty` + known-class `rdfs:domain`) | `OntologyDataService.java` (new `deriveDatatypeProperties`, `getDatatypeProperties()`, `getDatatypeProperties(className)`) |
+| New `OntologyDatatypeProperty` record (name, className, xsdType) | `model/OntologyDatatypeProperty.java` (new) |
+| Ontology-first field hub-key mapping (`instanceID → name`, `contactInfo → contact`, ...) | `hub/model/AttributeBindings.java` (new) |
+| Ontology-driven `ManualEntryFormFactory` — field IDs/forms/rejections derived from ontology, `Field` variants (modelRef, curated, hubKey, section, staticText, prefill), instance-based `supports`/`create` | `hub/ui/ManualEntryFormFactory.java` |
+| Derived subclass flattening (numbered class + subclasses per layer), derived-cap → parent redirect, factory injection | `hub/ui/MappingHubView.java` |
+| Indented derived rows + "derived" pill, coverage/count via parent | `hub/ui/ClassListPanel.java` |
+| "subclass of <parent>" badge, parent-based coverage resolution | `hub/ui/ClassDetailPanel.java` |
+| Required attributes validated against ontology datatype properties at construction | `hub/service/MatchingService.java` |
+| Styles for derived pills and subclass badge | `frontend/hub-styles.css` |
+| Derived hierarchy / datatype-property / field-rejection / validation tests | `hub/model/CanonicalRecordCoverageTest.java` (new, 3), `ui/OntologyViewTest.java` (19), `hub/ui/MappingHubViewTest.java` (17), `hub/ui/ManualEntryFormFactoryTest.java` (8), `hub/service/MatchingServiceTest.java` (9) |
+| Roadmap Phase 11c-5 entry | `specs/roadmap.md` |
+
+### Key technical decisions
+
+- Manual entry forms are derived from the ontology rather than hardcoded Java field lists, consistent with the AGENTS rule to keep semantic rules in RDF/Turtle/SPARQL and avoid hardcoded Java selection rules.
+- Derived subclasses reuse the numbered parent's coverage entry because instances are always typed on the numbered parent class; the browser shows them as indented sub-rows instead of 24+ separate entries.
+- Selecting a derived cap auto-redirects to the numbered parent for gap actions (only stackable-to-parent leaves call `selectParent` directly), so users never see an empty action panel for a derived class.
+- `MatchingService` validates required attributes against ontology datatype properties at construction so ontology drift fails fast with a clear `IllegalStateException` instead of silently missing coverage.
+
+---
+
 ## Summary
 
 | Phase | Status | Tests | Date |
@@ -915,6 +953,7 @@ Interactive dark-themed ontology visualizer at `/visualizer` grounded in the can
 | Maintenance: v2 Ontology Test Migration + Milo/Guava Test-Classpath Fix | [x] Completed | 467 | 2026-08-05 |
 | Maintenance: v2 Ontology Production Migration — Jena-Derived Catalog + UseCaseRequirement Renames | [x] Completed | 468 | 2026-08-06 |
 | Maintenance: Instance-Namespace Cleanup — example.org removed from production identity bases | [x] Completed | 468 | 2026-08-06 |
+| Maintenance: Ontology-Driven Manual Entry Forms + Derived Subclass Handling | [x] Completed | 479 | 2026-08-06 |
 | Phase 12: Documentation | [ ] Not started | — | — |
 | Phase 13: EKA UI Polish | [ ] Not started | — | — |
 | Phase 14: Margo Sandbox | [ ] Not started | — | — |

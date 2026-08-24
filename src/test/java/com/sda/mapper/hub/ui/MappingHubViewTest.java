@@ -54,7 +54,8 @@ class MappingHubViewTest {
             recommendationService,
             new ManifestExportService(matchingService, recommendationService),
             new MappingHubSession());
-        return new MappingHubView(hubService, ontologyDataService);
+        return new MappingHubView(hubService, ontologyDataService,
+            new ManualEntryFormFactory(ontologyDataService));
     }
 
     @Test
@@ -98,12 +99,18 @@ class MappingHubViewTest {
     }
 
     @Test
-    @DisplayName("Should list all 24 classes in the All Layers tab")
+    @DisplayName("Should list all 24 classes plus their 24 derived subclasses in the All Layers tab")
     void shouldListAllClassesByDefault() throws Exception {
         MappingHubView view = createView();
         ClassListPanel classListPanel = getField(view, "classListPanel", ClassListPanel.class);
         long rows = classListPanel.getChildren().filter(c -> c instanceof Div).count();
-        assertEquals(24, rows);
+        assertEquals(48, rows);
+        long derived = classListPanel.getChildren()
+            .filter(c -> c instanceof Div)
+            .map(Component::getElement)
+            .filter(element -> element.getClassList().contains("hub-class-item--derived"))
+            .count();
+        assertEquals(24, derived);
     }
 
     @Test
@@ -161,23 +168,35 @@ class MappingHubViewTest {
     }
 
     @Test
-    @DisplayName("Should filter the class browser to the six L1 classes")
+    @DisplayName("Should show the parent class badge when a derived subclass is selected")
+    void shouldShowSubclassBadgeForDerivedSelection() throws Exception {
+        MappingHubView view = createView();
+        view.selectClass("AASSkill");
+        ClassDetailPanel detailPanel = getField(view, "detailPanel", ClassDetailPanel.class);
+        String text = fullText(detailPanel.getElement());
+        assertTrue(text.contains("AASSkill"));
+        assertTrue(text.contains("subclass of Skill"),
+            "Derived class inspector must name its numbered parent");
+    }
+
+    @Test
+    @DisplayName("Should filter the class browser to the six L1 classes and their derived subclasses")
     void shouldFilterClassBrowserToL1() throws Exception {
         MappingHubView view = createView();
         view.selectLayer("L1");
         ClassListPanel classListPanel = getField(view, "classListPanel", ClassListPanel.class);
         long rows = classListPanel.getChildren().filter(c -> c instanceof Div).count();
-        assertEquals(6, rows);
+        assertEquals(11, rows);
     }
 
     @Test
-    @DisplayName("Should filter the class browser to the five L2 classes")
+    @DisplayName("Should filter the class browser to the five L2 classes and their derived subclasses")
     void shouldFilterClassBrowserToL2() throws Exception {
         MappingHubView view = createView();
         view.selectLayer("L2");
         ClassListPanel classListPanel = getField(view, "classListPanel", ClassListPanel.class);
         long rows = classListPanel.getChildren().filter(c -> c instanceof Div).count();
-        assertEquals(5, rows);
+        assertEquals(13, rows);
     }
 
     @Test

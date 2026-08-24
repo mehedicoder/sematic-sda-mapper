@@ -11,6 +11,7 @@ import com.sda.mapper.hub.model.CoverageStatus;
 import com.sda.mapper.hub.model.GapReport;
 import com.sda.mapper.hub.model.LayerCoverage;
 import com.sda.mapper.hub.model.Sensor;
+import com.sda.mapper.model.OntologyDatatypeProperty;
 import com.sda.mapper.service.OntologyDataService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,12 +20,26 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("Matching stage service")
 class MatchingServiceTest {
 
     private final MatchingService service = new MatchingService(new OntologyDataService());
+
+    @Test
+    @DisplayName("Should fail construction when a required attribute is missing from the ontology")
+    void shouldFailWhenRequiredAttributeNotDeclared() {
+        OntologyDataService stub = new OntologyDataService() {
+            @Override
+            public List<OntologyDatatypeProperty> getDatatypeProperties(String className) {
+                return List.of();
+            }
+        };
+        assertThrows(IllegalStateException.class, () -> new MatchingService(stub),
+            "Required attributes must be validated against the ontology at construction");
+    }
 
     @Test
     @DisplayName("Should report all 24 classes as missing on an empty model")

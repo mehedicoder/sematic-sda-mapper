@@ -970,7 +970,7 @@ Give operators a per-user overview of all Mapping Hub sessions (`/sessions`) wit
 
 **Goal**
 
-Extend `SparqlMatchingTest` with the uploaded Test Case Catalog's 18 cases (Categories A–E) as an executable ontology validation suite, mapped best-effort onto the repository's actual `css-sda-unified.ttl` vocabulary (the catalog's `sda_ontology_v2_structured.ttl` and its class names do not exist in the repo). Matching logic stays in RDF/Turtle and SPARQL; inference probes use the Apache Jena OWL reasoner; lifecycle cases reuse the existing SWRL-equivalent services.
+Extend `SparqlMatchingTest` with the uploaded Test Case Catalog's 18 cases (Categories A–E) as an executable ontology validation suite, mapped onto the repository's canonical `sda_ontology_v2_structured.ttl` vocabulary (namespace `http://sda-platform.org/ontology#`). Matching logic stays in RDF/Turtle and SPARQL; inference probes use the Apache Jena OWL reasoner; lifecycle cases reuse the existing SWRL-equivalent services.
 
 **Tasks**
 
@@ -1003,6 +1003,43 @@ Extend `SparqlMatchingTest` with the uploaded Test Case Catalog's 18 cases (Cate
 * [x] Existing Use Case A/B/C and cross-plant tests pass unchanged
 * [x] No new Maven dependencies (Apache Jena OWL reasoner + SPARQL + existing services only)
 * [x] `mvn clean test` — BUILD SUCCESS, 467 tests, 0 failures (was 451)
+
+---
+
+## Phase 11c-5: Ontology-Driven Manual Entry Forms + Derived Subclass Handling
+
+**Goal**
+
+Replace the hardcoded per-class manual entry forms in the mapping hub with forms derived from the v2 TBox (`owl:DatatypeProperty` domains + object-property domains), and surface the ontology's derived subclasses (`AASSkill`, `AARequirement`, ...) in the class browser as rows under their numbered parent, reusing the parent's coverage because instances are always typed at the numbered class level.
+
+**Tasks**
+
+* [x] **Ontology-driven field derivation**
+  * [x] `OntologyDataService.deriveDatatypeProperties` — every `owl:DatatypeProperty` with a known-class `rdfs:domain` becomes an `OntologyDatatypeProperty` (name, className, xsd:type), sorted by name
+  * [x] `AttributeBindings` — ontology-first mapping of hub field keys to canonical attribute keys (`instanceID → name`, `contactInfo → contact`, ...)
+  * [x] `ManualEntryFormFactory` — forms, field IDs and rejections derived from ontology datatype/object properties; `Field` variants `modelRef`, `curated`, `hubKey`, `section`, `staticText`, `prefill`; instance-based `supports`/`create` API injected into the view
+* [x] **Derived subclass support**
+  * [x] `MappingHubView` flattens each layer as numbered classes + their derived subclasses (`classesForLayer`/`classesForAllLayers`)
+  * [x] `ClassListPanel` renders derived rows indented with a "derived" pill; status/count resolved via the numbered parent
+  * [x] `ClassDetailPanel` shows a "subclass of <parent>" badge and resolves coverage via the parent
+  * [x] Selecting a derived cap auto-redirects to its numbered parent for gap actions
+* [x] **Ontology validation at construction**
+  * [x] `MatchingService` required attributes are validated against the ontology datatype properties at construction (`IllegalStateException` on undeclared attribute)
+  * [x] Manual `ServiceInstance` entries key on `name` (the hub key of `instanceID`) so entity naming stays stable
+* [x] **Tests (11 new)**
+  * [x] `CanonicalRecordCoverageTest` — typed canonical record for every numbered class; every derived subclass parented to a numbered class; all 138 `owl:DatatypeProperty` declarations derived with correct names/types
+  * [x] `OntologyViewTest` — derived subclasses list includes `AASSkill`; `getRelationsFrom/To("AASSkill")` resolve inherited relations through the parent
+  * [x] `MappingHubViewTest` — derived badge for `AASSkill`, All Layers tab lists 48 rows (24 numbered + 24 derived), per-layer counts, `selectClass`/`selectParent` API
+  * [x] `ManualEntryFormFactoryTest` — undeclared field (`Observation`) rejected with a clear error; ontology-derived field IDs; UseCase priority field
+  * [x] `MatchingServiceTest` — construction fails when a required attribute is undeclared in the ontology
+
+**Acceptance Criteria**
+
+* [x] Manual entry forms expose exactly the ontology-declared datatype properties per class (no hardcoded field lists in the factory)
+* [x] All v2 derived subclasses appear in the browser indented under their numbered parent with a "derived" pill
+* [x] Selecting a derived class shows its parent's coverage and a "subclass of <parent>" badge
+* [x] Matching required attributes fail fast with a clear error when they drift from the ontology
+* [x] `mvn clean test` — BUILD SUCCESS, 479 tests, 0 failures (was 468)
 
 ---
 

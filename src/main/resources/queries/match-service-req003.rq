@@ -10,9 +10,15 @@ WHERE {
 
     # R1: Capability match chain
     ?requirement  a                  sda:UseCaseRequirement ;
-                 sda:mapsToCapability ?capability .
+                 sda:mapsToCapability ?reqCap .
 
-    ?capability   sda:realisedBy      ?skill .
+    ?reqCap       sda:capabilityType  ?capType .
+
+    ?offCap       a                   sda:OfferedCapability ;
+                  sda:capabilityType  ?capType ;
+                  sda:realisedBy      ?skill .
+
+    BIND(?offCap AS ?capability)
 
     ?skill        sda:isImplementedBy  ?service .
 

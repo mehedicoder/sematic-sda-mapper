@@ -1,31 +1,39 @@
 @prefix : <http://sda-platform.org/ontology#> .
 # ----------------------------------------------------------------------------
-# CATEGORY C/D READINESS FIXES (this update, v2 only -- v1 untouched):
-#   Category C (SPARQL chain) was PARTIAL:
-#     - determinismClass was used in worked instance data (Kubernetes
-#       node-selector generation, paper Sec. 4.4) but never declared.
-#       Added: DeploymentContext.determinismClass (dp, xsd:string).
-#     - safetyIntegrityLevel "type/location changed" -- NOT a bug. It lives
-#       on SafetyClass by deliberate design (Layer 2b), not directly on
-#       DeploymentContext, and SafetyCriticalDeploymentContext already
-#       reasons over exactly that path. No property added here -- adding a
-#       second direct copy would recreate the redundant-property pattern
-#       dropped elsewhere (UseCase.determines, DataConnector.informationModel).
-#   Category D (SWRL lifecycle) was NOT READY -- 8 properties referenced only
-#     in SWRL rule text, never declared as real OWL properties. All 8 added
-#     with explicit domain/range: matchedCandidate, boundService,
-#     boundBinding, boundConnector, boundContext, candidateBlocked,
-#     satisfiesConstraint, allCriteriaSatisfied.
-#   One correctness bug fixed along the way: R0-HardConstraint's rule text
-#     wrote candidateBlocked as a ternary atom, candidateBlocked(?s,?cap,true)
-#     -- not valid SWRL (unary/binary atoms only). Corrected to binary
-#     candidateBlocked(?s,?cap); the triple's existence already means blocked.
-#   One stale-reference bug fixed: R-Deploy's rule text still called Skill's
-#     old 'uses' property (uses(?sk,?cb), uses(?sk,?dc)), split into
-#     usesBinding/usesConnector during the Layer 2/3 naming pass. The rule
-#     text had never been updated to match -- now says usesBinding/usesConnector.
-#   Now 48 classes, 9 declared "reasoning-bookkeeping" properties (the 8
-#   above + determinismClass), 11/11 validation checks still passing.
+# REQUIRED/OFFERED CAPABILITY SPLIT (this update, v2 only -- v1 untouched):
+#   Prior design flaw: a single :Capability class served both the demand
+#   side (UseCaseRequirement.mapsToCapability) and the supply side
+#   (Skill.realises) -- meaning R1's "capability match" only worked because
+#   a human pre-wired a Requirement and a Skill to the literal SAME
+#   Capability node. That is identity, not matching: it can't discover a
+#   provider that wasn't already known about ahead of time, which defeats
+#   the actual point of a requester/provider architecture.
+#
+#   Fixed by splitting into two disjoint subclasses, following the CSS
+#   model this ontology is built on (Bock et al., cited as [10] in the
+#   paper): RequiredCapability (what a Requirement demands) and
+#   OfferedCapability (what a Skill provides). Matching is now a real
+#   comparison -- capabilityType string equality between independently-
+#   declared RequiredCapability and OfferedCapability individuals -- not
+#   shared node identity.
+#     - mapsToCapability range narrowed: UseCaseRequirement -> RequiredCapability
+#     - mapsTo domain narrowed: RequiredCapability -> UseCaseRequirement
+#     - realises range narrowed: Skill -> OfferedCapability
+#     - realisedBy domain narrowed: OfferedCapability -> Skill
+#     - exposedAs domain narrowed: OfferedCapability -> Service (only ever
+#       made sense on the offered side)
+#   capabilityID/capabilityName/capabilityDescription/capabilityVersion/
+#   operatesOn/resolvedBy remain on the shared parent :Capability, inherited
+#   by both subclasses -- they apply equally to either facet.
+#
+#   Validated (tc_c3_required_offered_capability.py): a RequiredCapability
+#   and a matching OfferedCapability, declared as two INDEPENDENT nodes never
+#   wired together, are correctly matched by capabilityType comparison; a
+#   wrong-type OfferedCapability is correctly excluded; and the OLD
+#   identity-based query pattern is confirmed to find nothing on this data,
+#   proving the fix is load-bearing, not redundant. All 11 pre-existing
+#   validation checks (validate_ontology.py) still pass unchanged.
+#   Now 50 classes.
 # ----------------------------------------------------------------------------
 
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
@@ -195,6 +203,11 @@
 :capabilityName a owl:DatatypeProperty ;
     rdfs:label "capabilityName"^^xsd:string ;
     rdfs:comment "Used as: Capability → xsd:string"^^xsd:string ;
+    rdfs:domain :Capability ;
+    rdfs:range xsd:string .
+
+:capabilityType a owl:DatatypeProperty ;
+    rdfs:comment "Shared taxonomy key (e.g. 'AssetConditionMonitoring', 'TemperatureControl') used by R1 to match a RequiredCapability against an OfferedCapability by type equality, instead of requiring the two to be the same node."^^xsd:string ;
     rdfs:domain :Capability ;
     rdfs:range xsd:string .
 
@@ -1143,7 +1156,7 @@
 :exposedAs a owl:ObjectProperty ;
     rdfs:label "exposedAs"^^xsd:string ;
     rdfs:comment "Used as: Capability → :Service"^^xsd:string ;
-    rdfs:domain :Capability ;
+    rdfs:domain :OfferedCapability ;
     rdfs:range :Service ;
     owl:inverseOf :exposesCapability .
 
@@ -1337,7 +1350,7 @@
 :mapsTo a owl:ObjectProperty ;
     rdfs:label "mapsTo"^^xsd:string ;
     rdfs:comment "Used as: Capability → :UseCaseRequirement"^^xsd:string ;
-    rdfs:domain :Capability ;
+    rdfs:domain :RequiredCapability ;
     rdfs:range :UseCaseRequirement ;
     owl:inverseOf :mapsToCapability .
 
@@ -1345,7 +1358,7 @@
     rdfs:label "mapsToCapability"^^xsd:string ;
     rdfs:comment "Used as: UseCaseRequirement → :Capability"^^xsd:string ;
     rdfs:domain :UseCaseRequirement ;
-    rdfs:range :Capability ;
+    rdfs:range :RequiredCapability ;
     owl:inverseOf :mapsTo .
 
 :mapsToInformationModel a owl:ObjectProperty ;
@@ -1460,7 +1473,7 @@
 :realisedBy a owl:ObjectProperty ;
     rdfs:label "realisedBy"^^xsd:string ;
     rdfs:comment "Used as: Capability → :Skill"^^xsd:string ;
-    rdfs:domain :Capability ;
+    rdfs:domain :OfferedCapability ;
     rdfs:range :Skill ;
     owl:inverseOf :realises .
 
@@ -1468,7 +1481,7 @@
     rdfs:label "realises"^^xsd:string ;
     rdfs:comment "Used as: Skill → :Capability"^^xsd:string ;
     rdfs:domain :Skill ;
-    rdfs:range :Capability ;
+    rdfs:range :OfferedCapability ;
     owl:inverseOf :realisedBy .
 
 :referencedBySkill a owl:ObjectProperty ;
@@ -1617,6 +1630,11 @@
     rdfs:range :UseCaseRequirement ;
     owl:inverseOf :verifiedBy .
 
+:RequiredCapability a owl:Class ;
+    rdfs:comment "The capability facet a UseCaseRequirement demands. Distinct node from any OfferedCapability -- matching is now a real comparison (capabilityType equality, extensible to full attribute matching later), not shared identity."^^xsd:string ;
+    rdfs:subClassOf :Capability ;
+    owl:disjointWith :OfferedCapability .
+
 :contextConstrainedBy a owl:ObjectProperty ;
     rdfs:label "contextConstrainedBy"^^xsd:string ;
     rdfs:comment "Used as: DeploymentContext → :SafetyClass"^^xsd:string ;
@@ -1630,6 +1648,10 @@
     rdfs:domain :UseCaseRequirement ;
     rdfs:range :UseCaseRequirementConstraint ;
     owl:inverseOf :constrains .
+
+:OfferedCapability a owl:Class ;
+    rdfs:comment "The capability facet a Skill actually provides. See RequiredCapability."^^xsd:string ;
+    rdfs:subClassOf :Capability .
 
 :Observation a owl:Class ;
     rdfs:label "Observation"^^xsd:string ;
@@ -1743,6 +1765,14 @@
     rdfs:comment "A measurable, typed, unit-annotated attribute quantifying a UseCaseRequirement — read directly by R3's SPARQL FILTER clauses (e.g. recall ≥ 0.90, latency ≤ 60). dataType and the validation attributes below restate Margo's own Parameter/Schema vocabulary (Application Description spec) rather than inventing a separate one, so a parameter lifted from a UseCaseRequirement and one lifted from a Margo margo.yaml Parameter/Schema block are typed identically. Renamed from 'RequirementParameter' to match its owning class's new name."^^xsd:string ;
     rdfs:subClassOf owl:Thing .
 
+:Capability a owl:Class ;
+    rdfs:label "Capability"^^xsd:string ;
+    :classNumber "2.1"^^xsd:string ;
+    :isa95Alignment "ISA-95 Level 3"^^xsd:string ;
+    :ontologyLayer "Layer 2 — Capability, Skill, Service"^^xsd:string ;
+    rdfs:comment "A named functional intent mapped from a UseCaseRequirement. R1 hop 1→2 (mapsToCapability → realisedBy)."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
 :InformationModel a owl:Class ;
     rdfs:label "InformationModel"^^xsd:string ;
     :classNumber "3.1"^^xsd:string ;
@@ -1757,14 +1787,6 @@
     :isa95Alignment "No ISA-95 equivalent"^^xsd:string ;
     :ontologyLayer "Layer 2b — Platform Infrastructure (Margo-Aligned)"^^xsd:string ;
     rdfs:comment "A network segment (OT, DMZ, IT, Cloud, Edge) with its own latency and security profile — tags where a ClusterNode/DeploymentContext sits. Full latency-budget reasoning (matching a ControlCapability's maxLatencyMs against this zone) is deferred until the closed-loop control classes are in scope — kept here as a simple tagging class only."^^xsd:string ;
-    rdfs:subClassOf owl:Thing .
-
-:Capability a owl:Class ;
-    rdfs:label "Capability"^^xsd:string ;
-    :classNumber "2.1"^^xsd:string ;
-    :isa95Alignment "ISA-95 Level 3"^^xsd:string ;
-    :ontologyLayer "Layer 2 — Capability, Skill, Service"^^xsd:string ;
-    rdfs:comment "A named functional intent mapped from a UseCaseRequirement. R1 hop 1→2 (mapsToCapability → realisedBy)."^^xsd:string ;
     rdfs:subClassOf owl:Thing .
 
 :DataConnector a owl:Class ;
@@ -1827,16 +1849,17 @@
     rdfs:subClassOf owl:Thing .
 
 [] a owl:AllDisjointClasses ;
-    owl:members ( :MTPSkill :AASSkill :ControlLogicSkill :OrganisationalSkill ) .
+    owl:members ( :OTZone :DMZZone :ITZone :CloudZone :EdgeZone ) .
 
 [] a owl:AllDisjointClasses ;
-    owl:members ( :EdgeContext :OnPremContext :CloudContext :HybridContext ) .
+    owl:members ( :MTPSkill :AASSkill :ControlLogicSkill :OrganisationalSkill ) .
 
 [] a owl:AllDisjointClasses ;
     owl:members ( :FunctionalRequirement :PerformanceRequirement :SafetyRequirement :SecurityRequirement ) .
 
 [] a owl:AllDisjointClasses ;
-    owl:members ( :OTZone :DMZZone :ITZone :CloudZone :EdgeZone ) .
+    owl:members ( :EdgeContext :OnPremContext :CloudContext :HybridContext ) .
 
 [] a owl:AllDisjointClasses ;
     owl:members ( :CPCService :MOService :AnalyticsService ) .
+

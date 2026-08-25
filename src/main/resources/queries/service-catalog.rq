@@ -16,9 +16,10 @@ WHERE {
                  sda:reportedRecall  ?recall ;
                  sda:reportedLatency ?latency .
 
-    # Capability chain: Service ← isImplementedBy ← Skill ← realisedBy ← Capability
+    # Capability chain: Service ← isImplementedBy ← Skill ← realisedBy ← OfferedCapability
     OPTIONAL {
-        ?capability  sda:realisedBy     ?skill .
+        ?capability  a                  sda:OfferedCapability ;
+                     sda:realisedBy     ?skill .
         ?skill       sda:isImplementedBy ?service .
         ?capability  rdfs:label          ?capabilityLabel .
         ?skill       rdfs:label          ?skillLabel .

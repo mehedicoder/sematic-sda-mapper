@@ -11,6 +11,7 @@ import com.sda.mapper.hub.model.CoverageStatus;
 import com.sda.mapper.hub.model.GapReport;
 import com.sda.mapper.hub.model.LayerCoverage;
 import com.sda.mapper.hub.model.Sensor;
+import com.sda.mapper.hub.model.Skill;
 import com.sda.mapper.model.OntologyDatatypeProperty;
 import com.sda.mapper.service.OntologyDataService;
 import org.junit.jupiter.api.DisplayName;
@@ -107,14 +108,14 @@ class MatchingServiceTest {
     @DisplayName("Should report a blocking gap for a core relation to a missing class")
     void shouldReportBlockingGap() {
         CanonicalAssetModel model = new CanonicalAssetModel();
-        model.addEntity(new Capability("cap-1", "Pumping", "Pumping capability"));
+        model.addEntity(new Skill("skill-1", "Pumping Skill", "Pumping", null));
 
         GapReport report = service.compute(model, List.of());
 
         assertFalse(report.blockingGaps().isEmpty());
         BlockingGap gap = report.blockingGaps().stream()
             .filter(g -> g.className().equals("Service")).findFirst().orElseThrow();
-        assertTrue(gap.reasons().stream().anyMatch(r -> r.contains("Capability")));
+        assertTrue(gap.reasons().stream().anyMatch(r -> r.contains("Skill")));
     }
 
     @Test

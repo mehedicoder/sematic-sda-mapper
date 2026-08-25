@@ -1,6 +1,7 @@
 package com.sda.mapper.ui;
 
 import com.sda.mapper.model.OntologyClass;
+import com.sda.mapper.model.OntologyDatatypeProperty;
 import com.sda.mapper.model.OntologyLayer;
 import com.sda.mapper.model.OntologyRelation;
 import com.sda.mapper.service.OntologyDataService;
@@ -83,7 +84,7 @@ class OntologyViewTest {
     @DisplayName("Should expose the 24 derived subclasses grouped under their numbered parents")
     void shouldExposeDerivedSubclasses() {
         OntologyDataService service = new OntologyDataService();
-        assertEquals(24, service.getSubClasses().size());
+        assertEquals(26, service.getSubClasses().size());
         assertTrue(service.getSubClasses().stream()
             .allMatch(c -> c.derived() && c.parent() != null));
 
@@ -131,7 +132,6 @@ class OntologyViewTest {
         assertFalse(outgoing.isEmpty(), "Derived class must inherit its parent's outgoing relations");
         assertTrue(outgoing.stream().allMatch(r -> r.inherited()),
             "Relations of a derived class must be marked inherited");
-        assertTrue(outgoing.stream().anyMatch(r -> "realises".equals(r.label())));
         assertTrue(outgoing.stream().anyMatch(r -> "requiresConcept".equals(r.label())));
 
         List<OntologyRelation> incoming = service.getRelationsTo("AASSkill");
@@ -160,11 +160,11 @@ class OntologyViewTest {
     void shouldExposeAllRelations() {
         OntologyDataService service = new OntologyDataService();
         List<OntologyRelation> relations = service.getRelations();
-        assertEquals(89, relations.size());
+        assertEquals(84, relations.size());
         long core = relations.stream().filter(r -> "core".equals(r.kind())).count();
         long supporting = relations.stream().filter(r -> "supporting".equals(r.kind())).count();
-        assertEquals(22, core);
-        assertEquals(67, supporting);
+        assertEquals(18, core);
+        assertEquals(66, supporting);
     }
 
     @Test
@@ -188,8 +188,9 @@ class OntologyViewTest {
         assertTrue(outgoing.stream().anyMatch(r -> "instantiatedAs".equals(r.label())));
 
         List<OntologyRelation> incoming = service.getRelationsTo("Service");
-        assertEquals(9, incoming.size());
-        assertTrue(incoming.stream().anyMatch(r -> "exposedAs".equals(r.label())), "Capability exposes Service");
+        assertEquals(8, incoming.size());
+        assertTrue(incoming.stream().anyMatch(r -> "deploysService".equals(r.label())),
+            "DeploymentContext deploys Service");
         assertTrue(incoming.stream().anyMatch(r -> "bindsService".equals(r.label())));
     }
 
@@ -208,7 +209,7 @@ class OntologyViewTest {
         OntologyView view = createView();
         VerticalLayout classItemsPanel = getField(view, "classItemsPanel", VerticalLayout.class);
         long items = classItemsPanel.getChildren().filter(c -> c instanceof Div).count();
-        assertEquals(48, items, "All layers tab should list the 24 numbered classes plus their 24 derived subclasses");
+        assertEquals(50, items, "All layers tab should list the 24 numbered classes plus their 26 derived subclasses");
     }
 
     @Test
@@ -236,8 +237,8 @@ class OntologyViewTest {
         VerticalLayout detailPanel = getField(view, "detailPanel", VerticalLayout.class);
         String text = fullText(detailPanel.getElement());
         assertTrue(text.contains("Neighborhood Graph"));
-        assertTrue(text.contains("mapsToCapability"),
-            "Outgoing relation card should mention mapsToCapability");
+        assertTrue(text.contains("hasParameter"),
+            "Outgoing relation card should mention hasParameter");
         assertTrue(text.contains("satisfies"),
             "Incoming relation card should mention satisfies");
         assertTrue(hasClass(detailPanel.getElement(), "ontology-card--core"),
@@ -256,7 +257,6 @@ class OntologyViewTest {
         VerticalLayout detailPanel = getField(view, "detailPanel", VerticalLayout.class);
         String text = fullText(detailPanel.getElement());
         assertTrue(text.contains("requiresConcept"));
-        assertTrue(text.contains("realises"));
     }
 
     @Test
@@ -272,6 +272,62 @@ class OntologyViewTest {
             "Inherited relation cards must be marked as INHERITED");
         assertTrue(hasClass(detailPanel.getElement(), "ontology-card--inherited"),
             "Inherited relations must render as inherited cards");
+    }
+
+    @Test
+    @DisplayName("Should show explicit Domain and Range labels on relation cards")
+    void shouldShowDomainAndRangeLabelsOnRelationCards() throws Exception {
+        OntologyView view = createView();
+        view.selectClass("UseCaseRequirement");
+        VerticalLayout detailPanel = getField(view, "detailPanel", VerticalLayout.class);
+        String text = fullText(detailPanel.getElement());
+        assertTrue(text.contains("Domain: UseCaseRequirement"),
+            "Relation cards should show Domain label with the source class");
+        assertTrue(text.contains("Range:"),
+            "Relation cards should show Range label with the target class");
+    }
+
+    @Test
+    @DisplayName("Should show Datatype Properties section for a class with properties")
+    void shouldShowDatatypePropertiesSection() throws Exception {
+        OntologyView view = createView();
+        view.selectClass("DeploymentContext");
+        VerticalLayout detailPanel = getField(view, "detailPanel", VerticalLayout.class);
+        String text = fullText(detailPanel.getElement());
+        assertTrue(text.contains("Datatype Properties"),
+            "Inspector should show a Datatype Properties section");
+        assertTrue(text.contains("contextID"),
+            "DeploymentContext should have a contextID datatype property");
+        assertTrue(text.contains("determinismClass"),
+            "DeploymentContext should have a determinismClass datatype property");
+    }
+
+    @Test
+    @DisplayName("Should show empty Datatype Properties section for a derived class with no own properties")
+    void shouldShowEmptyDatatypePropertiesForDerivedClass() throws Exception {
+        OntologyDataService service = new OntologyDataService();
+        assertTrue(service.getDatatypeProperties("OnPremContext").isEmpty(),
+            "OnPremContext (derived subclass) should have no own datatype properties");
+        OntologyView view = createView();
+        view.selectClass("OnPremContext");
+        VerticalLayout detailPanel = getField(view, "detailPanel", VerticalLayout.class);
+        String text = fullText(detailPanel.getElement());
+        assertTrue(text.contains("Datatype Properties (0)"),
+            "Empty datatype properties section should show count 0");
+    }
+
+    @Test
+    @DisplayName("Should derive datatype properties from the ontology for all known classes")
+    void shouldDeriveDatatypePropertiesFromOntology() {
+        OntologyDataService service = new OntologyDataService();
+        List<OntologyDatatypeProperty> all = service.getDatatypeProperties();
+        assertFalse(all.isEmpty(), "Ontology should declare datatype properties");
+        assertTrue(all.stream().anyMatch(p -> "contextID".equals(p.name())),
+            "contextID should be a known datatype property");
+        assertTrue(all.stream().anyMatch(p -> "safetyIntegrityLevel".equals(p.name())),
+            "safetyIntegrityLevel should be a known datatype property");
+        assertTrue(all.stream().anyMatch(p -> "DeterminismClass".equals(p.className()) || "DeploymentContext".equals(p.className())),
+            "DeploymentContext should own datatype properties");
     }
 
     @SuppressWarnings("unchecked")

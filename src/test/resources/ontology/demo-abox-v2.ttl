@@ -8,7 +8,7 @@
 # demo-abox.ttl remains in the repository for reference only.
 #
 # v2 canonical chains used below:
-#   UseCaseRequirement --mapsToCapability--> Capability --realisedBy--> Skill
+#   UseCaseRequirement --mapsToCapability--> RequiredCapability --(capabilityType)--> OfferedCapability --realisedBy--> Skill
 #     --isImplementedBy--> Service --hasBinding--> CommunicationBinding
 #     --hasConnector--> DataConnector --mapsVariable--> ProcessVariable
 #     --describedBy--> SemanticConcept
@@ -43,7 +43,7 @@
     sda:lifecycleStatus "Defined" ;
     sda:hasConstraint :CON-REQ001 ;
     sda:verifiedBy :CRIT-REQ001-Latency, :CRIT-REQ001-Recall ;
-    sda:mapsToCapability :CAP-FlowDiagnostics ;
+    sda:mapsToCapability :CAP-FlowDiagnostics-Required ;
     sda:validatedBy :UseCase-HVACTempMonitoring .
 
 :REQ-002 a sda:UseCaseRequirement ;
@@ -55,7 +55,7 @@
     sda:lifecycleStatus "Defined" ;
     sda:hasConstraint :CON-REQ002 ;
     sda:verifiedBy :CRIT-REQ002-Latency, :CRIT-REQ002-Recall ;
-    sda:mapsToCapability :CAP-FermentationControl ;
+    sda:mapsToCapability :CAP-FermentationControl-Required ;
     sda:validatedBy :UseCase-FermentationSkid .
 
 :REQ-003 a sda:UseCaseRequirement ;
@@ -67,7 +67,7 @@
     sda:lifecycleStatus "Defined" ;
     sda:hasConstraint :CON-REQ003 ;
     sda:verifiedBy :CRIT-REQ003-Latency, :CRIT-REQ003-Recall ;
-    sda:mapsToCapability :CAP-HVACTempMonitoring ;
+    sda:mapsToCapability :CAP-HVACTempMonitoring-Required ;
     sda:validatedBy :UseCase-HVACTempMonitoring .
 
 :UseCase-HVACTempMonitoring a sda:UseCase ;
@@ -165,34 +165,58 @@
     sda:requiresConcept :PA-DIM-TemperatureConcept .
 
 # =====================================================================
-# Capabilities and Skills
+# Capabilities (Required / Offered split) and Skills
 # =====================================================================
-:CAP-FlowDiagnostics a sda:Capability ;
-    rdfs:label "Flowmeter Diagnostics" ;
+:CAP-FlowDiagnostics-Required a sda:RequiredCapability ;
+    rdfs:label "Flowmeter Diagnostics (Required)" ;
     sda:capabilityID "CAP-FLOW-DIAG-001" ;
     sda:capabilityName "Flowmeter Diagnostics" ;
     sda:capabilityDescription "Diagnose FT-101 flowmeter health and alarm state." ;
     sda:capabilityVersion "1.0" ;
-    sda:realisedBy :SK-FlowmeterDiagnostics ;
-    sda:hasContext :Context-FT101 .
+    sda:capabilityType "FlowDiagnostics" .
 
-:CAP-FermentationControl a sda:Capability ;
-    rdfs:label "Fermentation Control" ;
+:CAP-FlowDiagnostics-Offered a sda:OfferedCapability ;
+    rdfs:label "Flowmeter Diagnostics (Offered)" ;
+    sda:capabilityID "CAP-FLOW-DIAG-001" ;
+    sda:capabilityName "Flowmeter Diagnostics" ;
+    sda:capabilityDescription "Diagnose FT-101 flowmeter health and alarm state." ;
+    sda:capabilityVersion "1.0" ;
+    sda:capabilityType "FlowDiagnostics" ;
+    sda:realisedBy :SK-FlowmeterDiagnostics .
+
+:CAP-FermentationControl-Required a sda:RequiredCapability ;
+    rdfs:label "Fermentation Control (Required)" ;
     sda:capabilityID "CAP-FERM-CTRL-001" ;
     sda:capabilityName "Fermentation Control" ;
     sda:capabilityDescription "Control the fermentation skid process." ;
     sda:capabilityVersion "1.0" ;
-    sda:realisedBy :SK-FermentationControl ;
-    sda:hasContext :Context-SkidA1 .
+    sda:capabilityType "FermentationControl" .
 
-:CAP-HVACTempMonitoring a sda:Capability ;
-    rdfs:label "HVAC Temperature Monitoring" ;
+:CAP-FermentationControl-Offered a sda:OfferedCapability ;
+    rdfs:label "Fermentation Control (Offered)" ;
+    sda:capabilityID "CAP-FERM-CTRL-001" ;
+    sda:capabilityName "Fermentation Control" ;
+    sda:capabilityDescription "Control the fermentation skid process." ;
+    sda:capabilityVersion "1.0" ;
+    sda:capabilityType "FermentationControl" ;
+    sda:realisedBy :SK-FermentationControl .
+
+:CAP-HVACTempMonitoring-Required a sda:RequiredCapability ;
+    rdfs:label "HVAC Temperature Monitoring (Required)" ;
     sda:capabilityID "CAP-HVAC-TEMP-001" ;
     sda:capabilityName "HVAC Temperature Monitoring" ;
     sda:capabilityDescription "Monitor AHU-01 supply-air temperature." ;
     sda:capabilityVersion "1.0" ;
-    sda:realisedBy :SK-HVACTempAnalysis ;
-    sda:hasContext :Context-AHU01 .
+    sda:capabilityType "HVACTempMonitoring" .
+
+:CAP-HVACTempMonitoring-Offered a sda:OfferedCapability ;
+    rdfs:label "HVAC Temperature Monitoring (Offered)" ;
+    sda:capabilityID "CAP-HVAC-TEMP-001" ;
+    sda:capabilityName "HVAC Temperature Monitoring" ;
+    sda:capabilityDescription "Monitor AHU-01 supply-air temperature." ;
+    sda:capabilityVersion "1.0" ;
+    sda:capabilityType "HVACTempMonitoring" ;
+    sda:realisedBy :SK-HVACTempAnalysis .
 
 :SK-FlowmeterDiagnostics a sda:Skill ;
     rdfs:label "Flowmeter Diagnostics Skill" ;
@@ -466,7 +490,7 @@
     sda:assetID "FT101" ;
     sda:assetName "FT101 Flowmeter" ;
     sda:locatedIn :PlantA ;
-    sda:hasCapability :CAP-FlowDiagnostics ;
+    sda:hasCapability :CAP-FlowDiagnostics-Offered ;
     sda:hasContext :Context-FT101 .
 
 :AHU01 a sda:Asset ;
@@ -474,7 +498,7 @@
     sda:assetID "AHU01" ;
     sda:assetName "AHU01 Air Handling Unit" ;
     sda:locatedIn :PlantA ;
-    sda:hasCapability :CAP-HVACTempMonitoring ;
+    sda:hasCapability :CAP-HVACTempMonitoring-Offered ;
     sda:hasContext :Context-AHU01 .
 
 :Skid-A1 a sda:Asset ;
@@ -482,7 +506,7 @@
     sda:assetID "Skid-A1" ;
     sda:assetName "Skid-A1 Fermentation Skid" ;
     sda:locatedIn :PlantB ;
-    sda:hasCapability :CAP-FermentationControl ;
+    sda:hasCapability :CAP-FermentationControl-Offered ;
     sda:hasContext :Context-SkidA1 .
 
 # =====================================================================

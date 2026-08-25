@@ -104,13 +104,13 @@ class MappingHubViewTest {
         MappingHubView view = createView();
         ClassListPanel classListPanel = getField(view, "classListPanel", ClassListPanel.class);
         long rows = classListPanel.getChildren().filter(c -> c instanceof Div).count();
-        assertEquals(48, rows);
+        assertEquals(50, rows);
         long derived = classListPanel.getChildren()
             .filter(c -> c instanceof Div)
             .map(Component::getElement)
             .filter(element -> element.getClassList().contains("hub-class-item--derived"))
             .count();
-        assertEquals(24, derived);
+        assertEquals(26, derived);
     }
 
     @Test
@@ -184,7 +184,7 @@ class MappingHubViewTest {
         view.selectLayer("L2");
         ClassListPanel classListPanel = getField(view, "classListPanel", ClassListPanel.class);
         long rows = classListPanel.getChildren().filter(c -> c instanceof Div).count();
-        assertEquals(13, rows);
+        assertEquals(15, rows);
     }
 
     @Test

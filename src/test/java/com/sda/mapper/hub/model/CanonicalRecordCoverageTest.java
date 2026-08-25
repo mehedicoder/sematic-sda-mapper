@@ -46,7 +46,7 @@ class CanonicalRecordCoverageTest {
     void shouldExposeDatatypeProperties() {
         OntologyDataService ontology = new OntologyDataService();
         List<OntologyDatatypeProperty> properties = ontology.getDatatypeProperties();
-        assertEquals(138, properties.size());
+        assertEquals(139, properties.size());
 
         List<String> stakeholder = ontology.getDatatypeProperties("Stakeholder").stream()
             .map(OntologyDatatypeProperty::name)

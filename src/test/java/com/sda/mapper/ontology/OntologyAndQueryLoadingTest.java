@@ -79,8 +79,8 @@ class OntologyAndQueryLoadingTest {
 
         assertTrue(model.containsResource(model.createResource(INST_NS + "REQ-001")),
             "Ontology must contain REQ-001 requirement");
-        assertTrue(model.containsResource(model.createResource(INST_NS + "CAP-FlowDiagnostics")),
-            "Ontology must contain CAP-FlowDiagnostics capability");
+        assertTrue(model.containsResource(model.createResource(INST_NS + "CAP-FlowDiagnostics-Required")),
+            "Ontology must contain CAP-FlowDiagnostics-Required capability");
         assertTrue(model.containsResource(model.createResource(INST_NS + "SK-FlowmeterDiagnostics")),
             "Ontology must contain SK-FlowmeterDiagnostics skill");
         assertTrue(model.containsResource(model.createResource(INST_NS + "SVC-FlowmeterDiagnostics")),
@@ -100,8 +100,8 @@ class OntologyAndQueryLoadingTest {
 
         assertTrue(model.containsResource(model.createResource(INST_NS + "REQ-002")),
             "Ontology must contain REQ-002 requirement");
-        assertTrue(model.containsResource(model.createResource(INST_NS + "CAP-FermentationControl")),
-            "Ontology must contain CAP-FermentationControl capability");
+        assertTrue(model.containsResource(model.createResource(INST_NS + "CAP-FermentationControl-Required")),
+            "Ontology must contain CAP-FermentationControl-Required capability");
         assertTrue(model.containsResource(model.createResource(INST_NS + "SK-FermentationControl")),
             "Ontology must contain SK-FermentationControl skill");
         assertTrue(model.containsResource(model.createResource(INST_NS + "PA-DIM-DosingConcept")),
@@ -121,8 +121,8 @@ class OntologyAndQueryLoadingTest {
 
         assertTrue(model.containsResource(model.createResource(INST_NS + "REQ-003")),
             "Ontology must contain REQ-003 requirement");
-        assertTrue(model.containsResource(model.createResource(INST_NS + "CAP-HVACTempMonitoring")),
-            "Ontology must contain CAP-HVACTempMonitoring capability");
+        assertTrue(model.containsResource(model.createResource(INST_NS + "CAP-HVACTempMonitoring-Required")),
+            "Ontology must contain CAP-HVACTempMonitoring-Required capability");
         assertTrue(model.containsResource(model.createResource(INST_NS + "SK-HVACTempAnalysis")),
             "Ontology must contain SK-HVACTempAnalysis skill");
         assertTrue(model.containsResource(model.createResource(INST_NS + "SVC-HVACTempAnalysis")),

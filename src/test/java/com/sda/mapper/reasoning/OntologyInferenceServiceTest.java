@@ -56,18 +56,18 @@ class OntologyInferenceServiceTest {
         String instNs = "http://sda-platform.org/instance#";
         String sdaNs = "http://sda-platform.org/ontology#";
 
-        // CAP-FlowDiagnostics is an explicit Capability — must still exist
+        // CAP-FlowDiagnostics-Offered is an explicit OfferedCapability — must still exist
         assertTrue(inferredModel.contains(
-            inferredModel.createResource(instNs + "CAP-FlowDiagnostics"),
+            inferredModel.createResource(instNs + "CAP-FlowDiagnostics-Offered"),
             RDF.type,
-            inferredModel.createResource(sdaNs + "Capability")),
-            "Explicit Capability CAP-FlowDiagnostics must still exist after inference");
+            inferredModel.createResource(sdaNs + "OfferedCapability")),
+            "Explicit OfferedCapability CAP-FlowDiagnostics-Offered must still exist after inference");
 
         // Its capabilityName must be preserved
         var capNameProp = inferredModel.createProperty(sdaNs + "capabilityName");
-        var capNameStmt = inferredModel.getResource(instNs + "CAP-FlowDiagnostics")
+        var capNameStmt = inferredModel.getResource(instNs + "CAP-FlowDiagnostics-Offered")
             .getProperty(capNameProp);
-        assertNotNull(capNameStmt, "CAP-FlowDiagnostics must retain capabilityName property");
+        assertNotNull(capNameStmt, "CAP-FlowDiagnostics-Offered must retain capabilityName property");
         assertEquals("Flowmeter Diagnostics", capNameStmt.getString());
     }
 

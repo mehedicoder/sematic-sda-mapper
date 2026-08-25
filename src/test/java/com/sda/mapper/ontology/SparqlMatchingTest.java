@@ -93,8 +93,13 @@ class SparqlMatchingTest {
             BIND(:REQ-002 AS ?requirement)
 
             ?requirement  a                  sda:UseCaseRequirement ;
-                          sda:mapsToCapability ?capability .
-            ?capability   sda:realisedBy      ?skill .
+                          sda:mapsToCapability ?capReq .
+            ?capReq       sda:capabilityType  ?capType .
+
+            ?capOff       sda:capabilityType  ?capType ;
+                          sda:realisedBy      ?skill .
+            BIND(?capOff AS ?capability)
+
             ?skill        sda:isImplementedBy ?service .
 
             ?service      sda:hasBinding      ?binding .

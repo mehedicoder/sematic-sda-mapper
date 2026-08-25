@@ -9,11 +9,18 @@ WHERE {
     BIND(:REQ-001 AS ?requirement)
 
     # R1: Capability match chain (paper Table I)
-    # REQ → mapsToCapability → Capability → realisedBy → Skill → isImplementedBy → Service
+    # REQ → mapsToCapability → RequiredCapability →(capabilityType)→
+    #   OfferedCapability → realisedBy → Skill → isImplementedBy → Service
     ?requirement  a                  sda:UseCaseRequirement ;
-                 sda:mapsToCapability ?capability .
+                 sda:mapsToCapability ?reqCap .
 
-    ?capability   sda:realisedBy      ?skill .
+    ?reqCap       sda:capabilityType  ?capType .
+
+    ?offCap       a                   sda:OfferedCapability ;
+                  sda:capabilityType  ?capType ;
+                  sda:realisedBy      ?skill .
+
+    BIND(?offCap AS ?capability)
 
     ?skill        sda:isImplementedBy  ?service .
 

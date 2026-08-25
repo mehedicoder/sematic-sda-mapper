@@ -1,6 +1,7 @@
 package com.sda.mapper.ui;
 
 import com.sda.mapper.model.OntologyClass;
+import com.sda.mapper.model.OntologyDatatypeProperty;
 import com.sda.mapper.model.OntologyLayer;
 import com.sda.mapper.model.OntologyRelation;
 import com.sda.mapper.service.OntologyDataService;
@@ -312,6 +313,9 @@ public class OntologyView extends VerticalLayout {
 
         List<OntologyRelation> incoming = dataService.getRelationsTo(clazz.name());
         detailPanel.add(createRelationSection("Incoming Relations", incoming, false));
+
+        List<OntologyDatatypeProperty> props = dataService.getDatatypeProperties(clazz.name());
+        detailPanel.add(createDatatypePropertySection(props));
     }
 
     private Div createEmptyState() {
@@ -495,12 +499,88 @@ public class OntologyView extends VerticalLayout {
         var path = new Span(relation.from() + "  \u2192  " + relation.to());
         path.getStyle().set("color", "#94a3b8");
 
-        card.add(labelRow, path);
+        var domainRange = new Div();
+        domainRange.getStyle()
+            .set("display", "flex")
+            .set("gap", "12px")
+            .set("font-size", "var(--lumo-font-size-xs)")
+            .set("color", "#64748b");
+        var domainLabel = new Span("Domain: " + relation.from());
+        domainLabel.getStyle().set("color", "#10b981");
+        var rangeLabel = new Span("Range: " + relation.to());
+        rangeLabel.getStyle().set("color", "#f59e0b");
+        domainRange.add(domainLabel, rangeLabel);
+
+        card.add(labelRow, path, domainRange);
         if (relation.inverse() != null) {
             var inverse = new Span("Inverse: " + relation.inverse());
             inverse.getStyle().set("color", "#64748b").set("font-size", "var(--lumo-font-size-xs)");
             card.add(inverse);
         }
+        return card;
+    }
+
+    private VerticalLayout createDatatypePropertySection(List<OntologyDatatypeProperty> props) {
+        var section = new VerticalLayout();
+        section.setPadding(false);
+        section.setSpacing(true);
+
+        var heading = new Span("Datatype Properties (" + props.size() + ")");
+        heading.addClassName("section-title");
+        heading.getStyle().set("font-size", "var(--lumo-font-size-m)");
+        section.add(heading);
+
+        if (props.isEmpty()) {
+            var none = new Span("None");
+            none.getStyle().set("color", "#64748b");
+            section.add(none);
+        } else {
+            for (OntologyDatatypeProperty prop : props) {
+                section.add(createDatatypePropertyCard(prop));
+            }
+        }
+        return section;
+    }
+
+    private Div createDatatypePropertyCard(OntologyDatatypeProperty prop) {
+        var card = new Div();
+        card.addClassName("ontology-card");
+        card.addClassName("ontology-card--supporting");
+        card.getStyle().set("width", "100%");
+
+        var labelRow = new Div();
+        labelRow.getStyle()
+            .set("display", "flex")
+            .set("align-items", "center")
+            .set("justify-content", "space-between")
+            .set("gap", "8px");
+
+        var label = new Span(prop.name());
+        label.getStyle().set("font-weight", "600").set("color", "#94a3b8");
+        labelRow.add(label);
+
+        var typeBadge = new Span(prop.xsdType());
+        typeBadge.getStyle()
+            .set("font-size", "var(--lumo-font-size-xs)")
+            .set("color", "#f59e0b")
+            .set("border", "1px solid #334155")
+            .set("border-radius", "999px")
+            .set("padding", "0 8px");
+        labelRow.add(typeBadge);
+
+        var domainRange = new Div();
+        domainRange.getStyle()
+            .set("display", "flex")
+            .set("gap", "12px")
+            .set("font-size", "var(--lumo-font-size-xs)")
+            .set("color", "#64748b");
+        var domainLabel = new Span("Domain: " + prop.className());
+        domainLabel.getStyle().set("color", "#10b981");
+        var rangeLabel = new Span("Range: " + prop.xsdType());
+        rangeLabel.getStyle().set("color", "#f59e0b");
+        domainRange.add(domainLabel, rangeLabel);
+
+        card.add(labelRow, domainRange);
         return card;
     }
 }

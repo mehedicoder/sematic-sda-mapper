@@ -41,7 +41,7 @@ WHERE {
     OPTIONAL { ?reqDeployment sda:contextConstrainedBy ?reqSafety . ?reqSafety sda:safetyIntegrityLevel ?reqSil }
     OPTIONAL { ?reqDeployment sda:locatedInZone ?reqZoneResource . ?reqZoneResource sda:zoneName ?reqZone }
 
-    ?offered a sda:Capability ;
+    ?offered a sda:OfferedCapability ;
              sda:realisedBy ?skill .
     ?skill sda:requiresConcept ?concept .
     ?concept sda:conceptName ?reqConcept .

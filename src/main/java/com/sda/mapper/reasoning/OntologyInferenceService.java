@@ -131,7 +131,7 @@ public class OntologyInferenceService {
 
         for (Resource capability : capabilities) {
             if (!capability.hasProperty(org.apache.jena.vocabulary.RDF.type,
-                model.createResource(SDA_NS + "Capability"))) {
+                model.createResource(SDA_NS + "OfferedCapability"))) {
                 continue;
             }
             Resource skill = capability.getPropertyResourceValue(capProp);

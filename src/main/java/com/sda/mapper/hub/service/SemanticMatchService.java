@@ -135,7 +135,7 @@ public class SemanticMatchService {
             .toList();
         for (OfferedCapability offered : offeredCapabilities) {
             Resource r = newResource(m, uriToId, "offered", offered.id());
-            r.addProperty(RDF.type, m.createResource(SDA_NS + "Capability"));
+            r.addProperty(RDF.type, m.createResource(SDA_NS + "OfferedCapability"));
             addLabelIfNotBlank(m, r, offered.name());
             Resource skill = skillBySkillId.get(offered.skillId());
             if (skill != null) {

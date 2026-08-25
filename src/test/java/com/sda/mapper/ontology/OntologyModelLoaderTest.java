@@ -117,8 +117,8 @@ class OntologyModelLoaderTest {
     void shouldContainCapabilityProperties() {
         Model model = loadWithDemoAbox().getModel();
 
-        Resource oc = model.getResource(INST_NS + "CAP-FlowDiagnostics");
-        assertNotNull(oc, "CAP-FlowDiagnostics must exist");
+        Resource oc = model.getResource(INST_NS + "CAP-FlowDiagnostics-Required");
+        assertNotNull(oc, "CAP-FlowDiagnostics-Required must exist");
         assertEquals("CAP-FLOW-DIAG-001", oc.getProperty(model.createProperty(SDA_NS + "capabilityID")).getString());
         assertEquals("Flowmeter Diagnostics", oc.getProperty(model.createProperty(SDA_NS + "capabilityName")).getString());
         assertNotNull(oc.getProperty(model.createProperty(SDA_NS + "capabilityDescription")), "Capability must have description");

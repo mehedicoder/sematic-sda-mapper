@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class SparqlQueryHealthIndicator implements HealthIndicator {
 
-    private static final String QUERY_PATH = "queries/match-service.rq";
+    private static final String QUERY_PATH = "queries/match-generic.rq";
 
     @Override
     public Health health() {

@@ -160,7 +160,7 @@ class SparqlMatchingTest {
     @Test
     @DisplayName("Should match REQ-001 to SVC-FlowmeterDiagnostics (R1-R3 satisfied)")
     void shouldMatchReq001ToFlowmeterDiagnostics() throws IOException {
-        String queryStr = loadQuery("queries/match-service.rq");
+        String queryStr = loadGenericQuery("REQ-001");
         List<QuerySolution> results = executeQuery(queryStr);
 
         assertFalse(results.isEmpty(),
@@ -203,7 +203,12 @@ class SparqlMatchingTest {
         wrong.addProperty(fresh.createProperty(SDA_NS + "isDeployedBy"),
             fresh.createResource(INST_NS + "DEPLOY-OnPrem"));
 
-        List<QuerySolution> results = executeQuery(loadQuery("queries/match-service.rq"), fresh);
+        // Declare the protocol constraint so the generic matcher filters on it
+        // (it only filters when the requirement actually declares a protocol).
+        fresh.getResource(INST_NS + "REQ-001")
+            .addProperty(fresh.createProperty(SDA_NS + "protocol"), "OPC-UA");
+
+        List<QuerySolution> results = executeQuery(loadGenericQuery("REQ-001"), fresh);
         assertFalse(results.isEmpty(), "Baseline match must still return a service");
         for (QuerySolution sol : results) {
             assertNotEquals(INST_NS + "SVC-WrongProtocol",
@@ -222,7 +227,7 @@ class SparqlMatchingTest {
         wrong.addProperty(fresh.createProperty(SDA_NS + "isImplementedBy"),
             fresh.createResource(INST_NS + "SK-HVACTempAnalysis"));
 
-        List<QuerySolution> results = executeQuery(loadQuery("queries/match-service.rq"), fresh);
+        List<QuerySolution> results = executeQuery(loadGenericQuery("REQ-001"), fresh);
         for (QuerySolution sol : results) {
             assertNotEquals(INST_NS + "SVC-WrongCapability",
                 sol.getResource("service").getURI(),
@@ -287,7 +292,7 @@ class SparqlMatchingTest {
     @Test
     @DisplayName("Should match REQ-003 to SVC-HVACTempAnalysis")
     void shouldMatchReq003ToHvacTempAnalysis() throws IOException {
-        String queryStr = loadQuery("queries/match-service-req003.rq");
+        String queryStr = loadGenericQuery("REQ-003");
         List<QuerySolution> results = executeQuery(queryStr);
 
         assertFalse(results.isEmpty(),
@@ -307,7 +312,7 @@ class SparqlMatchingTest {
     void shouldExcludeOnNetworkZoneMismatch() throws IOException {
         // REQ-003 requires OT-Zone-3; DEPLOY-OnPrem / DEPLOY-Critical are in
         // OT-Zone-1, so their services must not satisfy the zone filter.
-        String queryStr = loadQuery("queries/match-service-req003.rq");
+        String queryStr = loadGenericQuery("REQ-003");
         List<QuerySolution> results = executeQuery(queryStr);
 
         for (QuerySolution sol : results) {
@@ -523,7 +528,7 @@ class SparqlMatchingTest {
         alt.addProperty(fresh.createProperty(SDA_NS + "isDeployedBy"),
             fresh.createResource(INST_NS + "DEPLOY-OnPrem"));
 
-        List<QuerySolution> results = executeQuery(loadQuery("queries/match-service.rq"), fresh);
+        List<QuerySolution> results = executeQuery(loadGenericQuery("REQ-001"), fresh);
         assertFalse(results.isEmpty(),
             "Matching query must return the top-ranked service");
 
@@ -544,7 +549,16 @@ class SparqlMatchingTest {
             fresh.createProperty(SDA_NS + "describedBy"),
             fresh.createResource(INST_NS + "PA-DIM-FlowConcept")));
 
-        List<QuerySolution> results = executeQuery(loadQuery("queries/match-service.rq"), fresh);
+        // Declare a required concept so the generic matcher enforces R2a coverage;
+        // removing the concept description below must then exclude the service.
+        Resource reqConcept = fresh.createResource(INST_NS + "RC-FlowConcept");
+        reqConcept.addProperty(RDF.type, fresh.createResource(SDA_NS + "UseCaseRequirementConstraint"))
+                  .addProperty(fresh.createProperty(SDA_NS + "concept"),
+                      fresh.createResource(INST_NS + "PA-DIM-FlowConcept"));
+        fresh.getResource(INST_NS + "REQ-001")
+            .addProperty(fresh.createProperty(SDA_NS + "requiresConcept"), reqConcept);
+
+        List<QuerySolution> results = executeQuery(loadGenericQuery("REQ-001"), fresh);
 
         assertTrue(results.isEmpty(),
             "R2a concept-coverage filter must exclude all results when the required concept is not covered");
@@ -888,6 +902,15 @@ class SparqlMatchingTest {
         try (InputStream in = resource.getInputStream()) {
             return new String(in.readAllBytes());
         }
+    }
+
+    /**
+     * Loads the generic matcher ({@code queries/match-generic.rq}) and injects
+     * the requirement ID, replacing the deleted per-requirement queries
+     * {@code match-service.rq} / {@code match-service-req003.rq}.
+     */
+    private String loadGenericQuery(String reqId) throws IOException {
+        return loadQuery("queries/match-generic.rq").replace("__REQ_ID__", reqId);
     }
 
     private byte[] loadOntologyBytes() throws IOException {

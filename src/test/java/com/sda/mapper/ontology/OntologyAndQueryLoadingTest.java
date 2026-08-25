@@ -170,7 +170,7 @@ class OntologyAndQueryLoadingTest {
     @DisplayName("Should parse and execute SPARQL query for REQ-001")
     void shouldExecuteSparqlQueryForReq001() throws IOException {
         Model model = loadOntology();
-        String queryStr = loadQuery("queries/match-service.rq");
+        String queryStr = loadQuery("queries/match-generic.rq").replace("__REQ_ID__", "REQ-001");
 
         Query query = QueryFactory.create(queryStr);
         try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
@@ -240,11 +240,11 @@ class OntologyAndQueryLoadingTest {
     @DisplayName("Should parse SPARQL query file with Jena QueryFactory")
     void shouldParseAllSparqlQueries() throws IOException {
         String[] queryFiles = {
-            "queries/match-service.rq",
-            "queries/match-service-req002.rq",
-            "queries/match-service-req003.rq",
+            "queries/match-generic.rq",
             "queries/cross-plant-temperature.rq",
-            "queries/hub-match-offered-required.rq"
+            "queries/hub-match-offered-required.rq",
+            "queries/r0-hard-constraint-prefilter.rq",
+            "queries/service-catalog.rq"
         };
 
         for (String queryFile : queryFiles) {

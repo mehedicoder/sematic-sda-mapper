@@ -46,6 +46,7 @@ public final class AttributeBindings {
         Map.entry("iec62443Level", "securityLevel"),
         Map.entry("sensorType", "type"),
         Map.entry("paramUnit", "engineeringUnit"),
+        Map.entry("engineeringUnit", "paramUnit"),
         Map.entry("semanticIRI", "iri"),
         Map.entry("bindingEndpointUri", "endpointUrl"),
         Map.entry("connectorSemanticIRI", "nodeId"),

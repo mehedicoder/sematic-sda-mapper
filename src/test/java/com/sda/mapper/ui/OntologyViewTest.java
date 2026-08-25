@@ -156,15 +156,15 @@ class OntologyViewTest {
     }
 
     @Test
-    @DisplayName("Should expose all 89 labeled relations of the v2 TBox")
+    @DisplayName("Should expose all 85 labeled relations of the v2 TBox")
     void shouldExposeAllRelations() {
         OntologyDataService service = new OntologyDataService();
         List<OntologyRelation> relations = service.getRelations();
-        assertEquals(84, relations.size());
+        assertEquals(85, relations.size());
         long core = relations.stream().filter(r -> "core".equals(r.kind())).count();
         long supporting = relations.stream().filter(r -> "supporting".equals(r.kind())).count();
         assertEquals(18, core);
-        assertEquals(66, supporting);
+        assertEquals(67, supporting);
     }
 
     @Test
@@ -328,6 +328,46 @@ class OntologyViewTest {
             "safetyIntegrityLevel should be a known datatype property");
         assertTrue(all.stream().anyMatch(p -> "DeterminismClass".equals(p.className()) || "DeploymentContext".equals(p.className())),
             "DeploymentContext should own datatype properties");
+    }
+
+    @Test
+    @DisplayName("Should visualize communicationNetworkZone only on CommunicationBinding")
+    void shouldVisualizeCommunicationNetworkZoneOnBindingOnly() {
+        OntologyDataService service = new OntologyDataService();
+        boolean fromBinding = service.getRelations().stream()
+            .anyMatch(r -> "communicationNetworkZone".equals(r.label())
+                && "CommunicationBinding".equals(r.from()));
+        boolean fromContext = service.getRelations().stream()
+            .anyMatch(r -> "communicationNetworkZone".equals(r.label())
+                && "DeploymentContext".equals(r.from()));
+        assertTrue(fromBinding, "communicationNetworkZone should be visualized from CommunicationBinding");
+        assertFalse(fromContext,
+            "communicationNetworkZone must not be declared on DeploymentContext (single domain)");
+        assertTrue(service.getRelations().stream()
+                .anyMatch(r -> "locatedInZone".equals(r.label())
+                    && "DeploymentContext".equals(r.from())),
+            "DeploymentContext reaches NetworkZone via locatedInZone");
+    }
+
+    @Test
+    @DisplayName("Should keep engineeringUnit/nominalRange single-domain (Capability) and use param-prefixed names on SkillParameter")
+    void shouldKeepSingleDomainDatatypeProperties() {
+        OntologyDataService service = new OntologyDataService();
+        assertTrue(service.getDatatypeProperties("Capability").stream()
+                .anyMatch(p -> "engineeringUnit".equals(p.name())),
+            "engineeringUnit should be visualized on Capability");
+        assertTrue(service.getDatatypeProperties("Capability").stream()
+                .anyMatch(p -> "nominalRange_min".equals(p.name())),
+            "nominalRange_min should be visualized on Capability");
+        assertFalse(service.getDatatypeProperties("SkillParameter").stream()
+                .anyMatch(p -> "engineeringUnit".equals(p.name())),
+            "engineeringUnit must not be declared on SkillParameter (uses paramUnit)");
+        assertTrue(service.getDatatypeProperties("SkillParameter").stream()
+                .anyMatch(p -> "paramNominalRangeMin".equals(p.name())),
+            "paramNominalRangeMin should be visualized on SkillParameter");
+        assertTrue(service.getDatatypeProperties("SkillParameter").stream()
+                .anyMatch(p -> "paramNominalRangeMax".equals(p.name())),
+            "paramNominalRangeMax should be visualized on SkillParameter");
     }
 
     @SuppressWarnings("unchecked")

@@ -202,14 +202,19 @@ public class OntologyDataService {
                 return;
             }
             String label = labelStmt.getObject().asLiteral().getString();
-            Resource domain = property.getPropertyResourceValue(RDFS.domain);
-            Resource range = property.getPropertyResourceValue(RDFS.range);
-            if (domain == null || range == null) {
-                return;
-            }
-            String from = localName(domain);
-            String to = localName(range);
-            if (!knownClasses.contains(from) || !knownClasses.contains(to)) {
+            List<Resource> domains = new ArrayList<>();
+            property.listProperties(RDFS.domain).forEachRemaining(s -> {
+                if (s.getObject().isResource()) {
+                    domains.add(s.getObject().asResource());
+                }
+            });
+            List<Resource> ranges = new ArrayList<>();
+            property.listProperties(RDFS.range).forEachRemaining(s -> {
+                if (s.getObject().isResource()) {
+                    ranges.add(s.getObject().asResource());
+                }
+            });
+            if (domains.isEmpty() || ranges.isEmpty()) {
                 return;
             }
             String inverse = null;
@@ -217,8 +222,20 @@ public class OntologyDataService {
             if (inverseRes != null) {
                 inverse = localName(inverseRes);
             }
-            result.add(new OntologyRelation(from, to, label,
-                CORE_PROPERTIES.contains(label) ? "core" : "supporting", inverse, false));
+            for (Resource domain : domains) {
+                String from = localName(domain);
+                if (!knownClasses.contains(from)) {
+                    continue;
+                }
+                for (Resource range : ranges) {
+                    String to = localName(range);
+                    if (!knownClasses.contains(to)) {
+                        continue;
+                    }
+                    result.add(new OntologyRelation(from, to, label,
+                        CORE_PROPERTIES.contains(label) ? "core" : "supporting", inverse, false));
+                }
+            }
         });
         result.sort(Comparator.comparing(OntologyRelation::label));
         return List.copyOf(result);
@@ -233,18 +250,33 @@ public class OntologyDataService {
         List<OntologyDatatypeProperty> result = new ArrayList<>();
         model.listStatements(null, RDF.type, OWL.DatatypeProperty).forEachRemaining(st -> {
             Resource property = st.getSubject();
-            Resource domain = property.getPropertyResourceValue(RDFS.domain);
-            Resource range = property.getPropertyResourceValue(RDFS.range);
             String name = localName(property);
-            if (name == null || domain == null || range == null) {
+            if (name == null) {
                 return;
             }
-            String className = localName(domain);
-            if (!knownClasses.contains(className)) {
+            List<Resource> domains = new ArrayList<>();
+            property.listProperties(RDFS.domain).forEachRemaining(s -> {
+                if (s.getObject().isResource()) {
+                    domains.add(s.getObject().asResource());
+                }
+            });
+            List<Resource> ranges = new ArrayList<>();
+            property.listProperties(RDFS.range).forEachRemaining(s -> {
+                if (s.getObject().isResource()) {
+                    ranges.add(s.getObject().asResource());
+                }
+            });
+            if (domains.isEmpty() || ranges.isEmpty()) {
                 return;
             }
-            String xsdType = "xsd:" + localName(range);
-            result.add(new OntologyDatatypeProperty(name, className, xsdType));
+            String xsdType = "xsd:" + localName(ranges.get(0));
+            for (Resource domain : domains) {
+                String className = localName(domain);
+                if (!knownClasses.contains(className)) {
+                    continue;
+                }
+                result.add(new OntologyDatatypeProperty(name, className, xsdType));
+            }
         });
         result.sort(Comparator.comparing(OntologyDatatypeProperty::name));
         return List.copyOf(result);

@@ -42,11 +42,11 @@ class CanonicalRecordCoverageTest {
     }
 
     @Test
-    @DisplayName("Should expose all 138 datatype properties across the 24 numbered classes")
+    @DisplayName("Should expose all 153 datatype properties across the 24 numbered classes")
     void shouldExposeDatatypeProperties() {
         OntologyDataService ontology = new OntologyDataService();
         List<OntologyDatatypeProperty> properties = ontology.getDatatypeProperties();
-        assertEquals(139, properties.size());
+        assertEquals(153, properties.size());
 
         List<String> stakeholder = ontology.getDatatypeProperties("Stakeholder").stream()
             .map(OntologyDatatypeProperty::name)

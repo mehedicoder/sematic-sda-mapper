@@ -147,9 +147,33 @@
 
 :bindingEndpointUri a owl:DatatypeProperty ;
     rdfs:label "bindingEndpointUri"^^xsd:string ;
-    rdfs:comment "Used as: CommunicationBinding → xsd:string"^^xsd:string ;
+    rdfs:comment "Used as: CommunicationBinding → xsd:anyURI"^^xsd:string ;
     rdfs:domain :CommunicationBinding ;
-    rdfs:range xsd:string .
+    rdfs:range xsd:anyURI .
+
+:securityPolicy a owl:DatatypeProperty ;
+    rdfs:label "securityPolicy"^^xsd:string ;
+    rdfs:comment "Used as: CommunicationBinding → xsd:anyURI (paper Example A/B: OPC UA SecurityPolicy URI)"^^xsd:string ;
+    rdfs:domain :CommunicationBinding ;
+    rdfs:range xsd:anyURI .
+
+:transportProfile a owl:DatatypeProperty ;
+    rdfs:label "transportProfile"^^xsd:string ;
+    rdfs:comment "Used as: CommunicationBinding → xsd:anyURI (paper Example B.4: OPC UA TransportProfileUri)"^^xsd:string ;
+    rdfs:domain :CommunicationBinding ;
+    rdfs:range xsd:anyURI .
+
+:discoveryUrl a owl:DatatypeProperty ;
+    rdfs:label "discoveryUrl"^^xsd:string ;
+    rdfs:comment "Used as: CommunicationBinding → xsd:anyURI (paper Example B.3: DiscoveryUrls)"^^xsd:string ;
+    rdfs:domain :CommunicationBinding ;
+    rdfs:range xsd:anyURI .
+
+:securityLevel a owl:DatatypeProperty ;
+    rdfs:label "securityLevel"^^xsd:string ;
+    rdfs:comment "Used as: CommunicationBinding → xsd:integer (paper Example B: SecurityLevel)"^^xsd:string ;
+    rdfs:domain :CommunicationBinding ;
+    rdfs:range xsd:integer .
 
 :bindingID a owl:DatatypeProperty ;
     rdfs:label "bindingID"^^xsd:string ;
@@ -211,6 +235,30 @@
     rdfs:domain :Capability ;
     rdfs:range xsd:string .
 
+:accuracy a owl:DatatypeProperty ;
+    rdfs:label "accuracy"^^xsd:string ;
+    rdfs:comment "Used as: Capability → xsd:decimal (paper Example A: OfferedCapability accuracy)"^^xsd:string ;
+    rdfs:domain :Capability ;
+    rdfs:range xsd:decimal .
+
+:engineeringUnit a owl:DatatypeProperty ;
+    rdfs:label "engineeringUnit"^^xsd:string ;
+    rdfs:comment "Used as: Capability → xsd:string (paper Example A: UCUM unit)"^^xsd:string ;
+    rdfs:domain :Capability ;
+    rdfs:range xsd:string .
+
+:nominalRange_min a owl:DatatypeProperty ;
+    rdfs:label "nominalRange_min"^^xsd:string ;
+    rdfs:comment "Used as: Capability → xsd:decimal (paper Example A: nominal range lower bound)"^^xsd:string ;
+    rdfs:domain :Capability ;
+    rdfs:range xsd:decimal .
+
+:nominalRange_max a owl:DatatypeProperty ;
+    rdfs:label "nominalRange_max"^^xsd:string ;
+    rdfs:comment "Used as: Capability → xsd:decimal (paper Example A: nominal range upper bound)"^^xsd:string ;
+    rdfs:domain :Capability ;
+    rdfs:range xsd:decimal .
+
 :capabilityVersion a owl:DatatypeProperty ;
     rdfs:label "capabilityVersion"^^xsd:string ;
     rdfs:comment "Used as: Capability → xsd:string"^^xsd:string ;
@@ -271,6 +319,18 @@
 :connectorSemanticIRI a owl:DatatypeProperty ;
     rdfs:label "connectorSemanticIRI"^^xsd:string ;
     rdfs:comment "Used as: DataConnector → xsd:string"^^xsd:string ;
+    rdfs:domain :DataConnector ;
+    rdfs:range xsd:string .
+
+:nodeSetFile a owl:DatatypeProperty ;
+    rdfs:label "nodeSetFile"^^xsd:string ;
+    rdfs:comment "Used as: DataConnector → xsd:string (paper Example A/B: NodeSet reference)"^^xsd:string ;
+    rdfs:domain :DataConnector ;
+    rdfs:range xsd:string .
+
+:semanticID a owl:DatatypeProperty ;
+    rdfs:label "semanticID"^^xsd:string ;
+    rdfs:comment "Used as: DataConnector → xsd:string (paper Example A/B: IEC CDD IRDI)"^^xsd:string ;
     rdfs:domain :DataConnector ;
     rdfs:range xsd:string .
 
@@ -377,9 +437,9 @@
 
 :endpointURI a owl:DatatypeProperty ;
     rdfs:label "endpointURI"^^xsd:string ;
-    rdfs:comment "Used as: ServiceInstance → xsd:string"^^xsd:string ;
+    rdfs:comment "Used as: ServiceInstance → xsd:anyURI"^^xsd:string ;
     rdfs:domain :ServiceInstance ;
-    rdfs:range xsd:string .
+    rdfs:range xsd:anyURI .
 
 :expression a owl:DatatypeProperty ;
     rdfs:label "expression"^^xsd:string ;
@@ -592,7 +652,25 @@
 
 :paramDataType a owl:DatatypeProperty ;
     rdfs:label "paramDataType"^^xsd:string ;
-    rdfs:comment "Used as: SkillParameter → xsd:string"^^xsd:string ;
+    rdfs:comment "Used as: SkillParameter → xsd:string (type name, e.g. \"Double\", \"REAL\")"^^xsd:string ;
+    rdfs:domain :SkillParameter ;
+    rdfs:range xsd:string .
+
+:paramNominalRangeMin a owl:DatatypeProperty ;
+    rdfs:label "paramNominalRangeMin"^^xsd:string ;
+    rdfs:comment "Used as: SkillParameter → xsd:decimal (paper Example A: nominal range lower bound)"^^xsd:string ;
+    rdfs:domain :SkillParameter ;
+    rdfs:range xsd:decimal .
+
+:paramNominalRangeMax a owl:DatatypeProperty ;
+    rdfs:label "paramNominalRangeMax"^^xsd:string ;
+    rdfs:comment "Used as: SkillParameter → xsd:decimal (paper Example A: nominal range upper bound)"^^xsd:string ;
+    rdfs:domain :SkillParameter ;
+    rdfs:range xsd:decimal .
+
+:paramDirection a owl:DatatypeProperty ;
+    rdfs:label "paramDirection"^^xsd:string ;
+    rdfs:comment "Used as: SkillParameter → xsd:string (paper Example A: InputParameter | OutputParameter)"^^xsd:string ;
     rdfs:domain :SkillParameter ;
     rdfs:range xsd:string .
 
@@ -751,6 +829,12 @@
     rdfs:comment "Used as: DeploymentContext → xsd:string"^^xsd:string ;
     rdfs:domain :DeploymentContext ;
     rdfs:range xsd:string .
+
+:maxCycleTime_ms a owl:DatatypeProperty ;
+    rdfs:label "maxCycleTime_ms"^^xsd:string ;
+    rdfs:comment "Used as: DeploymentContext → xsd:decimal (paper Example A: max cycle time in ms)"^^xsd:string ;
+    rdfs:domain :DeploymentContext ;
+    rdfs:range xsd:decimal .
 
 :satisfiesConstraint a owl:ObjectProperty ;
     rdfs:comment "Used in R0-HardConstraint's NOT EXISTS pattern: whether a candidate Service satisfies a given UseCaseRequirementConstraint."^^xsd:string ;
@@ -1162,7 +1246,7 @@
 
 :exposesCapability a owl:ObjectProperty ;
     rdfs:label "exposesCapability"^^xsd:string ;
-    rdfs:comment "Used as: Service → :Capability"^^xsd:string ;
+    rdfs:comment "Used as: Service → :Capability (inverse of exposedAs; :OfferedCapability is a derived subclass)"^^xsd:string ;
     rdfs:domain :Service ;
     rdfs:range :Capability ;
     owl:inverseOf :exposedAs .
@@ -1325,6 +1409,12 @@
     rdfs:domain :DeploymentContext ;
     rdfs:range :NetworkZone ;
     owl:inverseOf :containsDeploymentContext .
+
+:communicationNetworkZone a owl:ObjectProperty ;
+    rdfs:label "communicationNetworkZone"^^xsd:string ;
+    rdfs:comment "Used as: CommunicationBinding → :NetworkZone (paper Examples A/B: device network zone)"^^xsd:string ;
+    rdfs:domain :CommunicationBinding ;
+    rdfs:range :NetworkZone .
 
 :locatedOn a owl:ObjectProperty ;
     rdfs:label "locatedOn"^^xsd:string ;

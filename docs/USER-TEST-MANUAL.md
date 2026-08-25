@@ -50,7 +50,6 @@ After login the left navigation drawer (MainLayout) shows:
 | Discovery Catalog | `/catalog/discover` | Discoverable servers / capabilities |
 | OPC UA Monitor | `/opcua-visualization` | Live OPC UA server + node values |
 | Settings | `/settings` | Appearance + LLM translation configuration |
-| Requirement | `/requirement` | Define a user requirement (name/description/capability) and match it |
 
 (Legacy standalone Dashboard / Upload / Deployment / Requirement Form / Search views
 were consolidated into the Mapping Hub and the API.)
@@ -239,7 +238,10 @@ serves *any* requirement modeled with the standard SDA properties — no per-req
 query file is needed. A requirement may be predefined (e.g. `REQ-001`…`REQ-004` from the
 seeded catalog) or **user-defined** via the UI or REST.
 
-**Via the Requirement view (`/requirement`):**
+The requirement definition & matching UI is embedded at the bottom of the
+**Mapping Hub** (`/mapping-hub`) under the *Requirement Definition & Matching* section
+(the former standalone `/requirement` view has been consolidated into the hub):
+
 1. Enter a `Requirement ID` (mandatory), `Requirement name`, `Requirement description`,
    and a `Capability type` (e.g. `FlowmeterDiagnostics`, `ProcessVariableAnalysis`).
 2. Optionally add constraints: `Protocol`, `Access mode`, `Min recall`, `Max latency`,

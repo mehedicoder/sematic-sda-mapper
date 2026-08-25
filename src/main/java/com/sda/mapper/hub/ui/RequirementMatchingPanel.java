@@ -1,39 +1,39 @@
-package com.sda.mapper.ui;
+package com.sda.mapper.hub.ui;
 
 import com.sda.mapper.api.dto.MatchRequirementRequest;
 import com.sda.mapper.reasoning.RequirementService;
 import com.sda.mapper.reasoning.ServiceMatchResult;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.formlayout.FormLayout;
-import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Hr;
 import com.vaadin.flow.component.html.Pre;
 import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
-import com.vaadin.flow.router.PageTitle;
-import com.vaadin.flow.router.Route;
-import com.vaadin.flow.theme.lumo.LumoUtility;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.vaadin.flow.spring.annotation.UIScope;
+import com.vaadin.flow.spring.annotation.SpringComponent;
 
 import java.util.Objects;
 
 /**
- * Manual requirement entry and matching view.
+ * Reusable requirement definition &amp; matching panel.
  *
  * <p>Lets a user define a requirement (name, description, capability type and
  * constraints) — persisted into the live ontology — and match it against the
  * SDA service catalog using the generic matcher. Any requirement modeled with
  * the standard SDA properties can be matched; no per-requirement query is needed.
+ * The "Match existing requirement by ID" field accepts any ID — if the ID is not
+ * yet in the model, supplying a capability type / constraints creates it on the
+ * fly and matches immediately.
  */
-@Route(value = "requirement", layout = MainLayout.class)
-@PageTitle("Requirement")
-public class RequirementView extends VerticalLayout {
+@SpringComponent
+@UIScope
+public class RequirementMatchingPanel extends VerticalLayout {
 
-    @Autowired
-    private RequirementService requirementService;
+    private final RequirementService requirementService;
 
     private final TextField reqId = new TextField("Requirement ID");
     private final TextField reqName = new TextField("Requirement name");
@@ -50,15 +50,14 @@ public class RequirementView extends VerticalLayout {
     private final TextField matchExistingId = new TextField("Match existing requirement by ID");
     private final Pre resultArea = new Pre("");
 
-    public RequirementView() {
+    public RequirementMatchingPanel(RequirementService requirementService) {
+        this.requirementService = Objects.requireNonNull(requirementService,
+            "RequirementService is required");
         setPadding(true);
         setSpacing(true);
-        setSizeFull();
-        addClassName("requirement-view");
+        setWidthFull();
 
-        add(new H2("Requirement Definition & Matching"));
-
-        reqId.setPlaceholder("REQ-USER-001");
+        reqId.setPlaceholder("REQ-USER-001 (or any ID, e.g. REQ-ABC)");
         reqName.setPlaceholder("My analytics requirement");
         reqDescription.setPlaceholder("Describe what the service should do...");
         capabilityType.setPlaceholder("ProcessVariableAnalysis");
@@ -73,13 +72,14 @@ public class RequirementView extends VerticalLayout {
             reqId, reqName, capabilityType, protocol, accessMode,
             minRecall, maxLatencyMs, networkZone, safetyIntegrityLevel, determinismClass,
             create, createAndMatch);
-        form.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 1), new FormLayout.ResponsiveStep("800px", 2));
+        form.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 1),
+            new FormLayout.ResponsiveStep("800px", 2));
         form.setColspan(reqDescription, 2);
         form.setColspan(createAndMatch, 2);
 
         var matchRow = new VerticalLayout(
-            new H3("Match an existing requirement"),
-            new com.vaadin.flow.component.orderedlayout.HorizontalLayout(matchExistingId, matchExisting));
+            new H3("Match an existing requirement (any ID)"),
+            new HorizontalLayout(matchExistingId, matchExisting));
         matchRow.setSpacing(true);
 
         resultArea.setWidthFull();
@@ -112,16 +112,11 @@ public class RequirementView extends VerticalLayout {
             Notification.show("Requirement ID is required");
             return;
         }
-        RequirementService svc = requirementService;
-        if (svc == null) {
-            Notification.show("Requirement service unavailable");
-            return;
-        }
         try {
-            svc.persist(buildRequest());
+            requirementService.persist(buildRequest());
             Notification.show("Requirement " + reqId.getValue() + " created");
             if (andMatch) {
-                showResult(svc.match(reqId.getValue()));
+                showResult(requirementService.match(reqId.getValue()));
             }
         } catch (Exception ex) {
             Notification.show("Failed to create requirement: " + ex.getMessage());
@@ -129,11 +124,6 @@ public class RequirementView extends VerticalLayout {
     }
 
     private void matchExisting() {
-        RequirementService svc = requirementService;
-        if (svc == null) {
-            Notification.show("Requirement service unavailable");
-            return;
-        }
         String id = matchExistingId.getValue();
         if (id == null || id.isBlank()) {
             id = reqId.getValue();
@@ -142,27 +132,36 @@ public class RequirementView extends VerticalLayout {
             Notification.show("Enter a requirement ID (any value, e.g. REQ-ABC)");
             return;
         }
-        // Build a request from the entered ID plus any capability/constraints
-        // provided in the form. matchOrCreate matches it directly when the ID
-        // already exists, or creates it on the fly (so an arbitrary REQ-ABC with
-        // a capability type still matches) when it does not.
-        MatchRequirementRequest request = new MatchRequirementRequest(
-            id,
-            reqName.getValue(),
-            reqDescription.getValue(),
-            capabilityType.getValue(),
-            null,
-            blankToNull(protocol.getValue()),
-            blankToNull(accessMode.getValue()),
-            null,
-            blankToNull(safetyIntegrityLevel.getValue()),
-            blankToNull(networkZone.getValue()),
-            blankToNull(determinismClass.getValue()),
-            parseDouble(minRecall.getValue()),
-            parseInteger(maxLatencyMs.getValue()),
-            null,
-            null);
-        showResult(svc.matchOrCreate(request));
+        // Load the requirement (if it exists) into the editable fields so the user
+        // can review and change the ID / description / constraints before running.
+        MatchRequirementRequest loaded = requirementService.readRequest(id);
+        if (loaded != null) {
+            populateForm(loaded);
+            Notification.show("Loaded " + id + " — edit the fields if needed, then Create & Match");
+        }
+        MatchRequirementRequest request = buildRequest();
+        showResult(requirementService.matchOrCreate(request));
+    }
+
+    /**
+     * Copies a requirement's values into the editable text fields (null-safe), so
+     * the user can inspect and modify them before persisting / matching.
+     */
+    private void populateForm(MatchRequirementRequest req) {
+        if (req == null) {
+            return;
+        }
+        reqId.setValue(req.requirementId() != null ? req.requirementId() : "");
+        reqName.setValue(req.requirementName() != null ? req.requirementName() : "");
+        reqDescription.setValue(req.requirementDescription() != null ? req.requirementDescription() : "");
+        capabilityType.setValue(req.capabilityType() != null ? req.capabilityType() : "");
+        protocol.setValue(req.protocol() != null ? req.protocol() : "");
+        accessMode.setValue(req.accessMode() != null ? req.accessMode() : "");
+        networkZone.setValue(req.networkZone() != null ? req.networkZone() : "");
+        safetyIntegrityLevel.setValue(req.safetyIntegrityLevel() != null ? req.safetyIntegrityLevel() : "");
+        determinismClass.setValue(req.determinismClass() != null ? req.determinismClass() : "");
+        minRecall.setValue(req.minRecall() != null ? String.valueOf(req.minRecall()) : "");
+        maxLatencyMs.setValue(req.maxLatencyMs() != null ? String.valueOf(req.maxLatencyMs()) : "");
     }
 
     private void showResult(ServiceMatchResult result) {

@@ -62,7 +62,6 @@ public class MainLayout extends AppLayout {
         addToDrawer(createDrawerLink(VaadinIcon.CONNECT, "OPC UA Discovery", com.sda.mapper.ui.catalog.DiscoveryCatalogView.class));
         addToDrawer(createDrawerLink(VaadinIcon.DASHBOARD, "OPC UA Monitor", OpcUaVisualizationView.class));
         addToDrawer(createDrawerLink(VaadinIcon.COG, "Settings", SettingsView.class));
-        addToDrawer(createDrawerLink(VaadinIcon.FORM, "Requirement", RequirementView.class));
     }
 
     private HorizontalLayout createDrawerLink(VaadinIcon iconType, String label, Class<? extends com.vaadin.flow.component.Component> viewClass) {

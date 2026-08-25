@@ -162,4 +162,45 @@ class GenericRequirementMatchingTest {
             null, null, null, null));
         assertFalse(r.matched(), "Unknown ID without a capability/constraints cannot match");
     }
+
+    @Test
+    @DisplayName("readRequest should round-trip a persisted requirement into editable fields")
+    void readRequestRoundTripsPersistedRequirement() {
+        requirementService.persist(new MatchRequirementRequest(
+            "REQ-ROUND-1", "Round-trip requirement", "A description to edit", "FlowmeterDiagnostics",
+            null, "OPC-UA", "read-only", null, "SIL-2", "Zone-A", "D-SYNC",
+            0.91, 55, null, null));
+
+        MatchRequirementRequest loaded = requirementService.readRequest("REQ-ROUND-1");
+        assertEquals("REQ-ROUND-1", loaded.requirementId());
+        assertEquals("Round-trip requirement", loaded.requirementName());
+        assertEquals("A description to edit", loaded.requirementDescription());
+        assertEquals("FlowmeterDiagnostics", loaded.capabilityType());
+        assertEquals("OPC-UA", loaded.protocol());
+        assertEquals("read-only", loaded.accessMode());
+        assertEquals("SIL-2", loaded.safetyIntegrityLevel());
+        assertEquals("Zone-A", loaded.networkZone());
+        assertEquals("D-SYNC", loaded.determinismClass());
+        assertEquals(0.91, loaded.minRecall());
+        assertEquals(55, loaded.maxLatencyMs());
+    }
+
+    @Test
+    @DisplayName("Re-persisting an existing requirement should update its fields")
+    void rePersistUpdatesExistingRequirement() {
+        requirementService.persist(new MatchRequirementRequest(
+            "REQ-UPD-1", "Original name", "Original description", "FlowmeterDiagnostics",
+            null, "OPC-UA", "read-only", null, null, null, null,
+            null, null, null, null));
+        requirementService.persist(new MatchRequirementRequest(
+            "REQ-UPD-1", "Edited name", "Edited description", "FlowmeterDiagnostics",
+            null, "PROFINET", "read-write", null, null, null, null,
+            null, null, null, null));
+
+        MatchRequirementRequest loaded = requirementService.readRequest("REQ-UPD-1");
+        assertEquals("Edited name", loaded.requirementName());
+        assertEquals("Edited description", loaded.requirementDescription());
+        assertEquals("PROFINET", loaded.protocol());
+        assertEquals("read-write", loaded.accessMode());
+    }
 }

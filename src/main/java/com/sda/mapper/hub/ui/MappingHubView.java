@@ -10,6 +10,7 @@ import com.sda.mapper.hub.service.MappingHubService;
 import com.sda.mapper.hub.service.PipelineResult;
 import com.sda.mapper.model.OntologyClass;
 import com.sda.mapper.model.OntologyLayer;
+import com.sda.mapper.reasoning.RequirementService;
 import com.sda.mapper.service.OntologyDataService;
 import com.sda.mapper.ui.MainLayout;
 import com.vaadin.flow.component.UI;
@@ -45,6 +46,7 @@ public class MappingHubView extends VerticalLayout {
 
     private final MappingHubService hubService;
     private final OntologyDataService ontologyDataService;
+    private final RequirementService requirementService;
 
     private final ConsolePanel console;
     private final LayerTabs layerTabs;
@@ -66,9 +68,11 @@ public class MappingHubView extends VerticalLayout {
      * @param manualEntryFormFactory    the ontology-driven manual entry form factory
      */
     public MappingHubView(MappingHubService hubService, OntologyDataService ontologyDataService,
-                          ManualEntryFormFactory manualEntryFormFactory) {
+                           ManualEntryFormFactory manualEntryFormFactory,
+                           RequirementService requirementService) {
         this.hubService = hubService;
         this.ontologyDataService = ontologyDataService;
+        this.requirementService = requirementService;
 
         setSizeFull();
         setPadding(true);
@@ -120,6 +124,7 @@ public class MappingHubView extends VerticalLayout {
         setFlexGrow(1, body);
 
         add(createActionBar());
+        add(createRequirementSection());
         runInitialPipeline();
     }
 
@@ -193,6 +198,25 @@ public class MappingHubView extends VerticalLayout {
     private void runInitialPipeline() {
         lastResult = hubService.reRunPipeline();
         refresh();
+    }
+
+    /**
+     * Embeds the lightweight requirement definition &amp; matching panel so users
+     * can define or look up a requirement (any ID, created on the fly when needed)
+     * and match it against the service catalog without leaving the hub.
+     */
+    private VerticalLayout createRequirementSection() {
+        VerticalLayout section = new VerticalLayout();
+        section.addClassName("hub-requirement-section");
+        section.setPadding(true);
+        section.setSpacing(true);
+        section.add(new H2("Requirement Definition & Matching"));
+        section.add(new com.vaadin.flow.component.html.Span(
+            "Define a requirement (any ID, e.g. REQ-ABC) and match it against the "
+                + "service catalog, or match an existing requirement by ID. "
+                + "Unknown IDs are created on the fly when a capability type or constraints are supplied."));
+        section.add(new RequirementMatchingPanel(requirementService));
+        return section;
     }
 
     private void onUpload(String fileName, byte[] content) {

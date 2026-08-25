@@ -116,6 +116,46 @@ public class RequirementService {
         return reasonerService.matchByRequirementId(requirementId);
     }
 
+    /**
+     * Matches a requirement by ID, creating it on the fly when the ID is not yet
+     * in the model but the caller supplied a capability type or constraints.
+     *
+     * <p>This lets a user enter an arbitrary requirement ID (e.g. {@code REQ-ABC})
+     * together with a capability type / constraints and still obtain a match,
+     * without first persisting it through a separate "create" step.</p>
+     *
+     * @param request the requirement id plus optional capability/constraints
+     * @return the match result (no-match if the id is unknown and no spec given)
+     */
+    public ServiceMatchResult matchOrCreate(MatchRequirementRequest request) {
+        String id = request.requirementId();
+        if (id == null || id.isBlank()) {
+            return ServiceMatchResult.noMatch("Requirement ID is required");
+        }
+        if (requirementExists(id)) {
+            return match(id);
+        }
+        boolean hasSpec = (request.capabilityType() != null && !request.capabilityType().isBlank())
+            || request.protocol() != null || request.accessMode() != null
+            || request.minRecall() != null || request.maxLatencyMs() != null
+            || request.networkZone() != null || request.safetyIntegrityLevel() != null
+            || request.determinismClass() != null;
+        if (!hasSpec) {
+            return ServiceMatchResult.noMatch(
+                "Unknown requirement: " + id + " — provide a capability type or constraints to match it");
+        }
+        persist(request);
+        return match(id);
+    }
+
+    private boolean requirementExists(String id) {
+        Model model = ontologyModelLoader.getModel();
+        Resource r = model.getResource(INST_NS + id);
+        return r.hasProperty(
+            model.createProperty(RDF_TYPE),
+            model.createResource(SDA_NS + "UseCaseRequirement"));
+    }
+
     private void addLiteral(Model model, Resource subject, String property, String value) {
         if (value != null && !value.isBlank()) {
             subject.addProperty(model.createProperty(property), value);

@@ -248,7 +248,11 @@ seeded catalog) or **user-defined** via the UI or REST.
    **Create & Match** (persists then matches). Results show the matched service,
    capability, protocol, recall, latency, and deployment context.
 4. To match a seeded use case, enter its ID in **Match existing requirement by ID**
-   (e.g. `REQ-001`) and click **Match**.
+   (e.g. `REQ-001`) and click **Match**. You may enter **any** ID — if it does not
+   yet exist in the model, providing a **Capability type** (or constraints) in the
+   form above creates it on the fly and matches immediately (e.g. ID `REQ-ABC` with
+   Capability type `ProcessVariableAnalysis` returns the Process Variable Analytics
+   service). Unknown IDs with no capability/constraints return "no match".
 
 **Via REST:**
 ```bash

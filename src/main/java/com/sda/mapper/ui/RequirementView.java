@@ -136,10 +136,33 @@ public class RequirementView extends VerticalLayout {
         }
         String id = matchExistingId.getValue();
         if (id == null || id.isBlank()) {
-            Notification.show("Enter a requirement ID");
+            id = reqId.getValue();
+        }
+        if (id == null || id.isBlank()) {
+            Notification.show("Enter a requirement ID (any value, e.g. REQ-ABC)");
             return;
         }
-        showResult(svc.match(id));
+        // Build a request from the entered ID plus any capability/constraints
+        // provided in the form. matchOrCreate matches it directly when the ID
+        // already exists, or creates it on the fly (so an arbitrary REQ-ABC with
+        // a capability type still matches) when it does not.
+        MatchRequirementRequest request = new MatchRequirementRequest(
+            id,
+            reqName.getValue(),
+            reqDescription.getValue(),
+            capabilityType.getValue(),
+            null,
+            blankToNull(protocol.getValue()),
+            blankToNull(accessMode.getValue()),
+            null,
+            blankToNull(safetyIntegrityLevel.getValue()),
+            blankToNull(networkZone.getValue()),
+            blankToNull(determinismClass.getValue()),
+            parseDouble(minRecall.getValue()),
+            parseInteger(maxLatencyMs.getValue()),
+            null,
+            null);
+        showResult(svc.matchOrCreate(request));
     }
 
     private void showResult(ServiceMatchResult result) {

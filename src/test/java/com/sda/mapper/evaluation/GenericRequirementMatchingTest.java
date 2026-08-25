@@ -141,4 +141,25 @@ class GenericRequirementMatchingTest {
         assertTrue(r.matched());
         assertEquals("SVC-Test", r.serviceName());
     }
+
+    @Test
+    @DisplayName("matchOrCreate with arbitrary ID and capability type should create and match")
+    void matchOrCreateArbitraryIdMatches() {
+        var r = requirementService.matchOrCreate(new MatchRequirementRequest(
+            "REQ-ABC", "Ad-hoc requirement", "desc", "FlowmeterDiagnostics",
+            null, "OPC-UA", "read-only", null, null, null, null,
+            0.90, 60, null, null));
+        assertTrue(r.matched(), "An arbitrary ID (REQ-ABC) with a capability type must match");
+        assertEquals("SVC-Test", r.serviceName());
+    }
+
+    @Test
+    @DisplayName("matchOrCreate with unknown ID and no spec should return no match")
+    void matchOrCreateUnknownIdNoSpecNoMatch() {
+        var r = requirementService.matchOrCreate(new MatchRequirementRequest(
+            "REQ-NO-SPEC", null, null, null,
+            null, null, null, null, null, null, null,
+            null, null, null, null));
+        assertFalse(r.matched(), "Unknown ID without a capability/constraints cannot match");
+    }
 }

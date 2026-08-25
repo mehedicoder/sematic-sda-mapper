@@ -3,58 +3,66 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX sda:  <http://sda-platform.org/ontology#>
 PREFIX :     <http://sda-platform.org/instance#>
 
+# Generic requirement matcher (replaces the per-requirement queries).
+# The requirement URI is injected at runtime by replacing __REQ_ID__.
+# All requirement-scoped constraints are OPTIONAL: they only filter when the
+# requirement actually declares them, so the same query serves ANY requirement
+# modeled with the standard SDA properties.
+
 SELECT ?requirement ?capability ?skill ?service ?binding ?protocol ?accessMode ?recall ?latency ?onPlantNetwork ?connector ?connectorLabel ?deploy ?deployLabel ?safetyIntegrityLevel ?determinismClass ?networkZone
 WHERE {
-    # Bind the requirement to match (placeholder replaced at runtime)
-    BIND(:REQ-001 AS ?requirement)
+    BIND(:__REQ_ID__ AS ?requirement)
 
     # R1: Capability match chain (paper Table I)
-    # REQ → mapsToCapability → RequiredCapability →(capabilityType)→
-    #   OfferedCapability → realisedBy → Skill → isImplementedBy → Service
     ?requirement  a                  sda:UseCaseRequirement ;
                  sda:mapsToCapability ?reqCap .
 
     ?reqCap       sda:capabilityType  ?capType .
 
     ?offCap       a                   sda:OfferedCapability ;
-                  sda:capabilityType  ?capType ;
-                  sda:realisedBy      ?skill .
+                   sda:capabilityType  ?capType ;
+                   sda:realisedBy      ?skill .
 
     BIND(?offCap AS ?capability)
 
     ?skill        sda:isImplementedBy  ?service .
 
-    # R2b: Protocol match (paper Table I)
-    # Service must use an OPC-UA read-only CommunicationBinding
+    # R2b: Protocol match — only constrained if the requirement declares one
     ?service      sda:hasBinding      ?binding .
 
     ?binding      sda:protocol        ?protocol ;
-                  sda:accessMode      ?accessMode .
+                   sda:accessMode      ?accessMode .
+
+    OPTIONAL { ?requirement sda:protocol ?reqProtocol }
+    FILTER(!bound(?reqProtocol) || ?protocol = ?reqProtocol)
+
+    OPTIONAL { ?requirement sda:accessMode ?reqAccessMode }
+    FILTER(!bound(?reqAccessMode) || ?accessMode = ?reqAccessMode)
 
     ?service      sda:hasConnector    ?connector .
 
     ?connector    rdfs:label          ?connectorLabel .
 
-    FILTER (?protocol = "OPC-UA")
-    FILTER (?accessMode = "read-only")
-
-    # R3: Performance and locality constraints (paper Table I)
-    # reportedRecall >= 0.90, reportedLatency <= 60, onPlantNetwork = true
+    # R3: Performance constraints — only constrained if the requirement declares them
     ?service      sda:reportedRecall  ?recall ;
                   sda:reportedLatency ?latency .
 
-    FILTER (?recall >= 0.90)
-    FILTER (?latency <= 60)
+    OPTIONAL { ?requirement sda:minRecall ?reqMinRecall }
+    FILTER(!bound(?reqMinRecall) || ?recall >= ?reqMinRecall)
+
+    OPTIONAL { ?requirement sda:maxLatency ?reqMaxLatency }
+    FILTER(!bound(?reqMaxLatency) || ?latency <= ?reqMaxLatency)
 
     ?service      sda:isDeployedBy    ?deploy .
 
     ?deploy       rdfs:label          ?deployLabel ;
                   sda:onPlantNetwork  ?onPlantNetwork .
 
-    FILTER (?onPlantNetwork = true)
+    OPTIONAL { ?requirement sda:onPlantNetwork ?reqOnPlant }
+    FILTER(!bound(?reqOnPlant) || ?onPlantNetwork = ?reqOnPlant)
 
-    # R3 (v2): SIL is carried by the SafetyClass the deployment context is
-    # constrained by; determinism class and zone are read from the context.
+    # R3 (v2): SIL / determinism / zone — read from the deployment context,
+    # constrained only if the requirement declares them
     OPTIONAL {
         ?deploy sda:contextConstrainedBy ?safetyClass .
         ?safetyClass sda:safetyIntegrityLevel ?safetyIntegrityLevel
@@ -62,9 +70,15 @@ WHERE {
     OPTIONAL { ?deploy sda:determinismClass ?determinismClass }
     OPTIONAL { ?deploy sda:locatedInZone ?zone . ?zone rdfs:label ?networkZone }
 
+    OPTIONAL { ?requirement sda:safetyIntegrityLevel ?reqSil }
+    FILTER(!bound(?reqSil) || (?safetyIntegrityLevel = ?reqSil))
+    OPTIONAL { ?requirement sda:determinismClass ?reqDet }
+    FILTER(!bound(?reqDet) || (?determinismClass = ?reqDet))
+    OPTIONAL { ?requirement sda:networkZone ?reqZone }
+    FILTER(!bound(?reqZone) || (?networkZone = ?reqZone))
+
     # R2a: Semantic concept coverage (paper Table I)
     # All concepts required by the Skill must be provided by some DataConnector
-    # (connector provides a concept when it maps a ProcessVariable described by it)
     FILTER NOT EXISTS {
         ?skill sda:requiresConcept ?requiredConcept .
         FILTER NOT EXISTS {

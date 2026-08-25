@@ -148,7 +148,7 @@ public class MappingHubView extends VerticalLayout {
         badges.setSpacing(true);
 
         UploadDropzone dropzone = new UploadDropzone(
-            "Drop AAS .xml, MTP .aml/.xml, or OPC UA .json here",
+            "Drop AAS .xml, MTP .aml/.xml, AutomationML .aml/.xml, or OPC UA .json here",
             List.of(AssetFileFormat.values()),
             this::onUpload,
             this::showError);
@@ -348,6 +348,7 @@ public class MappingHubView extends VerticalLayout {
             case AAS_XML, AAS_JSON -> "aas";
             case MTP_AML -> "mtp";
             case OPCUA_JSON -> "opcua";
+            case AUTOMATION_ML -> "aml";
         };
     }
 

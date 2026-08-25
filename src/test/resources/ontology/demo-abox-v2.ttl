@@ -669,3 +669,113 @@
     sda:hasOTELCollector false ;
     sda:cpuArchitectures "arm64" ;
     sda:cpuCores 8 .
+
+# =====================================================================
+# Phase 16 — Process Variable Analysis example (paper "next steps")
+# Capability = analytic function over a process variable with a UCUM unit
+# and an IEC CDD IRDI semanticID; matched via R1-R3 + R2a (requiresConcept
+# CDD coverage via FILTER NOT EXISTS).
+# =====================================================================
+:UC-PVA a sda:UseCase ;
+    rdfs:label "Process Variable Analysis" ;
+    sda:useCaseID "UC-PVA" ;
+    sda:useCaseName "Process Variable Analysis" ;
+    sda:useCaseDescription "Analyse a process variable (e.g. temperature) with a UCUM unit and IEC CDD IRDI semanticID." ;
+    sda:targetsAsset :AHU01 ;
+    sda:hasRequirement :REQ-004 .
+
+:REQ-004 a sda:UseCaseRequirement ;
+    rdfs:label "Process Variable Analysis UseCaseRequirement" ;
+    sda:requirementID "REQ-004" ;
+    sda:requirementName "Process Variable Analysis UseCaseRequirement" ;
+    sda:requirementDescription "Match an analytics service over a temperature process variable (UCUM degC, IEC CDD IRDI)." ;
+    sda:requirementType "Analytics" ;
+    sda:lifecycleStatus "Defined" ;
+    sda:mapsToCapability :CAP-ProcessVariableAnalysis-Required ;
+    sda:validatedBy :UseCase-PVA .
+
+:CAP-ProcessVariableAnalysis-Required a sda:RequiredCapability ;
+    rdfs:label "Process Variable Analysis (Required)" ;
+    sda:capabilityID "CAP-PVA-001" ;
+    sda:capabilityName "Process Variable Analysis" ;
+    sda:capabilityDescription "Analyse a process variable analytically." ;
+    sda:capabilityVersion "1.0" ;
+    sda:capabilityType "ProcessVariableAnalysis" .
+
+:CAP-ProcessVariableAnalysis-Offered a sda:OfferedCapability ;
+    rdfs:label "Process Variable Analysis (Offered)" ;
+    sda:capabilityID "CAP-PVA-001" ;
+    sda:capabilityName "Process Variable Analysis" ;
+    sda:capabilityDescription "Analyse a process variable analytically." ;
+    sda:capabilityVersion "1.0" ;
+    sda:capabilityType "ProcessVariableAnalysis" ;
+    sda:realisedBy :SK-ProcessVariableAnalysis .
+
+:SK-ProcessVariableAnalysis a sda:Skill ;
+    rdfs:label "Process Variable Analysis Skill" ;
+    sda:skillID "SK-PVA-001" ;
+    sda:skillName "Process Variable Analysis Skill" ;
+    sda:skillDescription "Analytics skill over a process variable." ;
+    sda:skillVersion "1.0" ;
+    sda:requiresConcept :PA-CDD-TemperatureConcept ;
+    sda:isImplementedBy :SVC-ProcessVariableAnalytics .
+
+:PA-CDD-TemperatureConcept a sda:SemanticConcept ;
+    rdfs:label "IEC CDD Temperature" ;
+    sda:conceptID "PA-CDD-Temperature" ;
+    sda:conceptName "IEC CDD Temperature" ;
+    sda:conceptUnit "degC" ;
+    sda:conceptDataType "xsd:double" ;
+    sda:semanticID "0112/2///61987#ABI041#001" .
+
+:SVC-ProcessVariableAnalytics a sda:Service ;
+    rdfs:label "Process Variable Analytics Service" ;
+    sda:serviceID "SVC-PVA-001" ;
+    sda:serviceName "Process Variable Analytics Service" ;
+    sda:serviceType "Analytics" ;
+    sda:reportedRecall 0.92 ;
+    sda:reportedLatency 50 ;
+    sda:hasBinding :CB-PVA-OPCUA ;
+    sda:hasConnector :DC-PVA-OPCUA ;
+    sda:isImplementedBy :SK-ProcessVariableAnalysis ;
+    sda:isDeployedBy :DEPLOY-PVA .
+
+:CB-PVA-OPCUA a sda:CommunicationBinding ;
+    rdfs:label "PVA OPC-UA binding" ;
+    sda:bindingID "CB-PVA-OPCUA" ;
+    sda:protocol "OPC-UA" ;
+    sda:accessMode "read-only" ;
+    sda:securityMode "Sign" ;
+    sda:bindingEndpointUri "opc.tcp://opcua-pva:4840" ;
+    sda:bindsService :SVC-ProcessVariableAnalytics .
+
+:DC-PVA-OPCUA a sda:DataConnector ;
+    rdfs:label "PVA OPC-UA connector" ;
+    sda:connectorID "DC-PVA-OPCUA" ;
+    sda:connectorType "OPC-UA" ;
+    sda:connectorSemanticIRI "http://example.org/opcua/PVA" ;
+    sda:dataType "Double" ;
+    sda:mapsVariable :PV-PVA-Temperature ;
+    sda:connectsService :SVC-ProcessVariableAnalytics .
+
+:PV-PVA-Temperature a sda:ProcessVariable ;
+    rdfs:label "PVA analysed temperature" ;
+    sda:variableName "PVA analysed temperature" ;
+    sda:variableUnit "degC" ;
+    sda:describedBy :PA-CDD-TemperatureConcept ;
+    sda:hasObservation :OBS-PVA-1 .
+
+:OBS-PVA-1 a sda:Observation ;
+    rdfs:label "PVA observation 1" ;
+    sda:value 36.6 ;
+    sda:timestamp "2026-08-05T11:00:00Z"^^xsd:dateTime ;
+    sda:observes :PV-PVA-Temperature .
+
+:DEPLOY-PVA a sda:DeploymentContext ;
+    rdfs:label "PVA OT deployment" ;
+    sda:contextID "DEPLOY-PVA" ;
+    sda:locatedInZone :NZ-OT1 ;
+    sda:contextConstrainedBy :SCL-OnPrem ;
+    sda:determinismClass "SoftRealTime" ;
+    sda:onPlantNetwork true ;
+    sda:hostsService :SVC-ProcessVariableAnalytics .

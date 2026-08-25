@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class CanonicalParserRegistryTest {
 
     private final CanonicalParserRegistry registry = new CanonicalParserRegistry(List.of(
-        new AasModelParser(), new MtpModelParser(), new OpcUaModelParser()));
+        new AasModelParser(), new MtpModelParser(), new OpcUaModelParser(), new AutomationMlParser()));
 
     @Test
     @DisplayName("Should find the parser registered for each format")
@@ -26,6 +26,8 @@ class CanonicalParserRegistryTest {
         assertEquals("AAS Parser", registry.find(AssetFileFormat.AAS_JSON).format().parserName());
         assertEquals("MTP Parser", registry.find(AssetFileFormat.MTP_AML).format().parserName());
         assertEquals("OPC UA Parser", registry.find(AssetFileFormat.OPCUA_JSON).format().parserName());
+        assertEquals("AutomationML Parser",
+            registry.find(AssetFileFormat.AUTOMATION_ML).format().parserName());
     }
 
     @Test
@@ -44,5 +46,17 @@ class CanonicalParserRegistryTest {
             "pump.xml", AssetFileFormat.AAS_XML));
         assertNotNull(model);
         assertEquals(1, model.assets().size());
+    }
+
+    @Test
+    @DisplayName("Should route AutomationML (CAEX) to the AutomationML parser through the shared supports contract")
+    void shouldRouteAutomationMl() {
+        CanonicalAssetModel model = assertDoesNotThrow(() -> registry.parse(
+            new ByteArrayInputStream(
+                "<CAEXFile><InstanceHierarchy><InternalElement Name=\"Skid\" ID=\"ie-1\"/></InstanceHierarchy></CAEXFile>"
+                    .getBytes(StandardCharsets.UTF_8)),
+            "skid.aml", AssetFileFormat.AUTOMATION_ML));
+        assertNotNull(model);
+        assertEquals(1, model.allEntities().size());
     }
 }

@@ -1,0 +1,40 @@
+{
+  "EndpointDescriptions": [
+    {
+      "uri": "192.168.1.100",
+      "securityMode": "Sign",
+      "securityPolicy": "None",
+      "transportProfile": "BACnet/IP"
+    },
+    {
+      "uri": "opc.tcp://ahu01:4840",
+      "securityMode": "SignAndEncrypt",
+      "securityPolicy": "Basic256Sha256",
+      "transportProfile": "http://opcfoundation.org/UA-Profile/Transport/uabinary"
+    }
+  ],
+  "Configuration": {
+    "NodeSets": [
+      {
+        "id": "ns=3;s=HVAC.SupplyAirTemp",
+        "namespace": "HVAC",
+        "version": "2.1.0"
+      },
+      {
+        "id": "ns=3;s=HVAC.ReturnAirTemp",
+        "namespace": "HVAC",
+        "version": "2.1.0"
+      },
+      {
+        "id": "ns=3;s=HVAC.SupplyFanSpeed",
+        "namespace": "HVAC",
+        "version": "2.1.0"
+      }
+    ]
+  },
+  "Identification": {
+    "productUri": "urn:ahu01:bacnet",
+    "softwareVersion": "2.1.0",
+    "manufacturerName": "HVAC Systems GmbH"
+  }
+}

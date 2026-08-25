@@ -43,6 +43,20 @@ class HubFileTypeDetectorTest {
     }
 
     @Test
+    @DisplayName("Should sniff generic AutomationML (CAEX) without MTP markers")
+    void shouldSniffAutomationMl() {
+        assertEquals(Optional.of(AssetFileFormat.AUTOMATION_ML),
+            detect("<CAEXFile><InstanceHierarchy><InternalElement Name=\"Pump\"/></InstanceHierarchy></CAEXFile>"));
+    }
+
+    @Test
+    @DisplayName("Should not misclassify generic AutomationML as MTP AML")
+    void shouldNotMisclassifyAutomationMlAsMtp() {
+        assertEquals(Optional.of(AssetFileFormat.AUTOMATION_ML),
+            detect("<CAEXFile xmlns=\"http://www.automationml.org\"><InstanceHierarchy/></CAEXFile>"));
+    }
+
+    @Test
     @DisplayName("Should sniff OPC UA JSON by EndpointDescriptions key")
     void shouldSniffOpcUaJson() {
         assertEquals(Optional.of(AssetFileFormat.OPCUA_JSON),

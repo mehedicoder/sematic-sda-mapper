@@ -42,6 +42,7 @@ public final class CanonicalAssetModel {
     private final List<Sensor> sensors = new ArrayList<>();
     private final List<ProcessVariable> processVariables = new ArrayList<>();
     private final List<Observation> observations = new ArrayList<>();
+    private final List<AutomationMLEntity> automationMLEntities = new ArrayList<>();
 
     /**
      * Adds an entity, ignoring duplicates with the same class and id.
@@ -81,6 +82,7 @@ public final class CanonicalAssetModel {
             case "Sensor" -> addUnique(sensors, (Sensor) entity);
             case "ProcessVariable" -> addUnique(processVariables, (ProcessVariable) entity);
             case "Observation" -> addUnique(observations, (Observation) entity);
+            case "AutomationML" -> addUnique(automationMLEntities, (AutomationMLEntity) entity);
             default -> throw new IllegalArgumentException(
                 "Unknown canonical class: " + entity.className());
         }
@@ -156,6 +158,7 @@ public final class CanonicalAssetModel {
             case "Sensor" -> List.copyOf(sensors);
             case "ProcessVariable" -> List.copyOf(processVariables);
             case "Observation" -> List.copyOf(observations);
+            case "AutomationML" -> List.copyOf(automationMLEntities);
             default -> List.of();
         };
     }
@@ -404,6 +407,15 @@ public final class CanonicalAssetModel {
     }
 
     /**
+     * Returns the AutomationML (CAEX) entities lifted from uploaded AutomationML files.
+     *
+     * @return an immutable list of AutomationML entities
+     */
+    public List<AutomationMLEntity> automationMLEntities() {
+        return List.copyOf(automationMLEntities);
+    }
+
+    /**
      * Returns the number of entities for the given ontology class.
      *
      * @param className the ontology class name
@@ -446,7 +458,8 @@ public final class CanonicalAssetModel {
         result.addAll(assets);
         result.addAll(sensors);
         result.addAll(processVariables);
-        result.addAll(observations);
+            result.addAll(observations);
+            result.addAll(automationMLEntities);
         return Collections.unmodifiableList(result);
     }
 

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CAEXFile FileVersion="2.15" xmlns="http://www.automationml.org">
+  <InstanceHierarchy Name="Plant">
+    <InternalElement Name="PumpSkid" ID="ie-pump" RefBaseSystemUnitPath="Plus/Motor">
+      <RoleRequirements RefRoleClassPath="Plus/Function"/>
+      <Attribute Name="Power" Value="5.5"/>
+      <ExternalInterface Name="OPCUA_Server" ID="if-opcua">
+        <RoleRequirements RefRoleClassPath="Plus/Communication"/>
+      </ExternalInterface>
+    </InternalElement>
+  </InstanceHierarchy>
+</CAEXFile>

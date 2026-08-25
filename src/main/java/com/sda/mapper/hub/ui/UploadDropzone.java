@@ -70,6 +70,7 @@ public class UploadDropzone {
             case AAS_XML -> List.of("application/xml", ".xml");
             case AAS_JSON -> List.of("application/json", ".json");
             case MTP_AML -> List.of("application/xml", ".xml", ".aml");
+            case AUTOMATION_ML -> List.of("application/xml", ".xml", ".aml");
             case OPCUA_JSON -> List.of("application/json", ".json");
         };
     }

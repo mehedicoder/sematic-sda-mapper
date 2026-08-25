@@ -1,0 +1,29 @@
+{
+  "EndpointDescriptions": [
+    {
+      "uri": "opc.tcp://ahu01.local:4840",
+      "securityMode": "SignAndEncrypt",
+      "securityPolicy": "Basic256Sha256",
+      "transportProfile": "http://opcfoundation.org/UA-Profile/Transport/uabinary"
+    }
+  ],
+  "Configuration": {
+    "NodeSets": [
+      {
+        "id": "ns=2;s=AHU01.SupplyAirTemp",
+        "namespace": "AHU01",
+        "version": "1.0"
+      },
+      {
+        "id": "ns=2;s=AHU01.ReturnAirTemp",
+        "namespace": "AHU01",
+        "version": "1.0"
+      }
+    ]
+  },
+  "Identification": {
+    "productUri": "urn:example:ahu:01",
+    "softwareVersion": "2.1.0",
+    "manufacturerName": "Example HVAC Corp"
+  }
+}

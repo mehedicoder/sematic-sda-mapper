@@ -1,0 +1,260 @@
+{
+  "assetAdministrationShells": [
+    {
+      "idShort": "PumpModule-FT101",
+      "id": {
+        "idType": "IRI",
+        "identifier": "https://example.org/aas/pump-module-ft101"
+      },
+      "administration": {
+        "version": "1.0",
+        "revision": "0"
+      },
+      "assetInformation": {
+        "assetKind": "Instance",
+        "globalAssetId": "https://example.org/assets/pump-ft101",
+        "defaultThumbnail": {
+          "path": "thumbnails/pump-ft101.png",
+          "contentType": "image/png"
+        }
+      },
+      "submodels": [
+        {
+          "idShort": "Identification",
+          "id": {
+            "idType": "IRI",
+            "identifier": "https://example.org/submodels/pump-ft101/identification"
+          },
+          "semanticId": {
+            "keys": [
+              {
+                "type": "GlobalReference",
+                "value": "https://admin-shell.io/zvei/nameplate/1/0/Nameplate"
+              }
+            ]
+          },
+          "properties": [
+            { "idShort": "Manufacturer", "value": "Siemens Process Automation", "valueType": "xs:string" },
+            { "idShort": "ManufacturerId", "value": "0112", "valueType": "xs:string" },
+            { "idShort": "ModelId", "value": "SITRANS-FM-MASS2100", "valueType": "xs:string" },
+            { "idShort": "SerialNumber", "value": "FT101-2025-0042", "valueType": "xs:string" },
+            { "idShort": "ProductId", "value": "7MW52xxx-xxxxx", "valueType": "xs:string" },
+            { "idShort": "YearOfConstruction", "value": "2024", "valueType": "xs:integer" },
+            { "idShort": "CountryOfOrigin", "value": "DE", "valueType": "xs:string" }
+          ]
+        },
+        {
+          "idShort": "TechnicalData",
+          "id": {
+            "idType": "IRI",
+            "identifier": "https://example.org/submodels/pump-ft101/technical-data"
+          },
+          "semanticId": {
+            "keys": [
+              {
+                "type": "GlobalReference",
+                "value": "https://admin-shell.io/zvei/TechnicalData/1/0"
+              }
+            ]
+          },
+          "properties": [
+            { "idShort": "DeviceType", "value": "Coriolis Flowmeter", "valueType": "xs:string" },
+            { "idShort": "MeasuredMedium", "value": "Liquid", "valueType": "xs:string" },
+            { "idShort": "FlowRangeMin", "value": "0", "valueType": "xs:double" },
+            { "idShort": "FlowRangeMax", "value": "100", "valueType": "xs:double" },
+            { "idShort": "FlowUnit", "value": "l/min", "valueType": "xs:string" },
+            { "idShort": "AccuracyClass", "value": "0.1", "valueType": "xs:string" },
+            { "idShort": "ProcessConnection", "value": "DN50 PN40", "valueType": "xs:string" },
+            { "idShort": "OperatingTemperatureMin", "value": "-40", "valueType": "xs:double" },
+            { "idShort": "OperatingTemperatureMax", "value": "150", "valueType": "xs:double" },
+            { "idShort": "IngressProtection", "value": "IP67", "valueType": "xs:string" },
+            { "idShort": "NE107Support", "value": "true", "valueType": "xs:boolean" }
+          ]
+        },
+        {
+          "idShort": "Communication",
+          "id": {
+            "idType": "IRI",
+            "identifier": "https://example.org/submodels/pump-ft101/communication"
+          },
+          "properties": [
+            { "idShort": "Protocol", "value": "OPC-UA", "valueType": "xs:string" },
+            { "idShort": "EndpointUrl", "value": "opc.tcp://pump01:4840", "valueType": "xs:string" },
+            { "idShort": "Namespace", "value": "urn:siemens:sitrans:mass2100", "valueType": "xs:string" },
+            { "idShort": "NodeId", "value": "ns=2;s=Pump01", "valueType": "xs:string" },
+            { "idShort": "SecurityMode", "value": "SignAndEncrypt", "valueType": "xs:string" },
+            { "idShort": "SecurityPolicy", "value": "Basic256Sha256", "valueType": "xs:string" },
+            { "idShort": "AccessMode", "value": "read-only", "valueType": "xs:string" }
+          ]
+        },
+        {
+          "idShort": "Skills",
+          "id": {
+            "idType": "IRI",
+            "identifier": "https://example.org/submodels/pump-ft101/skills"
+          },
+          "submodelElements": [
+            {
+              "idShort": "Pumping",
+              "semanticId": {
+                "keys": [
+                  {
+                    "type": "GlobalReference",
+                    "value": "https://example.org/skills/pumping"
+                  }
+                ]
+              },
+              "properties": [
+                { "idShort": "SkillId", "value": "PUMP-001", "valueType": "xs:string" },
+                { "idShort": "SkillName", "value": "Pumping", "valueType": "xs:string" },
+                { "idShort": "Description", "value": "Primary pumping operation for liquid transport", "valueType": "xs:string" },
+                { "idShort": "FunctionClass", "value": "FlowControl", "valueType": "xs:string" },
+                { "idShort": "EngineeringUnit", "value": "l/min", "valueType": "xs:string" },
+                { "idShort": "NominalRangeMin", "value": "0", "valueType": "xs:double" },
+                { "idShort": "NominalRangeMax", "value": "100", "valueType": "xs:double" }
+              ]
+            },
+            {
+              "idShort": "FlowMonitoring",
+              "semanticId": {
+                "keys": [
+                  {
+                    "type": "GlobalReference",
+                    "value": "https://example.org/skills/flow-monitoring"
+                  }
+                ]
+              },
+              "properties": [
+                { "idShort": "SkillId", "value": "PUMP-002", "valueType": "xs:string" },
+                { "idShort": "SkillName", "value": "FlowMonitoring", "valueType": "xs:string" },
+                { "idShort": "Description", "value": "Continuous flow rate monitoring with NE 107 diagnostics", "valueType": "xs:string" },
+                { "idShort": "EngineeringUnit", "value": "l/min", "valueType": "xs:string" },
+                { "idShort": "NominalRangeMin", "value": "0", "valueType": "xs:double" },
+                { "idShort": "NominalRangeMax", "value": "100", "valueType": "xs:double" }
+              ]
+            }
+          ]
+        },
+        {
+          "idShort": "Operations",
+          "id": {
+            "idType": "IRI",
+            "identifier": "https://example.org/submodels/pump-ft101/operations"
+          },
+          "submodelElements": [
+            {
+              "idShort": "StartPump",
+              "semanticId": {
+                "keys": [
+                  {
+                    "type": "GlobalReference",
+                    "value": "https://example.org/operations/start-pump"
+                  }
+                ]
+              },
+              "inputVariables": [],
+              "outputVariables": [
+                { "idShort": "Result", "valueType": "xs:string" }
+              ]
+            },
+            {
+              "idShort": "StopPump",
+              "semanticId": {
+                "keys": [
+                  {
+                    "type": "GlobalReference",
+                    "value": "https://example.org/operations/stop-pump"
+                  }
+                ]
+              },
+              "inputVariables": [],
+              "outputVariables": [
+                { "idShort": "Result", "valueType": "xs:string" }
+              ]
+            },
+            {
+              "idShort": "SetFlowRate",
+              "semanticId": {
+                "keys": [
+                  {
+                    "type": "GlobalReference",
+                    "value": "https://example.org/operations/set-flowrate"
+                  }
+                ]
+              },
+              "inputVariables": [
+                { "idShort": "FlowRate", "valueType": "xs:double" }
+              ],
+              "outputVariables": [
+                { "idShort": "Result", "valueType": "xs:string" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "submodels": [
+    {
+      "idShort": "ProcessValues",
+      "id": {
+        "idType": "IRI",
+        "identifier": "https://example.org/submodels/pump-ft101/process-values"
+      },
+      "submodelElements": [
+        {
+          "idShort": "FlowRate",
+          "value": "0.0",
+          "valueType": "xs:double",
+          "semanticId": {
+            "keys": [
+              {
+                "type": "GlobalReference",
+                "value": "https://example.org/properties/flow-rate"
+              }
+            ]
+          }
+        },
+        {
+          "idShort": "Pressure",
+          "value": "0.0",
+          "valueType": "xs:double",
+          "semanticId": {
+            "keys": [
+              {
+                "type": "GlobalReference",
+                "value": "https://example.org/properties/pressure"
+              }
+            ]
+          }
+        },
+        {
+          "idShort": "Temperature",
+          "value": "25.0",
+          "valueType": "xs:double",
+          "semanticId": {
+            "keys": [
+              {
+                "type": "GlobalReference",
+                "value": "https://example.org/properties/temperature"
+              }
+            ]
+          }
+        },
+        {
+          "idShort": "Status",
+          "value": "Good",
+          "valueType": "xs:string",
+          "semanticId": {
+            "keys": [
+              {
+                "type": "GlobalReference",
+                "value": "https://example.org/properties/ne107-status"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -11,6 +11,7 @@ public enum EntityOrigin {
     AAS("AAS Parser"),
     MTP("MTP Parser"),
     OPC_UA("OPC UA Parser"),
+    AML("AutomationML Parser"),
     MANUAL("Manual Entry");
 
     private final String label;

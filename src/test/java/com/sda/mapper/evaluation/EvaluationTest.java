@@ -239,4 +239,101 @@ class EvaluationTest {
             fail("Should not throw: " + e.getMessage());
         }
     }
+
+    @Test
+    @DisplayName("REQ-004 should match SVC-ProcessVariableAnalytics through R1-R3 + R2a")
+    void shouldMatchReq004ToProcessVariableAnalytics() {
+        ClassPathResource resource = new ClassPathResource("queries/process-variable-analysis.rq");
+        assertTrue(resource.exists());
+        String queryStr;
+        try (InputStream in = resource.getInputStream()) {
+            queryStr = new String(in.readAllBytes());
+        } catch (Exception e) {
+            fail("Query load failed: " + e.getMessage());
+            return;
+        }
+        Query query = QueryFactory.create(queryStr);
+        try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
+            ResultSet rs = qe.execSelect();
+            List<String> services = new ArrayList<>();
+            List<String> units = new ArrayList<>();
+            while (rs.hasNext()) {
+                QuerySolution sol = rs.next();
+                services.add(sol.getLiteral("serviceName").getString());
+                units.add(sol.getLiteral("unit").getString());
+            }
+            assertTrue(services.contains("Process Variable Analytics Service"),
+                "REQ-004 should match the Process Variable Analytics Service");
+            assertTrue(units.contains("degC"),
+                "Matched variable should carry the UCUM degC unit");
+        }
+    }
+
+    @Test
+    @DisplayName("REQ-004 should exclude the wrong CDD concept (negative)")
+    void shouldExcludeWrongConceptForReq004() {
+        String q = """
+            PREFIX sda: <http://sda-platform.org/ontology#>
+            PREFIX inst: <http://sda-platform.org/instance#>
+            SELECT ?skill WHERE {
+                inst:REQ-004 sda:mapsToCapability ?rc .
+                ?rc sda:capabilityType ?t .
+                ?oc a sda:OfferedCapability ; sda:capabilityType ?t ; sda:realisedBy ?skill .
+                ?skill sda:requiresConcept ?c .
+                FILTER(?c = inst:PA-DIM-FlowConcept)
+            }
+            """;
+        Query query = QueryFactory.create(q);
+        try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
+            ResultSet rs = qe.execSelect();
+            assertFalse(rs.hasNext(),
+                "REQ-004's analytics skill must NOT require the flow concept");
+        }
+    }
+
+    @Test
+    @DisplayName("REQ-004 should exclude the wrong process variable unit (negative)")
+    void shouldExcludeWrongUnitForReq004() {
+        String q = """
+            PREFIX sda: <http://sda-platform.org/ontology#>
+            SELECT ?v WHERE {
+                ?s sda:serviceName "Process Variable Analytics Service" ;
+                   sda:hasConnector ?c .
+                ?c sda:mapsVariable ?v .
+                ?v sda:variableUnit ?u .
+                FILTER(?u = "m3/h")
+            }
+            """;
+        Query query = QueryFactory.create(q);
+        try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
+            ResultSet rs = qe.execSelect();
+            assertFalse(rs.hasNext(),
+                "The analytics service must not expose a process variable in m3/h");
+        }
+    }
+
+    @Test
+    @DisplayName("REQ-004 should exclude a SIL-3 deployment (negative)")
+    void shouldExcludeWrongSilForReq004() {
+        String q = """
+            PREFIX sda: <http://sda-platform.org/ontology#>
+            PREFIX inst: <http://sda-platform.org/instance#>
+            SELECT ?s WHERE {
+                inst:REQ-004 sda:mapsToCapability ?rc .
+                ?rc sda:capabilityType ?t .
+                ?oc a sda:OfferedCapability ; sda:capabilityType ?t ; sda:realisedBy ?skill .
+                ?skill sda:isImplementedBy ?s .
+                ?s sda:isDeployedBy ?d .
+                ?d sda:contextConstrainedBy ?sc .
+                ?sc sda:safetyIntegrityLevel ?sil .
+                FILTER(?sil = "SIL-3")
+            }
+            """;
+        Query query = QueryFactory.create(q);
+        try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
+            ResultSet rs = qe.execSelect();
+            assertFalse(rs.hasNext(),
+                "REQ-004's analytics service must not be deployed at SIL-3");
+        }
+    }
 }

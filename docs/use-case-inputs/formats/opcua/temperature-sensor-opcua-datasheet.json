@@ -1,0 +1,35 @@
+{
+  "EndpointDescriptions": [
+    {
+      "uri": "opc.tcp://temp-sensor01:4840",
+      "securityMode": "SignAndEncrypt",
+      "securityPolicy": "Basic256Sha256",
+      "transportProfile": "http://opcfoundation.org/UA-Profile/Transport/uabinary"
+    }
+  ],
+  "Configuration": {
+    "NodeSets": [
+      {
+        "id": "ns=2;s=TempSensor01.Temperature",
+        "namespace": "TempSensor01",
+        "version": "2.0"
+      },
+      {
+        "id": "ns=2;s=TempSensor01.Humidity",
+        "namespace": "TempSensor01",
+        "version": "2.0"
+      },
+      {
+        "id": "ns=2;s=TempSensor01.Status",
+        "namespace": "TempSensor01",
+        "version": "2.0"
+      }
+    ]
+  },
+  "Identification": {
+    "productUri": "urn:endress-hauser:promag:10w",
+    "softwareVersion": "3.0.1",
+    "manufacturerName": "Endress+Hauser",
+    "serialNumber": "TS-2024-0156"
+  }
+}

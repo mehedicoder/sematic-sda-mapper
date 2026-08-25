@@ -8,7 +8,6 @@ import com.sda.mapper.hub.service.MappingHubSession;
 import com.sda.mapper.hub.service.MatchingService;
 import com.sda.mapper.hub.service.RecommendationService;
 import com.sda.mapper.hub.service.SemanticMatchService;
-import com.sda.mapper.reasoning.RequirementService;
 import com.sda.mapper.hub.parser.AasModelParser;
 import com.sda.mapper.hub.parser.CanonicalParserRegistry;
 import com.sda.mapper.hub.parser.HubFileTypeDetector;
@@ -56,8 +55,7 @@ class MappingHubViewTest {
             new ManifestExportService(matchingService, recommendationService),
             new MappingHubSession());
         return new MappingHubView(hubService, ontologyDataService,
-            new ManualEntryFormFactory(ontologyDataService),
-            org.mockito.Mockito.mock(RequirementService.class));
+            new ManualEntryFormFactory(ontologyDataService));
     }
 
     @Test
@@ -98,17 +96,6 @@ class MappingHubViewTest {
         String text = fullText(view.getElement());
         assertTrue(text.contains("Semantic Mapping Hub"));
         assertTrue(text.contains("Re-running pipeline"));
-    }
-
-    @Test
-    @DisplayName("Should embed the Requirement Definition & Matching panel")
-    void shouldRenderRequirementSection() throws Exception {
-        MappingHubView view = createView();
-        String text = fullText(view.getElement());
-        assertTrue(text.contains("Requirement Definition & Matching"),
-            "Hub must embed the consolidated requirement matching panel");
-        assertTrue(text.contains("Match an existing requirement (any ID)"),
-            "Embedded panel must expose match-by-ID");
     }
 
     @Test

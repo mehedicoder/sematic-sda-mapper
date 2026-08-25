@@ -34,7 +34,9 @@ class MainLayoutTest {
             loader.loadOntology();
             var queryLoader = new com.sda.mapper.reasoning.SparqlQueryLoader();
             var catalogService = new com.sda.mapper.ui.catalog.ServiceCatalogService(loader, queryLoader);
-            new com.sda.mapper.ui.catalog.ServiceCatalogView(catalogService);
+            var requirementService = org.mockito.Mockito.mock(com.sda.mapper.reasoning.RequirementService.class);
+            new com.sda.mapper.ui.catalog.ServiceCatalogView(catalogService,
+                new com.sda.mapper.hub.ui.RequirementMatchingPanel(requirementService));
         });
         assertDoesNotThrow(() -> new SettingsView());
     }

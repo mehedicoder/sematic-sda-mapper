@@ -136,18 +136,6 @@ class MappingHubViewTest {
     }
 
     @Test
-    @DisplayName("Should render a per-layer coverage strip in the dashboard")
-    void shouldRenderPerLayerCoverageStrip() throws Exception {
-        MappingHubView view = createView();
-        VerticalLayout dashboard = getField(view, "dashboard", VerticalLayout.class);
-        String text = fullText(dashboard.getElement());
-        assertTrue(text.contains("Layer coverage"));
-        assertTrue(text.contains("L1"));
-        assertTrue(text.contains("L2b"));
-        assertTrue(text.contains("L4"));
-    }
-
-    @Test
     @DisplayName("Should write a re-run log line to the console on construction")
     void shouldLogToConsoleOnConstruction() throws Exception {
         MappingHubView view = createView();

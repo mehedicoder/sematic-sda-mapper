@@ -61,34 +61,6 @@
   white-space: nowrap;
 }
 
-.hub-stepper {
-  flex-wrap: wrap;
-}
-
-.hub-step {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 96px;
-  border-radius: 999px;
-  border: 1px solid var(--hub-border);
-  padding: 6px 10px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--hub-text-3);
-  background: var(--hub-panel);
-}
-
-.hub-step--complete {
-  border-color: rgba(16, 185, 129, 0.55);
-  color: var(--hub-ok);
-  background: rgba(16, 185, 129, 0.12);
-}
-
-.hub-step--pending {
-  color: var(--hub-text-3);
-}
-
 .hub-dashboard-panel {
   width: 100%;
 }
@@ -168,49 +140,6 @@
   align-items: center;
 }
 
-.hub-dashboard-cards {
-  flex-wrap: wrap;
-}
-
-.hub-card {
-  flex: 1 1 120px;
-  background: var(--hub-panel);
-  border: 1px solid var(--hub-border);
-  border-radius: 8px;
-  padding: 10px 14px;
-  min-width: 110px;
-}
-
-.hub-card-value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--hub-text-1);
-}
-
-.hub-card-label {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--hub-text-3);
-}
-
-.hub-card--present .hub-card-value {
-  color: var(--hub-ok);
-}
-
-.hub-card--inferred .hub-card-value,
-.hub-card--partial .hub-card-value {
-  color: var(--hub-warn);
-}
-
-.hub-card--missing .hub-card-value {
-  color: var(--hub-error);
-}
-
-.hub-card--coverage .hub-card-value {
-  color: var(--hub-accent);
-}
-
 .hub-section-label {
   display: block;
   font-size: 0.72rem;
@@ -248,31 +177,6 @@
 
 .hub-progress--missing {
   background: #ef4444;
-}
-
-.hub-recommendations {
-  width: 100%;
-}
-
-.hub-recommendation-card {
-  flex: 1 1 260px;
-  background: var(--hub-panel);
-  border: 1px solid var(--hub-border);
-  border-radius: 8px;
-  padding: 10px 12px;
-}
-
-.hub-recommendation-format {
-  display: block;
-  font-weight: 600;
-  color: var(--hub-text-1);
-}
-
-.hub-recommendation-reason {
-  display: block;
-  font-size: 0.78rem;
-  color: var(--hub-text-3);
-  margin: 2px 0 8px;
 }
 
 .hub-recommendations-empty {
@@ -360,33 +264,6 @@
   color: #ffffff;
   font-size: 0.7rem;
   font-weight: 700;
-}
-
-.hub-layer-coverage {
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.hub-layer-coverage-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--hub-panel);
-  border: 1px solid var(--hub-border);
-  border-radius: 999px;
-  padding: 4px 10px;
-}
-
-.hub-layer-coverage-name {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--hub-text-2);
-}
-
-.hub-layer-coverage-value {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--hub-accent);
 }
 
 .hub-body {
@@ -720,6 +597,54 @@
 .hub-session-view {
   color: var(--hub-text-1);
   background: var(--hub-bg);
+
+  /* Scope the hub dark palette to Lumo so the Grid, ComboBox and TextField
+     render with readable contrast on the dark page background. */
+  --lumo-base-color: var(--hub-bg);
+  --lumo-primary-color: var(--hub-accent);
+  --lumo-primary-text-color: var(--hub-accent);
+  --lumo-body-text-color: var(--hub-text-1);
+  --lumo-header-text-color: var(--hub-text-2);
+  --lumo-secondary-text-color: var(--hub-text-3);
+  --lumo-disabled-text-color: var(--hub-text-3);
+  --lumo-required-field-indicator-color: var(--hub-accent);
+  --lumo-error-text-color: var(--hub-error);
+  --lumo-contrast-5pct: rgba(148, 163, 184, 0.06);
+  --lumo-contrast-10pct: rgba(148, 163, 184, 0.10);
+  --lumo-contrast-20pct: rgba(148, 163, 184, 0.20);
+  --lumo-contrast-40pct: rgba(148, 163, 184, 0.40);
+  --lumo-contrast-60pct: rgba(148, 163, 184, 0.60);
+}
+
+/* Explicitly readable Grid header and cells. */
+.hub-session-view vaadin-grid {
+  background: var(--hub-bg);
+  --lumo-row-selected-background-color: var(--hub-selected-bg);
+}
+
+.hub-session-view vaadin-grid::part(header-cell) {
+  background: var(--hub-panel);
+  color: var(--hub-text-1);
+  font-weight: 700;
+}
+
+.hub-session-view vaadin-grid::part(cell),
+.hub-session-view vaadin-grid::part(row) {
+  color: var(--hub-text-1);
+  background: transparent;
+}
+
+.hub-session-view vaadin-grid::part(odd-row) {
+  background: rgba(148, 163, 184, 0.05);
+}
+
+/* The "Sessions" title was rendered as a muted, tiny, uppercase label which
+   blended into the dark background. Make it a clear, bright heading. */
+.hub-session-view h3.hub-section-label {
+  color: var(--hub-text-1);
+  font-size: var(--lumo-font-size-xl);
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .hub-session-chips {

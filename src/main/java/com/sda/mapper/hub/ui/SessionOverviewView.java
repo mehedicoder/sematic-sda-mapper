@@ -92,7 +92,7 @@ public class SessionOverviewView extends VerticalLayout {
         title.addClassName("hub-section-label");
         title.getStyle().set("margin", "0");
         Span subtitle = new Span("Mapping Hub sessions per user \u2014 incomplete and complete");
-        subtitle.getStyle().set("color", "var(--hub-text-3)");
+        subtitle.getStyle().set("color", "var(--hub-text-2)");
         titles.add(title, subtitle);
 
         Button refresh = new Button("Refresh", e -> refresh());

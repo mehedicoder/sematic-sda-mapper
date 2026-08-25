@@ -51,9 +51,7 @@ public class MappingHubView extends VerticalLayout {
     private final ClassListPanel classListPanel;
     private final ClassDetailPanel detailPanel;
     private final VerticalLayout fileQueue;
-    private final HorizontalLayout stepper;
     private final VerticalLayout dashboard;
-    private final RecommendationBar recommendationBar;
     private Button exportButton;
 
     private String selectedLayerId = "ALL";
@@ -85,12 +83,9 @@ public class MappingHubView extends VerticalLayout {
         fileQueue.addClassName("hub-file-queue");
         fileQueue.setPadding(false);
         fileQueue.setSpacing(false);
-        stepper = new HorizontalLayout();
-        stepper.addClassName("hub-stepper");
-        stepper.setWidthFull();
 
         var uploadPanel = createUploadSection();
-        uploadPanel.add(fileQueue, stepper);
+        uploadPanel.add(fileQueue);
 
         var uploadAndConsole = new HorizontalLayout(uploadPanel, console);
         uploadAndConsole.addClassName("hub-upload-row");
@@ -103,7 +98,6 @@ public class MappingHubView extends VerticalLayout {
         dashboard.addClassName("hub-dashboard-panel");
         dashboard.setPadding(false);
         dashboard.setSpacing(true);
-        recommendationBar = new RecommendationBar();
         add(dashboard);
 
         layerTabs = new LayerTabs(this::selectLayer);
@@ -256,7 +250,6 @@ public class MappingHubView extends VerticalLayout {
     private void refresh() {
         console.logLines(lastResult.consoleLines());
         renderFileQueue();
-        renderStepper();
         renderDashboard();
         layerTabs.update(ontologyDataService.getLayers(), lastResult.gapReport(), selectedLayerId);
         renderClassList();
@@ -328,68 +321,9 @@ public class MappingHubView extends VerticalLayout {
         }
     }
 
-    private void renderStepper() {
-        stepper.removeAll();
-        for (String stage : List.of("Parse", "Instantiate", "Lift", "Infer", "Match")) {
-            Span pill = new Span(stage);
-            pill.addClassName("hub-step");
-            boolean completed = lastResult.consoleLines().stream()
-                .anyMatch(line -> line.startsWith("[" + stage.toUpperCase() + "]"));
-            pill.addClassName(completed ? "hub-step--complete" : "hub-step--pending");
-            stepper.add(pill);
-        }
-    }
-
     private void renderDashboard() {
         dashboard.removeAll();
-        HorizontalLayout cards = new HorizontalLayout(
-            dashboardCard("Present", lastResult.gapReport().count(CoverageStatus.PRESENT), "present"),
-            dashboardCard("Inferred", lastResult.gapReport().count(CoverageStatus.INFERRED), "inferred"),
-            dashboardCard("Partial", lastResult.gapReport().count(CoverageStatus.PARTIAL), "partial"),
-            dashboardCard("Missing", lastResult.gapReport().count(CoverageStatus.MISSING), "missing"),
-            dashboardCard("Coverage %", lastResult.gapReport().coveragePercent(), "coverage")
-        );
-        cards.addClassName("hub-dashboard-cards");
-        cards.setWidthFull();
-        dashboard.add(cards, progressBar(), renderLayerCoverage());
-        recommendationBar.update(lastResult.recommendations(), hubService.getSession().getUploadedFormats(),
-            this::onSupplementaryUpload, this::showError);
-        dashboard.add(recommendationBar);
-    }
-
-    private HorizontalLayout renderLayerCoverage() {
-        HorizontalLayout strip = new HorizontalLayout();
-        strip.addClassName("hub-layer-coverage");
-        strip.setWidthFull();
-        strip.setSpacing(true);
-        Span label = new Span("Layer coverage");
-        label.addClassName("hub-section-label");
-        strip.add(label);
-        for (com.sda.mapper.hub.model.LayerCoverage coverage : lastResult.gapReport().layerCoverage()) {
-            Div pill = new Div();
-            pill.addClassName("hub-layer-coverage-pill");
-            Span name = new Span(coverage.layerId());
-            name.addClassName("hub-layer-coverage-name");
-            Span percent = new Span(Math.round(coverage.coveragePercent()) + "%");
-            percent.addClassName("hub-layer-coverage-value");
-            pill.add(name, percent);
-            pill.getElement().setAttribute("title", coverage.layerId() + " coverage: " + coverage.present()
-                + " present, " + coverage.inferred() + " inferred, "
-                + coverage.partial() + " partial, " + coverage.missing() + " missing");
-            strip.add(pill);
-        }
-        return strip;
-    }
-
-    private Div dashboardCard(String label, Object value, String status) {
-        Div card = new Div();
-        card.addClassNames("hub-card", "hub-card--" + status);
-        Span number = new Span(String.valueOf(value));
-        number.addClassName("hub-card-value");
-        Span text = new Span(label);
-        text.addClassName("hub-card-label");
-        card.add(number, text);
-        return card;
+        dashboard.add(progressBar());
     }
 
     private Div progressBar() {

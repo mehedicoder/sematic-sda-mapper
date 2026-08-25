@@ -89,6 +89,52 @@ public final class CanonicalAssetModel {
     }
 
     /**
+     * Replaces an existing entity (matched by class + id) with an updated one.
+     * Used by the editable Application/Requirements Layer review flow: the user
+     * changes field values and the edited entity is written back before the
+     * pipeline is re-run.
+     *
+     * @param updated the updated canonical entity (same id and class as the one it replaces)
+     */
+    public void replaceEntity(CanonicalEntity updated) {
+        removeById(updated.className(), updated.id());
+        addEntity(updated);
+    }
+
+    private void removeById(String className, String id) {
+        switch (className) {
+            case "Stakeholder" -> stakeholders.removeIf(e -> e.id().equals(id));
+            case "UseCase" -> useCases.removeIf(e -> e.id().equals(id));
+            case "UseCaseRequirement" -> requirements.removeIf(e -> e.id().equals(id));
+            case "UseCaseRequirementParameter" -> requirementParameters.removeIf(e -> e.id().equals(id));
+            case "UseCaseRequirementConstraint" -> requirementConstraints.removeIf(e -> e.id().equals(id));
+            case "VerificationCriterion" -> verificationCriteria.removeIf(e -> e.id().equals(id));
+            case "Capability" -> capabilities.removeIf(e -> e.id().equals(id));
+            case "OfferedCapability" -> offeredCapabilities.removeIf(e -> e.id().equals(id));
+            case "RequiredCapability" -> requiredCapabilities.removeIf(e -> e.id().equals(id));
+            case "Skill" -> skills.removeIf(e -> e.id().equals(id));
+            case "SkillParameter" -> skillParameters.removeIf(e -> e.id().equals(id));
+            case "Service" -> services.removeIf(e -> e.id().equals(id));
+            case "ServiceInstance" -> serviceInstances.removeIf(e -> e.id().equals(id));
+            case "DeploymentContext" -> deploymentContexts.removeIf(e -> e.id().equals(id));
+            case "ClusterNode" -> clusterNodes.removeIf(e -> e.id().equals(id));
+            case "DeploymentPolicy" -> deploymentPolicies.removeIf(e -> e.id().equals(id));
+            case "NetworkZone" -> networkZones.removeIf(e -> e.id().equals(id));
+            case "SafetyClass" -> safetyClasses.removeIf(e -> e.id().equals(id));
+            case "InformationModel" -> informationModels.removeIf(e -> e.id().equals(id));
+            case "SemanticConcept" -> semanticConcepts.removeIf(e -> e.id().equals(id));
+            case "CommunicationBinding" -> communicationBindings.removeIf(e -> e.id().equals(id));
+            case "DataConnector" -> dataConnectors.removeIf(e -> e.id().equals(id));
+            case "Asset" -> assets.removeIf(e -> e.id().equals(id));
+            case "Sensor" -> sensors.removeIf(e -> e.id().equals(id));
+            case "ProcessVariable" -> processVariables.removeIf(e -> e.id().equals(id));
+            case "Observation" -> observations.removeIf(e -> e.id().equals(id));
+            case "AutomationML" -> automationMLEntities.removeIf(e -> e.id().equals(id));
+            default -> { /* unknown class: nothing to remove */ }
+        }
+    }
+
+    /**
      * Merges all entities of another model into this one, keeping duplicates out.
      *
      * @param other the model to merge from

@@ -111,7 +111,8 @@ public class MappingHubView extends VerticalLayout {
         detailPanel = new ClassDetailPanel(ontologyDataService, manualEntryFormFactory,
             this::onSupplementaryUpload,
             this::showError,
-            this::onManualSave);
+            this::onManualSave,
+            this::onEntityEdit);
         detailPanel.setWidthFull();
 
         var body = new HorizontalLayout(classListPanel, detailPanel);
@@ -224,12 +225,45 @@ public class MappingHubView extends VerticalLayout {
             lastResult = hubService.processUpload(fileName, content);
             selectedClassName = null;
             refresh();
+            showApplicationRequirementsLayer();
             Notification.show("Parsed " + fileName, 3000, Notification.Position.TOP_CENTER);
         } catch (ParsingException e) {
             showError(e.getMessage());
         } catch (MappingException e) {
             showError(e.getMessage());
         }
+    }
+
+    /**
+     * Brings the Application / Requirements Layer (L1) to the front after an
+     * upload so the user can review and edit its fields before triggering the
+     * pipeline.
+     */
+    private void showApplicationRequirementsLayer() {
+        selectedLayerId = "L1";
+        layerTabs.update(ontologyDataService.getLayers(), lastResult.gapReport(), selectedLayerId);
+        selectedClassName = pickApplicationRequirementsClass();
+        renderClassList();
+        renderDetail();
+    }
+
+    private String pickApplicationRequirementsClass() {
+        List<OntologyClass> l1 = ontologyDataService.getClassesByLayer("L1");
+        return l1.stream().map(OntologyClass::name)
+            .filter(name -> "UseCaseRequirement".equals(name))
+            .findFirst()
+            .orElseGet(() -> l1.isEmpty() ? null : l1.get(0).name());
+    }
+
+    /**
+     * Applies an edited Application / Requirements Layer entity, re-runs the
+     * pipeline with the reviewed data and refreshes the UI.
+     */
+    private void onEntityEdit(CanonicalEntity oldEntity, CanonicalEntity updated) {
+        lastResult = hubService.updateEntity(updated);
+        refresh();
+        Notification.show("Updated " + updated.className() + " — pipeline re-run", 3000,
+            Notification.Position.TOP_CENTER);
     }
 
     private void onSupplementaryUpload(String fileName, byte[] content) {

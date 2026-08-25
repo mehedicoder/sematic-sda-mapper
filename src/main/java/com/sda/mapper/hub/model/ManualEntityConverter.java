@@ -36,10 +36,13 @@ public final class ManualEntityConverter {
             case "UseCase" -> new UseCase(
                 text(attributes, "id"), text(attributes, "name"),
                 text(attributes, "description"), text(attributes, "priority"),
+                text(attributes, "businessGoal"),
                 Optional.of(MANUAL_SOURCE), false);
             case "UseCaseRequirement", "Requirement" -> new UseCaseRequirement(
                 text(attributes, "id"), text(attributes, "name"),
                 text(attributes, "description"), text(attributes, "priority"),
+                text(attributes, "requirementID"), text(attributes, "lifecycleStatus"),
+                text(attributes, "rationale"), text(attributes, "acceptanceCondition"),
                 Optional.of(MANUAL_SOURCE), false);
             case "UseCaseRequirementParameter", "RequirementParameter" -> new UseCaseRequirementParameter(
                 text(attributes, "id"), text(attributes, "name"),

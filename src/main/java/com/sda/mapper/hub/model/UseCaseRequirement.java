@@ -11,16 +11,20 @@ public record UseCaseRequirement(
     String name,
     String description,
     String priority,
+    String requirementID,
+    String lifecycleStatus,
+    String rationale,
+    String acceptanceCondition,
     Optional<String> sourceFileName,
     boolean inferred
 ) implements CanonicalEntity {
 
     public UseCaseRequirement(String id, String name, String description, String priority) {
-        this(id, name, description, priority, Optional.empty(), false);
+        this(id, name, description, priority, id, "", "", "", Optional.empty(), false);
     }
 
     public UseCaseRequirement(String id, String name, String description, String priority, String sourceFileName) {
-        this(id, name, description, priority, Optional.of(sourceFileName), false);
+        this(id, name, description, priority, id, "", "", "", Optional.of(sourceFileName), false);
     }
 
     @Override
@@ -34,7 +38,11 @@ public record UseCaseRequirement(
             "id", id,
             "name", name,
             "description", description,
-            "priority", priority
+            "priority", priority,
+            "requirementID", requirementID,
+            "lifecycleStatus", lifecycleStatus,
+            "rationale", rationale,
+            "acceptanceCondition", acceptanceCondition
         );
     }
 }

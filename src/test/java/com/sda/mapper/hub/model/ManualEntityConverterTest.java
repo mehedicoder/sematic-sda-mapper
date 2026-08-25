@@ -40,7 +40,10 @@ class ManualEntityConverterTest {
             "id", "manual-requirement-1",
             "name", "Pump must deliver 0-100 l/min",
             "description", "Flow control over the nominal range",
-            "priority", "High")));
+            "priority", "High",
+            "requirementID", "REQ-EDIT-1", "lifecycleStatus", "Defined",
+            "rationale", "Pump flow must be observable",
+            "acceptanceCondition", "Flow within 0-100 l/min")));
 
         assertEquals(1, model.countForClass("UseCaseRequirement"));
         assertEquals(CoverageStatus.PRESENT,
@@ -49,6 +52,10 @@ class ManualEntityConverterTest {
         UseCaseRequirement requirement = model.requirements().get(0);
         assertEquals("Pump must deliver 0-100 l/min", requirement.name());
         assertEquals("High", requirement.priority());
+        assertEquals("REQ-EDIT-1", requirement.requirementID());
+        assertEquals("Defined", requirement.lifecycleStatus());
+        assertEquals("Pump flow must be observable", requirement.rationale());
+        assertEquals("Flow within 0-100 l/min", requirement.acceptanceCondition());
         assertTrue(requirement.sourceFileName().isPresent());
         assertEquals("manual-entry", requirement.sourceFileName().orElse(""));
         assertFalse(requirement.inferred());

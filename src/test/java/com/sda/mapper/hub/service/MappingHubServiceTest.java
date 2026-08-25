@@ -264,13 +264,20 @@ class MappingHubServiceTest {
 
         CanonicalEntity edited = new ManualEntity("UseCaseRequirement", "REQ-EDIT-1", "Edited",
             java.util.Map.of("id", "REQ-EDIT-1", "name", "Edited",
-                "description", "new description", "priority", "Low"));
+                "description", "new description", "priority", "Low",
+                "requirementID", "REQ-EDIT-1", "lifecycleStatus", "Defined",
+                "rationale", "Pump flow must be observable",
+                "acceptanceCondition", "Flow within 0-100 l/min"));
         PipelineResult result = service.updateEntity(edited);
 
         UseCaseRequirement updated = service.getSession().getModel().requirements().get(0);
         assertEquals("Edited", updated.name());
         assertEquals("new description", updated.description());
         assertEquals("Low", updated.priority());
+        assertEquals("REQ-EDIT-1", updated.requirementID());
+        assertEquals("Defined", updated.lifecycleStatus());
+        assertEquals("Pump flow must be observable", updated.rationale());
+        assertEquals("Flow within 0-100 l/min", updated.acceptanceCondition());
         assertTrue(result.consoleLines().stream().anyMatch(l -> l.startsWith("[EDIT]")),
             "Editing must log an [EDIT] stage");
     }

@@ -812,6 +812,18 @@
     rdfs:domain :UseCaseRequirement ;
     rdfs:range xsd:string .
 
+:rationale a owl:DatatypeProperty ;
+    rdfs:label "rationale"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirement → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range xsd:string .
+
+:acceptanceCondition a owl:DatatypeProperty ;
+    rdfs:label "acceptanceCondition"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirement → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range xsd:string .
+
 :role a owl:DatatypeProperty ;
     rdfs:label "role"^^xsd:string ;
     rdfs:comment "Used as: Stakeholder → xsd:string"^^xsd:string ;

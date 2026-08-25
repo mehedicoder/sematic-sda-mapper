@@ -301,7 +301,7 @@ public class ClassDetailPanel extends VerticalLayout {
         Map<String, TextField> inputs = new LinkedHashMap<>();
         for (Map.Entry<String, Object> attribute : entity.attributes().entrySet()) {
             String key = attribute.getKey();
-            if ("id".equals(key)) {
+            if ("id".equals(key) || "name".equals(key)) {
                 continue;
             }
             TextField input = new TextField(key);

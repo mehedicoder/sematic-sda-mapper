@@ -15,7 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies the runtime seed ABox ({@code ontology/seed-services.ttl}) loads together
+ * Verifies the runtime seed ABox (the split {@code ontology/seed-services.ttl} service
+ * side plus {@code ontology/seed-requirements.ttl} requirement side) loads together
  * with the TBox and that every paper use-case requirement matches its expected SDA
  * service via {@link SemanticReasonerService}. Mirrors the production ontology wiring
  * in {@code application.yml} ({@code app.ontology.file-paths}).
@@ -30,7 +31,8 @@ class SeedServicesLoadTest {
         OntologyModelLoader loader = new OntologyModelLoader();
         loader.setFilePaths(List.of(
             "ontology/sda_ontology_v2_structured.ttl",
-            "ontology/seed-services.ttl"));
+            "ontology/seed-services.ttl",
+            "ontology/seed-requirements.ttl"));
         loader.loadOntology();
         var queryLoader = new SparqlQueryLoader();
         var rDeployService = new RDeployService(loader);

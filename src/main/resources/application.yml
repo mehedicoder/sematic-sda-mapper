@@ -77,6 +77,7 @@ app:
     file-paths:
       - ontology/sda_ontology_v2_structured.ttl
       - ontology/seed-services.ttl
+      - ontology/seed-requirements.ttl
     inference:
       enabled: ${ONTOLOGY_INFERENCE_ENABLED:true}
   llm:

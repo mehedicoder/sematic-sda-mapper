@@ -2,7 +2,10 @@ package com.sda.mapper.hub.service;
 
 import com.sda.mapper.hub.model.AssetFileFormat;
 import com.sda.mapper.hub.model.Asset;
+import com.sda.mapper.hub.model.CanonicalEntity;
 import com.sda.mapper.hub.model.CoverageStatus;
+import com.sda.mapper.hub.model.ManualEntity;
+import com.sda.mapper.hub.model.UseCaseRequirement;
 import com.sda.mapper.hub.parser.AasModelParser;
 import com.sda.mapper.hub.parser.CanonicalParserRegistry;
 import com.sda.mapper.hub.parser.HubFileTypeDetector;
@@ -247,5 +250,35 @@ class MappingHubServiceTest {
         assertEquals(2, service.getSession().getUploadedFormats().size());
         assertTrue(result.gapReport().forClass("Asset").orElseThrow().status()
             == CoverageStatus.PRESENT);
+    }
+
+    @Test
+    @DisplayName("Should apply an edited Application/Requirements Layer entity and re-run the pipeline")
+    void shouldApplyEditedL1Entity() {
+        MappingHubService service = createService();
+        CanonicalEntity original = new ManualEntity("UseCaseRequirement", "REQ-EDIT-1", "Original",
+            java.util.Map.of("id", "REQ-EDIT-1", "name", "Original",
+                "description", "old description", "priority", "High"));
+        service.addManualEntity(original);
+        assertEquals("Original", service.getSession().getModel().requirements().get(0).name());
+
+        CanonicalEntity edited = new ManualEntity("UseCaseRequirement", "REQ-EDIT-1", "Edited",
+            java.util.Map.of("id", "REQ-EDIT-1", "name", "Edited",
+                "description", "new description", "priority", "Low",
+                "requirementID", "REQ-EDIT-1", "lifecycleStatus", "Defined",
+                "rationale", "Pump flow must be observable",
+                "acceptanceCondition", "Flow within 0-100 l/min"));
+        PipelineResult result = service.updateEntity(edited);
+
+        UseCaseRequirement updated = service.getSession().getModel().requirements().get(0);
+        assertEquals("Edited", updated.name());
+        assertEquals("new description", updated.description());
+        assertEquals("Low", updated.priority());
+        assertEquals("REQ-EDIT-1", updated.requirementID());
+        assertEquals("Defined", updated.lifecycleStatus());
+        assertEquals("Pump flow must be observable", updated.rationale());
+        assertEquals("Flow within 0-100 l/min", updated.acceptanceCondition());
+        assertTrue(result.consoleLines().stream().anyMatch(l -> l.startsWith("[EDIT]")),
+            "Editing must log an [EDIT] stage");
     }
 }

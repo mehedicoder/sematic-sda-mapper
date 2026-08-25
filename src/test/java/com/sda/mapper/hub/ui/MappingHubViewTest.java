@@ -236,6 +236,12 @@ class MappingHubViewTest {
             assertTrue(console.getLines().stream().anyMatch(line -> line.startsWith("[MATCH]")));
             Button exportButton = getField(view, "exportButton", Button.class);
             assertTrue(exportButton.isEnabled());
+
+            assertEquals("L1", getField(view, "selectedLayerId", String.class),
+                "Upload must focus the editable Application/Requirements (L1) layer");
+            ClassDetailPanel detailPanel = getField(view, "detailPanel", ClassDetailPanel.class);
+            assertTrue(fullText(detailPanel.getElement())
+                .contains("Application / Requirements Layer fields are editable"));
         } finally {
             UI.setCurrent(null);
         }

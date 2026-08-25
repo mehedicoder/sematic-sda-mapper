@@ -1,0 +1,209 @@
+# Seed ABox — Use Cases & Requirements (predefined requirement catalogue).
+#
+# Instance namespace: http://sda-platform.org/instance#
+# Ontology namespace: http://sda-platform.org/ontology#
+#
+# This file seeds the REQUIREMENT side of the demo graph:
+#   UseCase, UseCaseRequirement, UseCaseRequirementConstraint,
+#   VerificationCriterion, and RequiredCapability.
+# The matching SERVICE side lives in seed-services.ttl. Both files are listed
+# under app.ontology.file-paths and merged into one runtime model.
+#
+# Matching joins RequiredCapability (here) to OfferedCapability (services file)
+# on sda:capabilityType, so both files must be loaded together.
+
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix sda:  <http://sda-platform.org/ontology#> .
+@prefix :     <http://sda-platform.org/instance#> .
+
+# =====================================================================
+# Use Cases
+# =====================================================================
+:UC-HVACTempMonitoring a sda:UseCase ;
+    rdfs:label "HVAC Temperature Monitoring" ;
+    sda:useCaseID "UC-001" ;
+    sda:useCaseName "HVAC Temperature Monitoring" ;
+    sda:useCaseDescription "Monitor and analyse the supply-air temperature of AHU-01." ;
+    sda:targetsAsset :AHU01 ;
+    sda:hasRequirement :REQ-001, :REQ-003 .
+
+:UseCase-FermentationSkid a sda:UseCase ;
+    rdfs:label "Fermentation Skid Control" ;
+    sda:useCaseID "UC-002" ;
+    sda:useCaseName "Fermentation Skid Control" ;
+    sda:useCaseDescription "Control the fermentation skid Skid-A1." ;
+    sda:targetsAsset :Skid-A1 ;
+    sda:hasRequirement :REQ-002 .
+
+:UC-PVA a sda:UseCase ;
+    rdfs:label "Process Variable Analysis" ;
+    sda:useCaseID "UC-PVA" ;
+    sda:useCaseName "Process Variable Analysis" ;
+    sda:useCaseDescription "Analyse a process variable (e.g. temperature) with a UCUM unit and IEC CDD IRDI semanticID." ;
+    sda:targetsAsset :AHU01 ;
+    sda:hasRequirement :REQ-004 .
+
+# =====================================================================
+# Use Case Requirements
+# =====================================================================
+:REQ-001 a sda:UseCaseRequirement ;
+    rdfs:label "Flowmeter Diagnostics UseCaseRequirement" ;
+    sda:requirementID "REQ-001" ;
+    sda:requirementName "Flowmeter Diagnostics UseCaseRequirement" ;
+    sda:requirementDescription "Match a flowmeter diagnostics service for FT-101." ;
+    sda:requirementType "Diagnostics" ;
+    sda:lifecycleStatus "Defined" ;
+    sda:hasConstraint :CON-REQ001, :CON-REQ001-Recall ;
+    sda:verifiedBy :CRIT-REQ001-Latency, :CRIT-REQ001-Recall ;
+    sda:mapsToCapability :CAP-FlowDiagnostics-Required ;
+    sda:validatedBy :UseCase-HVACTempMonitoring .
+
+:REQ-002 a sda:UseCaseRequirement ;
+    rdfs:label "Fermentation Skid UseCaseRequirement" ;
+    sda:requirementID "REQ-002" ;
+    sda:requirementName "Fermentation Skid UseCaseRequirement" ;
+    sda:requirementDescription "Match a read-write PROFINET service for the fermentation skid." ;
+    sda:requirementType "Control" ;
+    sda:lifecycleStatus "Defined" ;
+    sda:hasConstraint :CON-REQ002, :CON-REQ002-Protocol ;
+    sda:verifiedBy :CRIT-REQ002-Latency, :CRIT-REQ002-Recall ;
+    sda:mapsToCapability :CAP-FermentationControl-Required ;
+    sda:validatedBy :UseCase-FermentationSkid .
+
+:REQ-003 a sda:UseCaseRequirement ;
+    rdfs:label "AHU Temperature Monitoring UseCaseRequirement" ;
+    sda:requirementID "REQ-003" ;
+    sda:requirementName "AHU Temperature Monitoring UseCaseRequirement" ;
+    sda:requirementDescription "Match an OT-Zone-3 OPC-UA read-only service for AHU-01." ;
+    sda:requirementType "Monitoring" ;
+    sda:lifecycleStatus "Defined" ;
+    sda:hasConstraint :CON-REQ003 ;
+    sda:verifiedBy :CRIT-REQ003-Latency, :CRIT-REQ003-Recall ;
+    sda:mapsToCapability :CAP-HVACTempMonitoring-Required ;
+    sda:validatedBy :UseCase-HVACTempMonitoring .
+
+:REQ-004 a sda:UseCaseRequirement ;
+    rdfs:label "Process Variable Analysis UseCaseRequirement" ;
+    sda:requirementID "REQ-004" ;
+    sda:requirementName "Process Variable Analysis UseCaseRequirement" ;
+    sda:requirementDescription "Match an analytics service over a temperature process variable (UCUM degC, IEC CDD IRDI)." ;
+    sda:requirementType "Analytics" ;
+    sda:lifecycleStatus "Defined" ;
+    sda:mapsToCapability :CAP-ProcessVariableAnalysis-Required ;
+    sda:validatedBy :UseCase-PVA .
+
+# =====================================================================
+# Use Case Requirement Constraints
+# =====================================================================
+:CON-REQ001 a sda:UseCaseRequirementConstraint ;
+    sda:constraintID "CON-REQ001" ;
+    sda:constraintType "Latency" ;
+    sda:expression "reportedLatency <= 60" ;
+    sda:isHardConstraint true .
+
+:CON-REQ001-Recall a sda:UseCaseRequirementConstraint ;
+    sda:constraintID "CON-REQ001-Recall" ;
+    sda:constraintType "Recall" ;
+    sda:expression "reportedRecall >= 0.90" ;
+    sda:isHardConstraint true .
+
+:CON-REQ002 a sda:UseCaseRequirementConstraint ;
+    sda:constraintID "CON-REQ002" ;
+    sda:constraintType "Latency" ;
+    sda:expression "reportedLatency <= 60" ;
+    sda:isHardConstraint true .
+
+:CON-REQ002-Protocol a sda:UseCaseRequirementConstraint ;
+    sda:constraintID "CON-REQ002-Protocol" ;
+    sda:constraintType "Protocol" ;
+    sda:expression "protocol = PROFINET" ;
+    sda:isHardConstraint true .
+
+:CON-REQ003 a sda:UseCaseRequirementConstraint ;
+    sda:constraintID "CON-REQ003" ;
+    sda:constraintType "Latency" ;
+    sda:expression "reportedLatency <= 60" ;
+    sda:isHardConstraint true .
+
+# =====================================================================
+# Verification Criteria
+# =====================================================================
+:CRIT-REQ001-Latency a sda:VerificationCriterion ;
+    sda:criterionID "CRIT-REQ001-Latency" ;
+    sda:criterionType "Hard" ;
+    sda:testMethod "reportedLatency" ;
+    sda:passThreshold 60.0 ;
+    sda:requiresConcept :PA-DIM-FlowConcept .
+
+:CRIT-REQ001-Recall a sda:VerificationCriterion ;
+    sda:criterionID "CRIT-REQ001-Recall" ;
+    sda:criterionType "Hard" ;
+    sda:testMethod "reportedRecall" ;
+    sda:passThreshold 0.90 ;
+    sda:requiresConcept :PA-DIM-FlowConcept .
+
+:CRIT-REQ002-Latency a sda:VerificationCriterion ;
+    sda:criterionID "CRIT-REQ002-Latency" ;
+    sda:criterionType "Hard" ;
+    sda:testMethod "reportedLatency" ;
+    sda:passThreshold 60.0 ;
+    sda:requiresConcept :PA-DIM-TemperatureConcept .
+
+:CRIT-REQ002-Recall a sda:VerificationCriterion ;
+    sda:criterionID "CRIT-REQ002-Recall" ;
+    sda:criterionType "Hard" ;
+    sda:testMethod "reportedRecall" ;
+    sda:passThreshold 0.90 ;
+    sda:requiresConcept :PA-DIM-TemperatureConcept .
+
+:CRIT-REQ003-Latency a sda:VerificationCriterion ;
+    sda:criterionID "CRIT-REQ003-Latency" ;
+    sda:criterionType "Hard" ;
+    sda:testMethod "reportedLatency" ;
+    sda:passThreshold 60.0 ;
+    sda:requiresConcept :PA-DIM-TemperatureConcept .
+
+:CRIT-REQ003-Recall a sda:VerificationCriterion ;
+    sda:criterionID "CRIT-REQ003-Recall" ;
+    sda:criterionType "Hard" ;
+    sda:testMethod "reportedRecall" ;
+    sda:passThreshold 0.90 ;
+    sda:requiresConcept :PA-DIM-TemperatureConcept .
+
+# =====================================================================
+# Required Capabilities (joined to Offered via capabilityType)
+# =====================================================================
+:CAP-FlowDiagnostics-Required a sda:RequiredCapability ;
+    rdfs:label "Flowmeter Diagnostics (Required)" ;
+    sda:capabilityID "CAP-FLOW-DIAG-001" ;
+    sda:capabilityName "Flowmeter Diagnostics" ;
+    sda:capabilityDescription "Diagnose FT-101 flowmeter health and alarm state." ;
+    sda:capabilityVersion "1.0" ;
+    sda:capabilityType "FlowDiagnostics" .
+
+:CAP-FermentationControl-Required a sda:RequiredCapability ;
+    rdfs:label "Fermentation Control (Required)" ;
+    sda:capabilityID "CAP-FERM-CTRL-001" ;
+    sda:capabilityName "Fermentation Control" ;
+    sda:capabilityDescription "Control the fermentation skid process." ;
+    sda:capabilityVersion "1.0" ;
+    sda:capabilityType "FermentationControl" .
+
+:CAP-HVACTempMonitoring-Required a sda:RequiredCapability ;
+    rdfs:label "HVAC Temperature Monitoring (Required)" ;
+    sda:capabilityID "CAP-HVAC-TEMP-001" ;
+    sda:capabilityName "HVAC Temperature Monitoring" ;
+    sda:capabilityDescription "Monitor AHU-01 supply-air temperature." ;
+    sda:capabilityVersion "1.0" ;
+    sda:capabilityType "HVACTempMonitoring" .
+
+:CAP-ProcessVariableAnalysis-Required a sda:RequiredCapability ;
+    rdfs:label "Process Variable Analysis (Required)" ;
+    sda:capabilityID "CAP-PVA-001" ;
+    sda:capabilityName "Process Variable Analysis" ;
+    sda:capabilityDescription "Analyse a process variable analytically." ;
+    sda:capabilityVersion "1.0" ;
+    sda:capabilityType "ProcessVariableAnalysis" .

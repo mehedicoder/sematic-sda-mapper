@@ -1,0 +1,38 @@
+# Process Variable Analysis match path (Phase 16, paper "next steps").
+#
+# Exercises the full v2 chain for REQ-004:
+#   R1 : UseCaseRequirement --mapsToCapability--> RequiredCapability
+#        (capabilityType) --> OfferedCapability --realisedBy--> Skill
+#   R2 : Skill --isImplementedBy--> Service --hasConnector--> DataConnector
+#        --mapsVariable--> ProcessVariable --describedBy--> SemanticConcept
+#   R3 : Service --isDeployedBy--> DeploymentContext --locatedInZone--> NetworkZone
+#        --contextConstrainedBy--> SafetyClass (SIL)
+#   R2a: every concept required by the skill must be covered by a process
+#        variable of the matched service (FILTER NOT EXISTS).
+PREFIX sda: <http://sda-platform.org/ontology#>
+PREFIX inst: <http://sda-platform.org/instance#>
+
+SELECT DISTINCT ?service ?serviceName ?variable ?unit ?concept
+WHERE {
+    inst:REQ-004 sda:mapsToCapability ?reqCap .
+    ?reqCap sda:capabilityType ?capType .
+    ?offCap a sda:OfferedCapability ;
+            sda:capabilityType ?capType ;
+            sda:realisedBy ?skill .
+    ?skill sda:isImplementedBy ?service ;
+           sda:requiresConcept ?reqConcept .
+    ?service a sda:Service ;
+             sda:serviceName ?serviceName ;
+             sda:hasConnector ?connector .
+    ?connector sda:mapsVariable ?variable .
+    ?variable sda:variableUnit ?unit ;
+              sda:describedBy ?concept .
+    FILTER NOT EXISTS {
+        ?skill sda:requiresConcept ?missing .
+        FILTER NOT EXISTS {
+            ?service sda:hasConnector ?c2 .
+            ?c2 sda:mapsVariable ?v2 .
+            ?v2 sda:describedBy ?missing .
+        }
+    }
+}

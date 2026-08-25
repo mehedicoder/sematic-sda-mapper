@@ -175,6 +175,24 @@ public class MappingHubService {
     }
 
     /**
+     * Applies an edited entity (written back from the editable Application/
+     * Requirements Layer review) and re-runs the dynamic pipeline stages so
+     * coverage and matching reflect the change.
+     *
+     * @param updated the edited canonical entity (same id + class as the replaced one)
+     * @return the updated pipeline result
+     */
+    public PipelineResult updateEntity(CanonicalEntity updated) {
+        session.getModel().replaceEntity(updated);
+        UUID runId = startRun();
+        saveEntities(runId, null, "EDIT", EntityOrigin.MANUAL, true, List.of(updated));
+        List<String> logs = new ArrayList<>();
+        logs.add("[EDIT] Updated " + updated.className() + " " + updated.name()
+            + " — re-running pipeline with reviewed data");
+        return runStages(null, logs, null, List.of(), runId);
+    }
+
+    /**
      * Returns the session-scoped state.
      *
      * @return the mapping hub session

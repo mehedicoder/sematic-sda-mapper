@@ -1,8 +1,10 @@
 package com.sda.mapper.ui.catalog;
 
+import com.sda.mapper.hub.ui.RequirementMatchingPanel;
 import com.sda.mapper.ui.MainLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.details.Details;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridVariant;
@@ -36,6 +38,7 @@ import java.util.List;
 public class ServiceCatalogView extends VerticalLayout {
 
     private final ServiceCatalogService catalogService;
+    private final RequirementMatchingPanel requirementMatchingPanel;
     private final Grid<ServiceCatalogEntry> grid;
     private final VerticalLayout detailPanel;
     private final ListDataProvider<ServiceCatalogEntry> dataProvider;
@@ -43,8 +46,10 @@ public class ServiceCatalogView extends VerticalLayout {
     private final ComboBox<String> deploymentZoneFilter;
     private final TextField searchField;
 
-    public ServiceCatalogView(ServiceCatalogService catalogService) {
+    public ServiceCatalogView(ServiceCatalogService catalogService,
+                              RequirementMatchingPanel requirementMatchingPanel) {
         this.catalogService = catalogService;
+        this.requirementMatchingPanel = requirementMatchingPanel;
         setSizeFull();
         setPadding(true);
         setSpacing(true);
@@ -60,10 +65,7 @@ public class ServiceCatalogView extends VerticalLayout {
         var subtitle = new Paragraph("Browse pre-built CSS-SDA services from the ontology catalog");
         subtitle.addClassNames(LumoUtility.TextColor.SECONDARY, LumoUtility.Margin.Top.NONE, LumoUtility.Margin.Bottom.SMALL);
 
-        var discoverLink = new com.vaadin.flow.component.html.Anchor("/catalog/discover", "Discover Live OPC UA Services");
-        discoverLink.addClassNames(LumoUtility.FontSize.SMALL);
-
-        var headerLayout = new VerticalLayout(header, subtitle, discoverLink);
+        var headerLayout = new VerticalLayout(header, subtitle);
         headerLayout.setPadding(false);
         headerLayout.setSpacing(false);
 
@@ -95,6 +97,12 @@ public class ServiceCatalogView extends VerticalLayout {
 
         add(headerLayout, createFilterBar(), splitLayout);
         setFlexGrow(1, splitLayout);
+
+        var matchDetails = new Details(new Span("Match a Requirement against this Catalog"),
+            requirementMatchingPanel);
+        matchDetails.setWidthFull();
+        matchDetails.addClassName("catalog-requirement-details");
+        add(matchDetails);
     }
 
     private void configureFilters() {

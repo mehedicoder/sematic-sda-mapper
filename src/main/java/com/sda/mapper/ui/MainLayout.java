@@ -59,7 +59,6 @@ public class MainLayout extends AppLayout {
         addToDrawer(createDrawerLink(VaadinIcon.CLUSTER, "Mapping Hub", com.sda.mapper.hub.ui.MappingHubView.class));
         addToDrawer(createDrawerLink(VaadinIcon.GROUP, "Sessions", com.sda.mapper.hub.ui.SessionOverviewView.class));
         addToDrawer(createDrawerLink(VaadinIcon.BOOK, "Service Catalog", com.sda.mapper.ui.catalog.ServiceCatalogView.class));
-        addToDrawer(createDrawerLink(VaadinIcon.CONNECT, "OPC UA Discovery", com.sda.mapper.ui.catalog.DiscoveryCatalogView.class));
         addToDrawer(createDrawerLink(VaadinIcon.DASHBOARD, "OPC UA Monitor", OpcUaVisualizationView.class));
         addToDrawer(createDrawerLink(VaadinIcon.COG, "Settings", SettingsView.class));
     }

@@ -4,6 +4,7 @@ import com.sda.mapper.hub.model.AssetFileFormat;
 import com.sda.mapper.hub.model.CanonicalAssetModel;
 import com.sda.mapper.hub.model.CanonicalEntity;
 import com.sda.mapper.hub.model.CoverageEntry;
+import com.sda.mapper.hub.model.ManualEntity;
 import com.sda.mapper.hub.model.CoverageStatus;
 import com.sda.mapper.hub.model.GapReport;
 import com.sda.mapper.hub.model.UploadedFileInfo;
@@ -16,6 +17,7 @@ import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.textfield.TextField;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -39,10 +41,15 @@ public class ClassDetailPanel extends VerticalLayout {
     private final BiConsumer<String, byte[]> onSupplementaryUpload;
     private final Consumer<String> onError;
     private final Consumer<CanonicalEntity> onManualSave;
+    private final BiConsumer<CanonicalEntity, CanonicalEntity> onEntityEdit;
 
     private boolean manualFormVisible;
     private CanonicalAssetModel currentModel;
     private List<CanonicalEntity> currentInferred;
+    private String editingEntityId;
+    private String currentClassName;
+    private GapReport currentReport;
+    private List<UploadedFileInfo> currentFiles;
 
     /**
      * Creates the detail panel.
@@ -51,12 +58,14 @@ public class ClassDetailPanel extends VerticalLayout {
                             ManualEntryFormFactory manualEntryFormFactory,
                             BiConsumer<String, byte[]> onSupplementaryUpload,
                             Consumer<String> onError,
-                            Consumer<CanonicalEntity> onManualSave) {
+                            Consumer<CanonicalEntity> onManualSave,
+                            BiConsumer<CanonicalEntity, CanonicalEntity> onEntityEdit) {
         this.ontologyDataService = ontologyDataService;
         this.manualEntryFormFactory = manualEntryFormFactory;
         this.onSupplementaryUpload = onSupplementaryUpload;
         this.onError = onError;
         this.onManualSave = onManualSave;
+        this.onEntityEdit = onEntityEdit;
         setPadding(true);
         setSpacing(true);
         addClassName("hub-detail-panel");
@@ -75,8 +84,12 @@ public class ClassDetailPanel extends VerticalLayout {
                        List<CanonicalEntity> inferred, List<UploadedFileInfo> files) {
         removeAll();
         manualFormVisible = false;
+        editingEntityId = null;
         currentModel = model;
         currentInferred = inferred;
+        currentClassName = className;
+        currentReport = report;
+        currentFiles = files;
         if (className == null) {
             add(createEmptyState());
             return;
@@ -99,6 +112,16 @@ public class ClassDetailPanel extends VerticalLayout {
         add(createRawData(clazz.get().name(), model, inferred));
         add(createGapAnalysis(className, entry));
         add(createGapActions(clazz.get().name(), entry));
+    }
+
+    private void rerender() {
+        update(currentClassName, currentReport, currentModel, currentInferred, currentFiles);
+    }
+
+    private boolean isLayerOne(String className) {
+        return ontologyDataService.getClassByName(className)
+            .map(c -> "L1".equals(c.layerId()))
+            .orElse(false);
     }
 
     private HorizontalLayout createHeader(OntologyClass clazz, CoverageEntry entry, OntologyLayer layer) {
@@ -191,6 +214,14 @@ public class ClassDetailPanel extends VerticalLayout {
         section.setSpacing(true);
         section.add(createSectionLabel("AAS Data Mapping"));
 
+        boolean layerOne = isLayerOne(className);
+        if (layerOne) {
+            Span hint = new Span("These Application / Requirements Layer fields are editable. "
+                + "Review them and change any value, then trigger the pipeline (Run Pipeline).");
+            hint.addClassName("hub-gap-hint");
+            section.add(hint);
+        }
+
         List<CanonicalEntity> entities = new ArrayList<>(model.getEntitiesForClass(className));
         entities.addAll(inferred.stream()
             .filter(e -> e.className().equals(className))
@@ -204,12 +235,16 @@ public class ClassDetailPanel extends VerticalLayout {
         }
 
         for (CanonicalEntity entity : entities) {
-            section.add(createEntityCard(entity));
+            if (layerOne && !entity.inferred() && entity.id().equals(editingEntityId)) {
+                section.add(createEntityEditForm(entity));
+            } else {
+                section.add(createEntityCard(entity, layerOne && !entity.inferred()));
+            }
         }
         return section;
     }
 
-    private Div createEntityCard(CanonicalEntity entity) {
+    private Div createEntityCard(CanonicalEntity entity, boolean editable) {
         Div card = new Div();
         card.addClassName("hub-entity-card");
 
@@ -233,7 +268,76 @@ public class ClassDetailPanel extends VerticalLayout {
             row.add(key, value);
             card.add(row);
         }
+
+        if (editable) {
+            Button edit = new Button("Edit");
+            edit.addClassName("hub-entity-edit");
+            edit.setId("hub-edit-" + entity.className().toLowerCase() + "-" + entity.id());
+            edit.addClickListener(e -> {
+                editingEntityId = entity.id();
+                rerender();
+            });
+            card.add(edit);
+        }
         return card;
+    }
+
+    /**
+     * Renders an L1 entity as an editable form. Field values come from the
+     * entity's attribute map (the {@code id} attribute is preserved, not shown).
+     */
+    private VerticalLayout createEntityEditForm(CanonicalEntity entity) {
+        VerticalLayout form = new VerticalLayout();
+        form.addClassName("hub-entity-edit-form");
+        form.setPadding(true);
+        form.setSpacing(true);
+
+        TextField nameField = new TextField("Name");
+        nameField.setId("hub-edit-field-name-" + entity.id());
+        nameField.setWidthFull();
+        nameField.setValue(entity.name());
+        form.add(nameField);
+
+        Map<String, TextField> inputs = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> attribute : entity.attributes().entrySet()) {
+            String key = attribute.getKey();
+            if ("id".equals(key) || "name".equals(key)) {
+                continue;
+            }
+            TextField input = new TextField(key);
+            input.setId("hub-edit-field-" + entity.id() + "-" + key);
+            input.setWidthFull();
+            input.setValue(String.valueOf(attribute.getValue()));
+            inputs.put(key, input);
+            form.add(input);
+        }
+
+        Button save = new Button("Save changes");
+        save.addThemeName("primary");
+        save.setId("hub-edit-save-" + entity.id());
+        save.addClickListener(e -> {
+            Map<String, Object> values = new LinkedHashMap<>();
+            values.put("id", entity.id());
+            String nameValue = nameField.getValue().trim();
+            String name = nameValue.isBlank() ? entity.name() : nameValue;
+            values.put("name", name);
+            for (Map.Entry<String, TextField> entry : inputs.entrySet()) {
+                values.put(entry.getKey(), entry.getValue().getValue().trim());
+            }
+            CanonicalEntity updated = new ManualEntity(entity.className(), entity.id(), name, values);
+            editingEntityId = null;
+            onEntityEdit.accept(entity, updated);
+        });
+
+        Button cancel = new Button("Cancel");
+        cancel.setId("hub-edit-cancel-" + entity.id());
+        cancel.addClickListener(e -> {
+            editingEntityId = null;
+            rerender();
+        });
+
+        form.add(new HorizontalLayout(save, cancel));
+        return form;
     }
 
     private VerticalLayout createGapAnalysis(String className, CoverageEntry entry) {

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MtpAml xmlns="http://www.example.org/mtp-aml"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <Instance Name="FermentationSkid-A1">
+        <Service Name="FermentationControl">
+            <Description>Fermentation temperature control service for batch bioprocess</Description>
+            <Parameter Name="Temperature"
+                       EngineeringUnit="&#176;C"
+                       NominalRangeMin="15"
+                       NominalRangeMax="40"
+                       DataType="Double" />
+            <Parameter Name="Pressure"
+                       EngineeringUnit="bar"
+                       NominalRangeMin="0.5"
+                       NominalRangeMax="3.0"
+                       DataType="Double" />
+        </Service>
+
+        <Service Name="DosingControl">
+            <Description>Nutrient dosing rate control service</Description>
+            <Parameter Name="DosingRate"
+                       EngineeringUnit="mL/min"
+                       NominalRangeMin="0"
+                       NominalRangeMax="50"
+                       DataType="Double" />
+        </Service>
+
+        <Communication>
+            <OpcUaServer Endpoint="opc.tcp://skid-a1:4840"
+                         SecurityMode="SignAndEncrypt"
+                         SecurityPolicy="Basic256Sha256" />
+        </Communication>
+
+        <DataAssembly>
+            <OpcUaNode NodeId="ns=2;s=Fermentation.TempSetpoint"
+                       BrowseName="2:Fermentation.TempSetpoint"
+                       DisplayName="TempSetpoint"
+                       DataType="Double" />
+            <OpcUaNode NodeId="ns=2;s=Fermentation.TempActual"
+                       BrowseName="2:Fermentation.TempActual"
+                       DisplayName="TempActual"
+                       DataType="Double" />
+            <OpcUaNode NodeId="ns=2;s=Dosing.RateSetpoint"
+                       BrowseName="2:Dosing.RateSetpoint"
+                       DisplayName="RateSetpoint"
+                       DataType="Double" />
+            <OpcUaNode NodeId="ns=2;s=Dosing.RateActual"
+                       BrowseName="2:Dosing.RateActual"
+                       DisplayName="RateActual"
+                       DataType="Double" />
+        </DataAssembly>
+    </Instance>
+
+</MtpAml>

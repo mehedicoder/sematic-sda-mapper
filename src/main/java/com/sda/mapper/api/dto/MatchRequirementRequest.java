@@ -8,6 +8,9 @@ import jakarta.validation.constraints.Positive;
  */
 public record MatchRequirementRequest(
     String requirementId,
+    String requirementName,
+    String requirementDescription,
+    String capabilityType,
     String functionClass,
     String protocol,
     String accessMode,

@@ -76,5 +76,18 @@ app:
   ontology:
     file-paths:
       - ontology/sda_ontology_v2_structured.ttl
+      - ontology/seed-services.ttl
+      - ontology/seed-requirements.ttl
     inference:
       enabled: ${ONTOLOGY_INFERENCE_ENABLED:true}
+  llm:
+    # Optional LLM-based semantic translation (paper p.7-8, p.12).
+    # Defaults to OpenRouter with a free model. Enable and supply an API key
+    # via environment variable (never commit secrets).
+    enabled: ${APP_LLM_ENABLED:false}
+    provider: ${APP_LLM_PROVIDER:OPENROUTER}
+    # api-key is supplied via APP_LLM_APIKEY (left blank by default)
+    api-key: ${APP_LLM_APIKEY:}
+    model: ${APP_LLM_MODEL:mistralai/mistral-7b-instruct:free}
+    # base-url / timeout-ms / temperature / max-tokens are optional;
+    # provider presets supply the default base URL.

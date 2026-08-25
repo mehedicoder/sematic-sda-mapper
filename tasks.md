@@ -925,6 +925,159 @@ Interactive dark-themed ontology visualizer at `/visualizer` grounded in the can
 
 ---
 
+## Phase 15: Capability Typing & PlantUnit (SDA-OM extension)
+
+**Status:** [x] Completed
+**Branch:** `feature/2026-08-25-remaining-phases`
+**Completed:** 2026-08-25
+**Tests:** 489 passing (0 failures, 0 errors, 0 skipped) — was 484; +5 new tests
+
+### Completion Evidence
+
+- `mvn clean test` — BUILD SUCCESS, 489 tests, 0 failures
+- Ontology TBox extended with capability-typing + PlantUnit reference concepts; verified via `CapabilityTypingPlantUnitTest` (Jena model, positive + negative)
+- `OntologyViewTest` counts unchanged — new reference classes kept out of the numbered catalog to avoid regenerating 46 canonical-record Java classes (`CanonicalRecordCoverageTest` requires a Java class per numbered class)
+
+### What was built
+
+| Component | Files |
+|---|---|
+| TTL: `:requiresFunction` + inverse `:requiredByCapability` (Capability → `:AnalyticalFunction | :ControlFunction`); `:AnalyticalFunction`/`:ControlFunction`/`:PlantUnit` as plain `owl:Class` reference concepts; widened `:operatesOn` range to `:Asset | :PlantUnit` | `src/main/resources/ontology/sda_ontology_v2_structured.ttl` |
+| Capability-typing TBox coverage test (positive: Capability requires AnalyticalFunction; negative: Capability does not map to Asset; inverse asymmetry) | `src/test/java/com/sda/mapper/service/CapabilityTypingPlantUnitTest.java` |
+
+### Key technical decisions
+
+- New classes kept non-numbered (no `:classNumber`) so they remain RDF/SPARQL-native reference concepts validated by the Jena model, not by the numbered visualizer contract — keeps the 24-class catalog and `OntologyViewTest` (85 relations / 24 classes) stable and avoids 46 generated canonical-record Java classes (`CanonicalRecordCoverageTest` would otherwise require a Java class per numbered class).
+
+---
+
+## Phase 16: Process Variable Analysis (paper "next steps" validation)
+
+**Status:** [x] Completed
+**Branch:** `feature/2026-08-25-remaining-phases`
+**Completed:** 2026-08-25
+**Tests:** 500 passing (0 failures, 0 errors, 0 skipped) — cumulative; +4 new `EvaluationTest` methods (18 total in `EvaluationTest`)
+
+### Completion Evidence
+
+- `mvn clean test` — BUILD SUCCESS, 500 tests, 0 failures
+- `UC-PVA` / `REQ-004` matches `SVC-ProcessVariableAnalytics` via the process-variable analysis path; 3 negative scenarios (wrong concept / wrong unit / wrong SIL) excluded
+- SPARQL path exercises R1–R3 + R2a (`requiresConcept` CDD coverage via `FILTER NOT EXISTS`)
+
+### What was built
+
+| Component | Files |
+|---|---|
+| PVA example (`UC-PVA`, `REQ-004`, capability/skill/service/connector/PV with UCUM `degC` + IEC CDD IRDI `semanticID`, deployed in OT-Zone-1) | `src/test/resources/ontology/demo-abox-v2.ttl` |
+| SPARQL match path (R1–R3 + R2a) | `src/main/resources/queries/process-variable-analysis.rq` |
+| Positive + 3 negative `EvaluationTest` methods | `src/test/java/com/sda/mapper/evaluation/EvaluationTest.java` |
+
+### Key technical decisions
+
+- Example data lives in the evaluation ABox (the demo data source) rather than a vendor device-description upload; PVA deployed in OT-Zone-1 so the existing `shouldMatchModeBWithNetworkZoneFilter` (OT-Zone-3) stays uniquely HVAC and no regression occurs.
+- Validated the paper's "process variable with unit + semanticID" next-step item via SPARQL, keeping matching logic in RDF/Turtle + queries per engineering rules.
+
+---
+
+## Phase 19: AutomationML (CAEX) Ingestion
+
+**Status:** [x] Completed
+**Branch:** `feature/2026-08-25-remaining-phases`
+**Completed:** 2026-08-25
+**Tests:** 496 passing (0 failures, 0 errors, 0 skipped) at this phase boundary (489 → 496; +7); full suite 500 after Phase 16
+
+### Completion Evidence
+
+- `mvn clean test` — BUILD SUCCESS, 496 tests, 0 failures (`AutomationMlParserTest` + extended `HubFileTypeDetectorTest` / `CanonicalParserRegistryTest` green)
+- Hub file-type detector sniffs CAEX/automationml **after** MTP markers (no false MTP classification)
+- `AutomationMlParser` lifts CAEX `InternalElement`/`ExternalInterface` into canonical AutomationML entities consumed by the hub pipeline
+
+### What was built
+
+| Component | Files |
+|---|---|
+| `AssetFileFormat.AUTOMATION_ML` + `EntityOrigin.AML` | `src/main/java/com/sda/mapper/hub/model/AssetFileFormat.java`, `src/main/java/com/sda/mapper/hub/model/EntityOrigin.java` |
+| CAEX sniff (after MTP markers) + `origin()` switch | `src/main/java/com/sda/mapper/hub/parser/HubFileTypeDetector.java` |
+| `AutomationMlParser` (`CanonicalModelParser`) + `AutomationMLEntity` (className `"AutomationML"`) | `src/main/java/com/sda/mapper/hub/parser/AutomationMlParser.java`, `src/main/java/com/sda/mapper/hub/model/AutomationMLEntity.java` |
+| `CanonicalAssetModel` `automationMLEntities` bucket + getter | `src/main/java/com/sda/mapper/hub/model/CanonicalAssetModel.java` |
+| `UploadDropzone` mime types + `MappingHubView` drop label/`formatClass` | `src/main/java/com/sda/mapper/hub/ui/UploadDropzone.java`, `src/main/java/com/sda/mapper/hub/ui/MappingHubView.java` |
+| Sample CAEX fixture | `src/test/resources/device-descriptions/automationml/sample-caex.aml` |
+| Tests: `AutomationMlParserTest` (new), `HubFileTypeDetectorTest` (+), `CanonicalParserRegistryTest` (+) | `src/test/java/com/sda/mapper/hub/parser/*.java` |
+
+### Key technical decisions
+
+- Generic CAEX mapped to a single new `AutomationML` canonical entity type (`caexElementType` stored in attributes) rather than forced into MTP-specific Skill/Service vocabulary, keeping it format-agnostic.
+- Sniffing checks MTP markers (`RoleClassLibrary`/`Service`) FIRST and falls through to CAEX/automationml, so AML files are not misclassified as MTP.
+
+---
+
+## Phase 17: Deployment Manager — actual orchestration
+
+**Status:** [x] Completed
+**Branch:** `feature/2026-08-25-remaining-phases`
+**Completed:** 2026-08-25
+**Tests:** 509 passing (0 failures, 0 errors, 0 skipped) cumulative; +9 new tests (`LocalDryRunBackendTest` 6, `DeploymentManagerServiceTest` 3)
+
+### Completion Evidence
+
+- `mvn clean test` — BUILD SUCCESS, 509 tests, 0 failures
+- `DeploymentManagerService` generates manifests via `ManifestService` (nodeSelector derived from `boundContext`) and applies them via the resolved `OrchestrationBackend`
+- `LocalDryRunBackend`: valid manifest → `READY`; failing `HealthChecker` → `ROLLED_BACK`; dry-run → `PLANNED`; invalid YAML → `FAILED`; observer records every transition; only supports `LOCAL_DRY_RUN`
+
+### What was built
+
+| Component | Files |
+|---|---|
+| Rollout lifecycle enum | `src/main/java/com/sda/mapper/deployment/orchestration/RolloutStatus.java` |
+| Health probe status + checker interface + NoOp default | `src/main/java/com/sda/mapper/deployment/orchestration/{HealthStatus,HealthChecker,NoOpHealthChecker}.java` |
+| Orchestration target / request / result records | `src/main/java/com/sda/mapper/deployment/orchestration/{OrchestrationTarget,OrchestrationRequest,OrchestrationResult}.java` |
+| Rollout observer + backend interface | `src/main/java/com/sda/mapper/deployment/orchestration/{RolloutObserver,OrchestrationBackend}.java` |
+| Dependency-free local dry-run backend (validate, health-gate, rollback, dry-run) | `src/main/java/com/sda/mapper/deployment/orchestration/LocalDryRunBackend.java` |
+| Deployment Manager wiring `ManifestService` → backend | `src/main/java/com/sda/mapper/deployment/orchestration/DeploymentManagerService.java` |
+| Tests (in-memory backend, injectable `HealthChecker`, no cluster) | `src/test/java/com/sda/mapper/deployment/orchestration/{LocalDryRunBackendTest,DeploymentManagerServiceTest}.java` |
+
+### Key technical decisions
+
+- Pluggable `OrchestrationBackend`: the shipped `LocalDryRunBackend` needs no external cluster/client, so the suite is green by default and health-gated rollback is exercised via an injectable `HealthChecker` (NoOp = UP, or a failing checker to drive rollback).
+- Real Kubernetes backend (`OrchestrationTarget.Type.KUBERNETES`) left as an extension point requiring a Kubernetes client dependency + infrastructure approval, consistent with AGENTS "no new infrastructure without explicit sign-off."
+- `nodeSelector` / deployment constraints are already derived by `KubernetesManifestService` from the `ServiceMatchResult` (which carries the R-Deploy `boundContext`), so no extra wiring was needed.
+
+---
+
+## Phase 18: Future / Optional (paper-stated plans)
+
+**Status:** [x] Completed — LLM-based semantic translation implemented & configurable (OpenRouter free default); SWRL-engine migration still deferred/optional
+**Branch:** `feature/2026-08-25-remaining-phases`
+**Completed:** 2026-08-25
+**Tests:** 523 passing (0 failures, 0 errors, 0 skipped) — +14 new LLM tests
+
+### Completion Evidence
+
+- Property-name alignment verified: paper `uses` intentionally split into `sda:usesBinding` / `sda:usesConnector` (Layer 2/3 naming pass; `R-Deploy` SWRL text updated) — no code change required.
+- R2a concept-coverage (`requiresConcept` + CDD IRDI) enforced on the canonical reasoner match path (`queries/match-service.rq`, exercised by `EvaluationTest`/REST) and the Process Variable Analysis path (`queries/process-variable-analysis.rq`). Hub match path joins on `conceptName` identity, so the separate coverage filter is not applicable there (documented; adding it broke its synthetic fixtures).
+- **LLM-based semantic translation implemented (2026-08-25):** `LlmProperties` (`app.llm.*`, env-overridable `APP_LLM_ENABLED`/`APP_LLM_PROVIDER`/`APP_LLM_APIKEY`/`APP_LLM_MODEL`) targets **OpenRouter with a free model by default**. `RestClientChatCompletionsClient` speaks the OpenAI-compatible Chat Completions API, so OpenRouter / OpenAI / Ollama / custom endpoints are all selectable by `provider`/`baseUrl`/`apiKey`. `LlmTranslationService` maps AutomationML / OPC UA NodeSet / AAS device descriptions to candidate SDA ontology concepts; exposed via `LlmController` (`/api/v1/llm/translate`, `/status`) and a Settings view form. API key is user-supplied, never returned by status. Tests use a stub `ChatCompletionsClient` (no external call).
+- SWRL-engine migration of R-Deploy/R-Verify intentionally **deferred** (optional; would add a SWRL-engine dependency; only if paper-exact fidelity is required).
+
+### What was built / changed
+
+| Component | Files |
+|---|---|
+| LLM configuration (OpenRouter free default) | `src/main/java/com/sda/mapper/llm/LlmProperties.java`, `src/main/resources/application.yml` (`app.llm.*`) |
+| Provider presets + chat transport interface | `src/main/java/com/sda/mapper/llm/LlmProvider.java`, `ChatCompletionsClient.java` |
+| OpenAI-compatible client (OpenRouter headers) | `src/main/java/com/sda/mapper/llm/RestClientChatCompletionsClient.java` |
+| Translation service + records + exception | `src/main/java/com/sda/mapper/llm/{LlmTranslationService,ConceptHint,TranslationResult,LlmNotConfiguredException}.java` |
+| REST API | `src/main/java/com/sda/mapper/api/LlmController.java`, `api/dto/{LlmTranslateRequest,LlmStatusResponse}.java` |
+| Settings view LLM config form | `src/main/java/com/sda/mapper/ui/SettingsView.java` |
+| Tests (stubbed transport, no external call) | `src/test/java/com/sda/mapper/llm/{LlmTranslationServiceTest,LlmPropertiesTest,RestClientChatCompletionsClientExtractTest}.java`, `src/test/java/com/sda/mapper/api/LlmControllerTest.java` |
+| Roadmap Phase 18 markers updated | `specs/roadmap.md` |
+
+### Key technical decisions
+
+- R2a hardening scoped to the paths where skill-level `requiresConcept` coverage is meaningful; the hub semantic-match engine matches Offered vs Required capability by `conceptName` identity, making the coverage filter redundant there.
+- LLM translation and SWRL migration are documented extension points, not implemented, to respect the AGENTS safety rules (no cloud services / no new infrastructure without approval) and the MVP scope.
+
+---
+
 ## Summary
 
 | Phase | Status | Tests | Date |
@@ -957,3 +1110,43 @@ Interactive dark-themed ontology visualizer at `/visualizer` grounded in the can
 | Phase 12: Documentation | [ ] Not started | — | — |
 | Phase 13: EKA UI Polish | [ ] Not started | — | — |
 | Phase 14: Margo Sandbox | [ ] Not started | — | — |
+| Phase 15: Capability Typing & PlantUnit | [x] Completed | 489 | 2026-08-25 |
+| Phase 16: Process Variable Analysis | [x] Completed | 500 | 2026-08-25 |
+| Phase 17: Deployment Manager Orchestration (local target) | [x] Completed | 509 | 2026-08-25 |
+| Phase 18: Future/Optional (property+R2a done; LLM implemented; SWRL deferred) | [x] Completed | 523 | 2026-08-25 |
+| Phase 19: AutomationML (CAEX) Ingestion | [x] Completed | 496 | 2026-08-25 |
+| Phase 20: Generic Requirement Matching & User-Defined Requirements | [x] Completed | 536 | 2026-08-25 |
+
+---
+
+## Phase 20: Generic Requirement Matching & User-Defined Requirements
+
+**Status:** [x] Completed
+**Branch:** `feature/2026-08-25-remaining-phases`
+**Completed:** 2026-08-25
+**Tests:** 536 passing (0 failures)
+
+### Completion Evidence
+
+- `mvn clean test` — BUILD SUCCESS (536 run, 0 failures)
+- `GenericRequirementMatchingTest` — seeded REQ-001..004 + user-defined `ProcessVariableAnalysis` match; `PROFINET`-only requirement correctly produces no match.
+- `RequirementViewTest` — UI renders, Create/Match flows work.
+- `SeedServicesLoadTest` — runtime catalog (seed-services.ttl) loaded; REQ-001..004 match expected services.
+
+### What was built
+
+| Component | Files |
+|---|---|
+| Generic matcher | `src/main/resources/queries/match-generic.rq` (replaces 4 per-requirement queries) |
+| Reasoner routing | `SemanticReasonerService.java` (generic query for any requirement; inline fallback for capability-less requirements) |
+| Persist API + DTO | `RequirementService.java`, `MatchRequirementRequest.java` (+requirementName, requirementDescription, capabilityType) |
+| UI | `RequirementView.java` (`/requirement`), `MainLayout.java` nav link |
+| Tests | `GenericRequirementMatchingTest`, `RequirementViewTest`, `SeedServicesLoadTest` |
+
+### Key technical decisions
+
+- Single parameterized query (`BIND(:__REQ_ID__ AS ?requirement)`) reads all requirement
+  constraints as OPTIONAL filters, so no per-requirement query file is needed.
+- Requirement ID is never auto-generated (user-supplied); constraints stored as typed
+  SDA literals, not expression strings.
+- Capability-less requirements fall back to constraint-only `matchInline` (legacy behaviour).

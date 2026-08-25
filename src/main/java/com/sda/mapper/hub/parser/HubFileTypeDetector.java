@@ -73,6 +73,9 @@ public class HubFileTypeDetector {
         if (text.contains("mtpaml") || text.contains("mtp-aml") || text.contains("opcuaserver")) {
             return Optional.of(AssetFileFormat.MTP_AML);
         }
+        if (text.contains("<caex") || text.contains("caexfile") || text.contains("automationml")) {
+            return Optional.of(AssetFileFormat.AUTOMATION_ML);
+        }
         if (text.contains("assetadministrationshells")) {
             return Optional.of(AssetFileFormat.AAS_JSON);
         }

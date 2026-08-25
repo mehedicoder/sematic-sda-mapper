@@ -812,6 +812,18 @@
     rdfs:domain :UseCaseRequirement ;
     rdfs:range xsd:string .
 
+:rationale a owl:DatatypeProperty ;
+    rdfs:label "rationale"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirement → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range xsd:string .
+
+:acceptanceCondition a owl:DatatypeProperty ;
+    rdfs:label "acceptanceCondition"^^xsd:string ;
+    rdfs:comment "Used as: UseCaseRequirement → xsd:string"^^xsd:string ;
+    rdfs:domain :UseCaseRequirement ;
+    rdfs:range xsd:string .
+
 :role a owl:DatatypeProperty ;
     rdfs:label "role"^^xsd:string ;
     rdfs:comment "Used as: Stakeholder → xsd:string"^^xsd:string ;
@@ -1506,9 +1518,9 @@
 
 :operatesOn a owl:ObjectProperty ;
     rdfs:label "operatesOn"^^xsd:string ;
-    rdfs:comment "Used as: Capability → :Asset"^^xsd:string ;
+    rdfs:comment "Used as: Capability → :Asset | :PlantUnit (paper Figure 5)"^^xsd:string ;
     rdfs:domain :Capability ;
-    rdfs:range :Asset ;
+    rdfs:range :Asset, :PlantUnit ;
     owl:inverseOf :hasCapability .
 
 :ownedByStakeholder a owl:ObjectProperty ;
@@ -1573,6 +1585,20 @@
     rdfs:domain :Skill ;
     rdfs:range :OfferedCapability ;
     owl:inverseOf :realisedBy .
+
+:requiresFunction a owl:ObjectProperty ;
+    rdfs:label "requiresFunction"^^xsd:string ;
+    rdfs:comment "Capability → :AnalyticalFunction | :ControlFunction (paper Figure 5). Distinguishes analytical from control capabilities without hardcoding service selection."^^xsd:string ;
+    rdfs:domain :Capability ;
+    rdfs:range :AnalyticalFunction, :ControlFunction ;
+    owl:inverseOf :requiredByCapability .
+
+:requiredByCapability a owl:ObjectProperty ;
+    rdfs:label "requiredByCapability"^^xsd:string ;
+    rdfs:comment "Inverse of requiresFunction: AnalyticalFunction|ControlFunction → Capability."^^xsd:string ;
+    rdfs:domain :AnalyticalFunction, :ControlFunction ;
+    rdfs:range :Capability ;
+    owl:inverseOf :requiresFunction .
 
 :referencedBySkill a owl:ObjectProperty ;
     rdfs:label "referencedBySkill"^^xsd:string ;
@@ -1861,6 +1887,21 @@
     :isa95Alignment "ISA-95 Level 3"^^xsd:string ;
     :ontologyLayer "Layer 2 — Capability, Skill, Service"^^xsd:string ;
     rdfs:comment "A named functional intent mapped from a UseCaseRequirement. R1 hop 1→2 (mapsToCapability → realisedBy)."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:AnalyticalFunction a owl:Class ;
+    rdfs:label "AnalyticalFunction"^^xsd:string ;
+    rdfs:comment "A function type for analytical capabilities (e.g., quality inspection, monitoring) referenced by requiresFunction. Typing only; service selection stays in semantic assets."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:ControlFunction a owl:Class ;
+    rdfs:label "ControlFunction"^^xsd:string ;
+    rdfs:comment "A function type for control capabilities (e.g., actuation, regulation) referenced by requiresFunction. Typing only; service selection stays in semantic assets."^^xsd:string ;
+    rdfs:subClassOf owl:Thing .
+
+:PlantUnit a owl:Class ;
+    rdfs:label "PlantUnit"^^xsd:string ;
+    rdfs:comment "A physical plant unit (line, station, skid) that a Capability may operate on, alongside :Asset (paper Figure 5). Minimal physical layer."^^xsd:string ;
     rdfs:subClassOf owl:Thing .
 
 :InformationModel a owl:Class ;

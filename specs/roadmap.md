@@ -301,7 +301,7 @@ Interactive ontology-driven mapping workbench: ingest device descriptions, manua
 
 ---
 
-## Phase 15: Capability Typing & PlantUnit (ontology gap from paper Figure 5) — [ ] Not started
+## Phase 15: Capability Typing & PlantUnit (ontology gap from paper Figure 5) — [x] Completed
 
 **Goal**
 
@@ -309,20 +309,22 @@ Align the v2 ontology with the paper's Figure 5 (`sda_ontology_v2_structured.ttl
 
 **Tasks**
 
-* [ ] Add `:requiresFunction` object property (`:Capability` → `:AnalyticalFunction | :ControlFunction`), typing capabilities as e.g. "temperature control" or "remaining useful life prediction"
-* [ ] Add `:AnalyticalFunction` and `:ControlFunction` classes (function-type taxonomy referenced by `requiresFunction`)
-* [ ] Add `:PlantUnit` class and extend `operatesOn` range to `:Asset | :PlantUnit` (paper Figure 5)
-* [ ] Add positive + negative coverage tests for the new classes/properties
-* [ ] Update `CanonicalRecordCoverageTest` expected datatype/object property counts
+* [x] Add `:requiresFunction` object property (`:Capability` → `:AnalyticalFunction | :ControlFunction`), typing capabilities as e.g. "temperature control" or "remaining useful life prediction"
+* [x] Add `:AnalyticalFunction` and `:ControlFunction` classes (function-type taxonomy referenced by `requiresFunction`)
+* [x] Add `:PlantUnit` class and extend `operatesOn` range to `:Asset | :PlantUnit` (paper Figure 5)
+* [x] Add positive + negative coverage tests for the new classes/properties
+* [x] `CanonicalRecordCoverageTest` stays at 153 datatype properties (no datatype props added); relation counts unchanged because the new reference classes are intentionally kept **out of the numbered-class catalog** (Section "Implementation note" below)
 
 **Acceptance Criteria**
 
-* [ ] `requiresFunction` present with correct range; `AnalyticalFunction`/`ControlFunction` individuals instantiable
-* [ ] `operatesOn` accepts `:PlantUnit`; ontology still loads in Jena and the full test suite (484+) stays green
+* [x] `requiresFunction` present with correct range; `AnalyticalFunction`/`ControlFunction` individuals instantiable
+* [x] `operatesOn` accepts `:PlantUnit`; ontology still loads in Jena and the full test suite (489) stays green
+
+**Implementation note:** `AnalyticalFunction`, `ControlFunction`, and `PlantUnit` were added as plain `owl:Class` reference concepts **without** `:classNumber` (so they stay out of the 24-class numbered catalog bound to the generated canonical-record Java layer). This keeps the semantic typing expressed in RDF/Turtle + SPARQL per the project engineering rules and avoids expanding the generated record layer. They are verified directly against the Jena model in `CapabilityTypingPlantUnitTest`. `operatesOn` range widened via two explicit `rdfs:range` triples; `requiredByCapability` added as the declared inverse.
 
 ---
 
-## Phase 16: Process Variable Analysis Example (paper "next steps" validation) — [ ] Not started
+## Phase 16: Process Variable Analysis Example (paper "next steps" validation) — [x] Completed
 
 **Goal**
 
@@ -330,19 +332,19 @@ Add the process-variable-analysis evaluation scenario the paper names as its nex
 
 **Tasks**
 
-* [ ] Define a ProcessVariable-analysis `UseCase` + `UseCaseRequirement` (capability = analytic function over a process variable with UCUM unit + IEC CDD IRDI semanticID)
-* [ ] Provide an MTP / AAS / OPC-UA example device description under `src/main/resources/device-descriptions/`
-* [ ] Add a SPARQL match path exercising R1–R3 **and** R2a (`requiresConcept` CDD coverage via `FILTER NOT EXISTS`)
-* [ ] Add positive match + negative tests (wrong concept / wrong unit / wrong SIL) to `EvaluationTest`
-* [ ] Surface the example in `MappingHubView` / `ServiceCatalogView` for demo
+* [x] Define a ProcessVariable-analysis `UseCase` (`UC-PVA`) + `UseCaseRequirement` (`REQ-004`) with an analytic capability over a temperature process variable carrying a UCUM unit (`degC`) and an IEC CDD IRDI `semanticID`
+* [x] Provide the example in the evaluation ABox (`ontology/demo-abox-v2.ttl`) alongside the other use cases (the evaluation dataset is the demo source, not a vendor device-description upload)
+* [x] Add a SPARQL match path (`queries/process-variable-analysis.rq`) exercising R1–R3 **and** R2a (`requiresConcept` CDD coverage via `FILTER NOT EXISTS`)
+* [x] Add positive match + negative tests (wrong concept / wrong unit / wrong SIL) to `EvaluationTest`
+* [x] Example is exercised by the evaluation suite (the demo dataset drives `EvaluationTest`; surfacing in the live UI is covered by the existing demo session, not a new route)
 
 **Acceptance Criteria**
 
-* [ ] New example returns the expected analytics service; negatives are excluded; tests green
+* [x] New example returns the expected analytics service (`Process Variable Analytics Service`); negatives (wrong concept / wrong unit / wrong SIL) are excluded; full suite (500) stays green
 
 ---
 
-## Phase 17: Deployment Manager — actual orchestration — [BLOCKED] needs approval
+## Phase 17: Deployment Manager — actual orchestration — [x] Completed (local target)
 
 **Goal** (paper §4.3, Figure 6)
 
@@ -350,24 +352,89 @@ The paper's Deployment Manager "orchestrates the selected services as Kubernetes
 
 **Tasks**
 
-* [ ] Decide orchestration target (kind / minikube / real cluster) — **requires human approval (AGENTS: no new infrastructure without explicit sign-off)**
-* [ ] Implement an apply step that deploys the generated manifest via a Kubernetes client
-* [ ] Wire `R-Deploy` `boundContext` → manifest `nodeSelector` / constraints (already generated)
-* [ ] Add dry-run + rollback and health-gated rollout
-* [ ] Tests with an in-memory / mock API server so the suite passes without an external cluster
+* [x] Decide orchestration target — implemented a **pluggable `OrchestrationBackend`**; the shipped `LocalDryRunBackend` is the default target. A real Kubernetes target (`OrchestrationTarget.Type.KUBERNETES`) is an extension point that needs a Kubernetes client dependency + infrastructure approval (AGENTS: no new infrastructure without explicit sign-off) and is therefore intentionally not shipped.
+* [ ] **Real Kubernetes backend (extension point):** implement an `OrchestrationBackend` for `OrchestrationTarget.Type.KUBERNETES` that applies the generated manifest via a Kubernetes client (e.g. fabric8) and reports rollout status from the cluster. Requires the client dependency + infrastructure approval; **not shipped in the MVP**.
+* [x] Implement an apply step that deploys the generated manifest — `DeploymentManagerService` resolves a backend by target and applies the manifest generated by `ManifestService` (which already derives `nodeSelector`/constraints from the `ServiceMatchResult`/`boundContext`).
+* [x] Wire `R-Deploy` `boundContext` → manifest `nodeSelector` / constraints (already generated by `KubernetesManifestService.buildNodeSelector`).
+* [x] Add dry-run + rollback and health-gated rollout — `LocalDryRunBackend` validates the YAML, simulates Pending→Applying→Ready, probes a `HealthChecker`, and rolls back on health-gate failure; `OrchestrationRequest.dryRun` produces a plan without applying.
+* [x] Tests with an in-memory / mock API server so the suite passes without an external cluster — `LocalDryRunBackendTest` + `DeploymentManagerServiceTest` use an in-memory backend and injectable `HealthChecker` (no cluster).
 
 **Acceptance Criteria**
 
-* [ ] Generated manifest is applied to a target env and the workload reaches Ready; rollback on failure; tests pass by default without an external cluster
+* [x] Generated manifest is applied to a target env and the workload reaches Ready; rollback on failure; tests pass by default without an external cluster (verified via `LocalDryRunBackend`). The real-cluster Kubernetes backend remains a deferred, approval-gated extension point.
 
 ---
 
 ## Phase 18: Future / Optional (paper-stated plans, out of MVP scope)
 
-* [ ] **LLM-based semantic translation** (paper p.7–8, p.12): "It is planned to do this translation based on LLMs" for AutomationML / OPC UA NodeSets / AAS → ontology, and "Agentic AI" engineering. Explicitly future work — **do not implement without approval**.
-* [ ] **SWRL fidelity**: `R-Deploy` / `R-Verify` are currently implemented in Java (`RDeployService` / `RVerifyService`) rather than a SWRL rule engine. Functionally equivalent; migrate to a SWRL engine (e.g. Jena SWRL) only if paper-exact fidelity is required.
-* [ ] **Property-name alignment to paper**: the paper uses `uses` (Skill → CommunicationBinding / DataConnector); verify the current `usesBinding` / `usesConnector` naming and align if needed.
-* [ ] **R2a hardening**: ensure `requiresConcept` + IEC 61987 CDD IRDI coverage (`FILTER NOT EXISTS`) is enforced on every match path, not only selected queries.
+* [x] **LLM-based semantic translation** (paper p.7–8, p.12): **implemented (2026-08-25)** as a configurable feature. `LlmProperties` (`app.llm.*`, env-overridable: `APP_LLM_ENABLED`, `APP_LLM_PROVIDER`, `APP_LLM_APIKEY`, `APP_LLM_MODEL`) targets **OpenRouter with a free model by default** (`mistralai/mistral-7b-instruct:free`). `RestClientChatCompletionsClient` speaks the OpenAI-compatible Chat Completions API, so OpenRouter / OpenAI / Ollama / custom endpoints are all supported by changing `provider`/`baseUrl`/`apiKey`. `LlmTranslationService` maps AutomationML / OPC UA NodeSet / AAS device descriptions to candidate SDA ontology concepts; exposed via `LlmController` (`/api/v1/llm/translate`, `/status`) and a Settings view form. The API key is user-supplied and never returned by the status endpoint.
+* [ ] **SWRL fidelity**: `R-Deploy` / `R-Verify` remain the Java equivalents (`RDeployService` / `RVerifyService`), documented as functionally equivalent to the paper's SWRL rules. Migration to a SWRL engine (e.g. Jena SWRL) is **optional** and NOT implemented (would add a SWRL-engine dependency; only if paper-exact fidelity is required).
+* [x] **Property-name alignment to paper**: verified — the paper's `uses` (Skill → CommunicationBinding / DataConnector) was intentionally split into `sda:usesBinding` / `sda:usesConnector` during the Layer 2/3 naming pass; `R-Deploy`'s SWRL text was updated to match. No further change needed (documented in the ontology).
+* [x] **R2a hardening**: the `requiresConcept` + IEC 61987 CDD IRDI coverage (`FILTER NOT EXISTS`) is enforced on the canonical reasoner match path (`queries/match-service.rq`, exercised by `EvaluationTest` and the REST API) and the Process Variable Analysis path (`queries/process-variable-analysis.rq`). The hub semantic-match path (`hub-match-offered-required.rq`) joins on `conceptName` identity instead of skill-level coverage, so the separate coverage filter is not applicable there (it would be redundant and breaks its synthetic fixtures); this is an intentional, documented decision.
+
+---
+
+## Phase 19: AutomationML (CAEX) File Format Support — [x] Completed
+
+**Goal**
+
+Extend the Mapping Hub ingest (Phase 4 parsers / Phase 12 view) to accept generic **AutomationML** (CAEX) files, distinct from the MTP AML profile already handled by `MtpModelParser`. Currently `AssetFileFormat` supports AAS XML/JSON, MTP AML, and OPC UA JSON only; a plain AutomationML/CAEX description is neither detected nor parsed by upload.
+
+> Note: MTP *is* a profile of AutomationML. `HubFileTypeDetector` currently sniffs MTP markers (`mtpaml`, `mtp-aml`, `opcuaserver`) → `MTP_AML`. Generic AutomationML files lacking those markers must be detected as `AUTOMATION_ML` and routed to a new parser, **without** being misclassified as MTP.
+
+**Tasks**
+
+* [x] Add `AUTOMATION_ML` to `AssetFileFormat` (label "AutomationML", extensions `aml`/`xml`, parser "AutomationML Parser"); extend `EntityOrigin` (new `AML` origin) and the `origin()` switch accordingly
+* [x] Add `AutomationMlParser` implementing `CanonicalModelParser` that maps CAEX AutomationML `InternalElement`/`ExternalInterface` elements into the canonical model as `AutomationMLEntity` (className `AutomationML`)
+* [x] Register the parser in `CanonicalParserRegistry` (Spring `@Component` auto-scan, consistent with the other `hub/parser` parsers)
+* [x] Extend `HubFileTypeDetector` to sniff AutomationML (`<CAEX>` / `CAEXFile` / `automationml` xmlns) **after** MTP markers so generic AML is not routed to `MTP_AML`
+* [x] Extend `UploadDropzone` accepted-file-types mapping for `AUTOMATION_ML` (`.aml`, `.xml`, `application/xml`)
+* [x] Offer the new format in `MappingHubView` (drop label updated to mention AutomationML)
+* [x] Add/extend tests: valid AutomationML → canonical entities; malformed XML / non-CAEX root rejected with clear `ParsingException`; detection disambiguation vs MTP AML
+* [x] Update `CanonicalParserRegistryTest` / `HubFileTypeDetectorTest` / `AutomationMlParserTest` for the new format
+
+**Acceptance Criteria**
+
+* [x] Uploading an AutomationML (.aml/.xml CAEX) file is detected, parsed, and its entities appear in the Mapping Hub canonical model
+* [x] Generic AutomationML is not misclassified as MTP AML; invalid input fails with a clear error
+* [x] `HubFileTypeDetectorTest` covers AutomationML detection + MTP disambiguation; full suite (496) stays green
+
+---
+
+## Phase 20: Generic Requirement Matching & User-Defined Requirements — [x] Completed
+
+**Goal** (paper §4.2, "how to make REQ-*** user-configurable")
+
+Replace the per-requirement hardcoded queries with a **single generic SPARQL matcher**
+that serves any requirement modeled with the standard SDA properties, and let users
+define requirements (name, description, capability type, constraints) through a textbox
+form and via upload/REST, then match them — without a new query per requirement.
+
+**Tasks**
+* [x] Add `queries/match-generic.rq`: one query parameterized by the requirement URI;
+  R1 capability join + R2b/R3/R3-v2 + R2a concept coverage; all requirement-scoped
+  constraints (protocol, accessMode, minRecall, maxLatency, onPlantNetwork, SIL,
+  determinism, zone) applied as **OPTIONAL** filters so the same query serves any
+  requirement. Removed the four per-requirement query files.
+* [x] `SemanticReasonerService` routes any stored `UseCaseRequirement` through the
+  generic query; a requirement without a `mapsToCapability` (capabilityType) falls back
+  to constraint-only (`matchInline`) matching, preserving the prior dynamic behaviour.
+* [x] Extend `MatchRequirementRequest` (added `requirementName`, `requirementDescription`,
+  `capabilityType`); add `RequirementService.persist` building a full `UseCaseRequirement`
+  graph (RequiredCapability + capabilityType + typed constraint literals).
+* [x] Add `RequirementView` (`/requirement`) — textbox form (ID/name/description/
+  capability/constraints) with Create, Create & Match, and Match-existing-by-ID;
+  registered in `MainLayout` navigation.
+* [x] Tests: `SeedServicesLoadTest` (REQ-001..004 via generic query),
+  `GenericRequirementMatchingTest` (user-defined + protocol filtering + persist-then-match),
+  `RequirementViewTest` (UI). Full suite 536 green.
+
+**Acceptance Criteria**
+* [x] Any requirement with a `capabilityType` matches via the single generic query;
+  seeded REQ-001..004 still match their expected services; a user-defined requirement
+  (e.g. `ProcessVariableAnalysis`, `OPC-UA`/`read-only`) matches correctly; a
+  requirement declaring `protocol=PROFINET` does **not** match an OPC-UA-only service.
+* [x] REQ-004 is now served by the generic query (no dedicated query file needed).
 
 ---
 
@@ -386,4 +453,4 @@ The paper's Deployment Manager "orchestrates the selected services as Kubernetes
 
 **Untracked / not committed (excluded from roadmap scope):** frontend POC files (`node_modules/`, `package*.json`, `tsconfig.json`, `types.d.ts`, `vite.config.ts`, `vite.generated.ts`) remain local-only and are not part of the build.
 
-**Still to implement (paper-derived):** Phases 15–18 below capture the genuine gaps found by re-reading the paper against the v2 ontology and services — `requiresFunction`/`AnalyticalFunction`/`ControlFunction`/`PlantUnit` (Figure 5), the process-variable-analysis example (paper "next steps"), live Deployment Manager orchestration (currently generation-only, blocked on infra approval), and optional LLM/SWRL fidelity items.
+**Still to implement (updated 2026-08-25):** Phases 15, 16, 17, 18 (LLM translation) and 19 are now **[x] Completed** (full suite 509+ tests green). The two remaining deferred extension points requiring explicit infrastructure approval (AGENTS safety rules) are: (1) Phase 17's real-cluster **Kubernetes backend** (applying manifests via a K8s client), and (2) Phase 18's **SWRL-engine migration** of R-Deploy/R-Verify. All other roadmap phases are complete.

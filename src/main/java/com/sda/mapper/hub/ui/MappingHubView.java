@@ -10,6 +10,7 @@ import com.sda.mapper.hub.service.MappingHubService;
 import com.sda.mapper.hub.service.PipelineResult;
 import com.sda.mapper.model.OntologyClass;
 import com.sda.mapper.model.OntologyLayer;
+
 import com.sda.mapper.service.OntologyDataService;
 import com.sda.mapper.ui.MainLayout;
 import com.vaadin.flow.component.UI;
@@ -66,7 +67,7 @@ public class MappingHubView extends VerticalLayout {
      * @param manualEntryFormFactory    the ontology-driven manual entry form factory
      */
     public MappingHubView(MappingHubService hubService, OntologyDataService ontologyDataService,
-                          ManualEntryFormFactory manualEntryFormFactory) {
+                            ManualEntryFormFactory manualEntryFormFactory) {
         this.hubService = hubService;
         this.ontologyDataService = ontologyDataService;
 
@@ -107,7 +108,8 @@ public class MappingHubView extends VerticalLayout {
         detailPanel = new ClassDetailPanel(ontologyDataService, manualEntryFormFactory,
             this::onSupplementaryUpload,
             this::showError,
-            this::onManualSave);
+            this::onManualSave,
+            this::onEntityEdit);
         detailPanel.setWidthFull();
 
         var body = new HorizontalLayout(classListPanel, detailPanel);
@@ -148,7 +150,7 @@ public class MappingHubView extends VerticalLayout {
         badges.setSpacing(true);
 
         UploadDropzone dropzone = new UploadDropzone(
-            "Drop AAS .xml, MTP .aml/.xml, or OPC UA .json here",
+            "Drop AAS .xml, MTP .aml/.xml, AutomationML .aml/.xml, or OPC UA .json here",
             List.of(AssetFileFormat.values()),
             this::onUpload,
             this::showError);
@@ -200,12 +202,45 @@ public class MappingHubView extends VerticalLayout {
             lastResult = hubService.processUpload(fileName, content);
             selectedClassName = null;
             refresh();
+            showApplicationRequirementsLayer();
             Notification.show("Parsed " + fileName, 3000, Notification.Position.TOP_CENTER);
         } catch (ParsingException e) {
             showError(e.getMessage());
         } catch (MappingException e) {
             showError(e.getMessage());
         }
+    }
+
+    /**
+     * Brings the Application / Requirements Layer (L1) to the front after an
+     * upload so the user can review and edit its fields before triggering the
+     * pipeline.
+     */
+    private void showApplicationRequirementsLayer() {
+        selectedLayerId = "L1";
+        layerTabs.update(ontologyDataService.getLayers(), lastResult.gapReport(), selectedLayerId);
+        selectedClassName = pickApplicationRequirementsClass();
+        renderClassList();
+        renderDetail();
+    }
+
+    private String pickApplicationRequirementsClass() {
+        List<OntologyClass> l1 = ontologyDataService.getClassesByLayer("L1");
+        return l1.stream().map(OntologyClass::name)
+            .filter(name -> "UseCaseRequirement".equals(name))
+            .findFirst()
+            .orElseGet(() -> l1.isEmpty() ? null : l1.get(0).name());
+    }
+
+    /**
+     * Applies an edited Application / Requirements Layer entity, re-runs the
+     * pipeline with the reviewed data and refreshes the UI.
+     */
+    private void onEntityEdit(CanonicalEntity oldEntity, CanonicalEntity updated) {
+        lastResult = hubService.updateEntity(updated);
+        refresh();
+        Notification.show("Updated " + updated.className() + " — pipeline re-run", 3000,
+            Notification.Position.TOP_CENTER);
     }
 
     private void onSupplementaryUpload(String fileName, byte[] content) {
@@ -348,6 +383,7 @@ public class MappingHubView extends VerticalLayout {
             case AAS_XML, AAS_JSON -> "aas";
             case MTP_AML -> "mtp";
             case OPCUA_JSON -> "opcua";
+            case AUTOMATION_ML -> "aml";
         };
     }
 

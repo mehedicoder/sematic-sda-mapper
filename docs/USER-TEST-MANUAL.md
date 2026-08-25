@@ -1,482 +1,431 @@
-# Semantic SDA Mapper — User Test Manual
+# Semantic SDA Mapper — User Acceptance Test (UAT) Manual
 
-## Overview
+**Scope:** Full user acceptance testing of the Semantic SDA Mapper, including the
+Mapping Hub, Ontology Visualizer, Session overview, Service/Discovery Catalogs,
+Settings (incl. LLM translation), OPC UA Monitor, the REST API, and the paper-derived
+use cases. Covers the completed roadmap phases 1–19, specifically the recently added
+**Phase 15** (capability typing / PlantUnit), **Phase 16** (Process Variable Analysis),
+**Phase 17** (Deployment Manager orchestration) and **Phase 19** (AutomationML / CAEX
+ingest), plus the configurable **LLM-based semantic translation** (Phase 18).
 
-This manual guides you through testing all features of the Semantic SDA Mapper prototype. The application maps industrial automation requirements to deployable software services using a CSS-SDA ontology, Apache Jena, and SPARQL matching.
+**Prerequisites**
 
-**Prerequisites:**
 - Java 25+
 - Maven 3.9+
-- PostgreSQL (or use H2 in-memory for testing)
-- Browser (Chrome, Firefox, Edge)
+- PostgreSQL (or run with the `test` profile / H2 for a quick smoke test)
+- A modern browser (Chrome, Firefox, Edge)
+- For LLM translation only: an API key from OpenRouter (free tier) or any
+  OpenAI-compatible provider
+
+**Application URL:** http://localhost:8080
 
 ---
 
 ## 1. Starting the Application
 
 ```bash
-# From project root
 mvn spring-boot:run
-
-# Or run the main class
-# com.sda.mapper.SemanticSdaMapperApplication
+# or run com.sda.mapper.SemanticSdaMapperApplication
 ```
 
-The application starts at **http://localhost:8080**. The OPC UA simulation server starts automatically on port 4840.
+- The app starts at **http://localhost:8080**.
+- The OPC UA simulation server starts automatically on port **4840**.
+- On first load you are presented with the login page.
 
-**Login credentials:**
-- Username: `user`
-- Password: `password`
-
----
-
-## 2. System Status (Landing Page)
-
-**Route:** `/`
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 2.1 | Open http://localhost:8080 | Login page appears |
-| 2.2 | Enter credentials and log in | System Status page loads with welcome message |
-| 2.3 | Verify navigation drawer on the left | All 12 navigation links are visible |
-| 2.4 | Click the theme toggle (sun/moon icon) | Page switches between light and dark mode |
-| 2.5 | Refresh the page | Theme preference is preserved |
+**Login (default):** `user` / `password` (form login; security is active outside the
+`test` profile).
 
 ---
 
-## 3. Dashboard
+## 2. Navigation Overview
 
-**Route:** `/dashboard`
+After login the left navigation drawer (MainLayout) shows:
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 3.1 | Click "Dashboard" in navigation | 5 animated cards appear: Services, Capabilities, Skills, Semantic Mappings, Inferred Capabilities |
-| 3.2 | Verify card values | Cards show numeric counts from the ontology (e.g., Services: 6+, Capabilities: 5+) |
-| 3.3 | Click on "Services" card | Navigates to Service Instances view |
-| 3.4 | Click on "Capabilities" card | Navigates to relevant view |
+| Link | Route | Purpose |
+|------|-------|---------|
+| Ontology Browser | `/` | Interactive CSS-SDA ontology visualizer |
+| Mapping Hub | `/mapping-hub` | Universal ingest → parse → lift → infer → match → manifest |
+| Sessions | `/sessions` | Per-user mapping-session overview (complete / incomplete) |
+| Service Catalog | `/catalog` | Browsable SDA service catalog |
+| Discovery Catalog | `/catalog/discover` | Discoverable servers / capabilities |
+| OPC UA Monitor | `/opcua-visualization` | Live OPC UA server + node values |
+| Settings | `/settings` | Appearance + LLM translation configuration |
 
----
-
-## 4. Ontology Explorer
-
-**Route:** `/ontology`
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 4.1 | Click "Ontology Explorer" in navigation | Split layout appears: tree on left, details on right |
-| 4.2 | Expand "sda:Requirement" node in tree | REQ-001, REQ-002, REQ-003 appear as children |
-| 4.3 | Click on "REQ-001" | Right panel shows Overview tab with label "REQ-001 Flowmeter Asset-Health" |
-| 4.4 | Click "Properties" tab | Shows requirementID=REQ-001, title, description, etc. |
-| 4.5 | Click "Relationships" tab | Shows mapsToCapability -> OC-ACM-Flowmeter |
-| 4.6 | Expand "sda:Service" node | Shows all service instances |
-| 4.7 | Click on "SVC-FlowmeterDiagnostics" | Shows service details with image, recall, latency |
-| 4.8 | Expand "css:Capability" node | Shows all capability instances |
+(Legacy standalone Dashboard / Upload / Deployment / Requirement Form / Search views
+were consolidated into the Mapping Hub and the API.)
 
 ---
 
-## 5. Requirement Form — Mode B (Inline Fields)
+## 3. Ontology Visualizer (`/`)
 
-**Route:** `/requirements`
+| Step | Action | Expected |
+|------|--------|----------|
+| 3.1 | Open the app | Ontology Visualizer loads at `/` with a dark-themed layout |
+| 3.2 | Inspect the summary pills | Shows layer / class / relation counts (24 classes, 85+ relations, 5 layers) |
+| 3.3 | Click a layer tab | Class list filters to that layer |
+| 3.4 | Click a class (e.g. `Service`) | Detail panel shows attributes + core/supporting relations |
+| 3.5 | Click a related class from a relation | Neighborhood graph navigates to it |
+| 3.6 | Toggle light/dark (header icon) | Theme switches and is preserved on refresh |
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 5.1 | Click "Requirement Form" in navigation | Form appears with all fields and populated dropdowns |
-| 5.2 | Verify dropdowns are populated | Protocol, Access Mode, Network Zone, Determinism Class, Safety Integrity Level dropdowns contain options |
-| 5.3 | Select "OPC-UA" from Protocol dropdown | Dropdown shows OPC-UA selected |
-| 5.4 | Select "read-only" from Access Mode dropdown | Dropdown shows read-only selected |
-| 5.5 | Set Minimum Recall to 0.90 | Numeric field accepts value |
-| 5.6 | Set Maximum Latency to 60 | Numeric field accepts value |
-| 5.7 | Click "Match" button | Results panel shows matched service: Flowmeter Diagnostics Service, OPC-UA, recall=0.94, latency=45ms |
-| 5.8 | Verify explanation text | Explanation mentions capability match, OPC-UA protocol, recall >= 0.90 |
-| 5.9 | Verify deployment context fields | Results may show Safety Integrity Level, Determinism Class, Network Zone if available |
-| 5.10 | Change Protocol to "HTTP" and click "Match" | No match returned (no service uses HTTP) |
-
----
-
-## 6. Requirement Form — Save Requirement
-
-**Route:** `/requirements`
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 6.1 | Fill in Title and Description | Fields accept input |
-| 6.2 | Select "FlowRate" from Function Class (if available) | Dropdown selection |
-| 6.3 | Select "OPC-UA" from Protocol | Dropdown selection |
-| 6.4 | Select "read-only" from Access Mode | Dropdown selection |
-| 6.5 | Set Nominal Range Min to 0.0 | Numeric field accepts value |
-| 6.6 | Set Nominal Range Max to 100.0 | Numeric field accepts value |
-| 6.7 | Select deployment context fields (optional) | Network Zone, Determinism Class, Safety Integrity Level dropdowns available |
-| 6.8 | Click "Save Requirement" button | Success message with auto-generated requirement ID (e.g., "Requirement saved: REQ-A1B2C3D4") |
-| 6.9 | The saved requirement appears in the ontology | Can be queried via Ontology Explorer |
+**Phase 15 check:** the ontology now carries the capability-typing relation
+`sda:requiresFunction` (inverse `sda:requiredByCapability`) linking a `Capability` to an
+`AnalyticalFunction` / `ControlFunction`, and the `PlantUnit` reference concept. These are
+reference (non-numbered) concepts; verify their presence via the Visualizer relation
+view or a SPARQL probe (`match-service.rq` exercises them). The `sda:operatesOn` range
+was widened to `Asset` **and** `PlantUnit`.
 
 ---
 
-## 7. Requirement Form — Lifecycle Verification
+## 4. Mapping Hub (`/mapping-hub`)
 
-**Route:** `/requirements`
+The Hub is the single place to ingest device descriptions and run the semantic pipeline.
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 7.1 | Match a requirement (Steps 5.3-5.7) | Results panel shows matched service |
-| 7.2 | Click the "Verify" button in results panel | Verification results appear below the match results |
-| 7.3 | Verify pass/fail status | Each criterion shows PASS or FAIL badge |
-| 7.4 | Verify summary text | Summary indicates whether all criteria are satisfied |
-| 7.5 | If criteria fail, check detail messages | Detail shows actual vs. threshold values |
+### 4.1 Upload / Ingest
 
----
+| Step | Action | Expected |
+|------|--------|----------|
+| 4.1.1 | Open Mapping Hub | Upload dropzone + console + layer tabs + coverage dashboard render |
+| 4.1.2 | Drag an **AAS .xml** file | Detected as AAS, parsed, triples/canonical entities listed in the console |
+| 4.1.3 | Drag an **MTP .aml / .xml** file | Detected as MTP AML, parsed (Service/Communication/DataAssembly) |
+| 4.1.4 | Drag an **OPC UA .json** datasheet | Detected as OPC UA, parsed |
+| 4.1.5 | Drag a generic **AutomationML / CAEX .aml / .xml** file | Detected as `AutomationML` (not MTP) and parsed into `AutomationML` canonical entities — **Phase 19** |
+| 4.1.6 | Upload an invalid / non-CAEX file | Clear `ParsingException` error message, no crash |
 
-## 8. Registration Wizard
+> Detection order matters: MTP markers (`RoleClassLibrary` / `Service`) are checked
+> **first**; a plain CAEX/AutomationML file then falls through to the `AutomationML`
+> format, so AML is never misclassified as MTP.
 
-**Route:** `/register`
+### 4.2 Pipeline, Coverage & Matching
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 8.1 | Click "Registration Wizard" in navigation | Step 1 (General Info) appears with form fields |
-| 8.2 | Verify dropdowns are populated | Requirement Type dropdown loaded from configuration |
-| 8.3 | Fill in Title and Description | Fields accept input |
-| 8.4 | Click "Next" | Step 2 (Communication) appears with populated protocol and access mode dropdowns |
-| 8.5 | Select protocol and access mode | Dropdowns show selections |
-| 8.6 | Click "Next" through Steps 3-6 | Each step shows relevant form fields with populated dropdowns |
-| 8.7 | Step 7 (Review) shows all entered data | Summary of all fields displayed |
-| 8.8 | Click "Register" on Step 8 | Requirement persisted to ontology model, success message with requirement ID |
-| 8.9 | Click "Previous" on any step | Returns to previous step with data preserved |
-| 8.10 | Click "Cancel" | Returns to System Status view |
+| Step | Action | Expected |
+|------|--------|----------|
+| 4.2.1 | On load (or click **Run Pipeline**) | Pipeline runs Parse → Lift → Infer → Match → Manifest; stages logged in the console |
+| 4.2.2 | Inspect the **Coverage Dashboard** | Per-layer coverage % and gap counts for the 24 numbered classes |
+| 4.2.3 | Open a class with a gap (red) | Detail panel shows gap actions (e.g. manual entry / supplementary upload) |
+| 4.2.4 | Click a matched service in results | Shows the matched `Service`, `Skill`, `CommunicationBinding`, `DataConnector`, deployment context |
+| 4.2.5 | Click **Export** | Manifest (Docker Compose + Kubernetes YAML) is produced/previewed |
 
----
+### 4.3 Manual Entry
 
-## 9. Search
+| Step | Action | Expected |
+|------|--------|----------|
+| 4.3.1 | Select a class in the browser | `ManualEntryFormFactory` renders ontology-driven fields for that class |
+| 4.3.2 | Fill required attributes and Save | Entity is added to the canonical model; coverage updates |
+| 4.3.3 | Submit an entity missing a required attribute | Validation error, entity not added |
 
-**Route:** `/search`
+### 4.4 UAT Input Files & Combined Matching Sessions
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 9.1 | Click "Search" in navigation | Search bar with type filter appears |
-| 9.2 | Type "Flowmeter" in search field | Results grid shows Flowmeter-related entities |
-| 9.3 | Verify grid columns | Name, Type, Description, Score columns visible |
-| 9.4 | Select "Requirement" from type filter | Only requirement entities shown |
-| 9.5 | Clear filter and type "OPC-UA" | All OPC-UA related entities appear |
-| 9.6 | Type "NONEXISTENT" | Empty results with "No results found" message |
-| 9.7 | Type "REQ-001" | Shows REQ-001 requirement with high similarity score |
+The sample device descriptions for the paper's use cases are collected in
+`docs/use-case-inputs/` (copies of the repo samples). They can be dragged into the
+Mapping Hub dropzone for manual UAT, or used to drive the REST matcher.
 
----
+#### Per-use-case upload (one file per session)
 
-## 10. Upload
+| File (relative to `docs/use-case-inputs/`) | Use case | Expected matched service |
+|--------------------------------------------|----------|--------------------------|
+| `REQ-001-flowmeter-diagnostics/req001-uaserver-nodeset-complete.xml` | A — Flowmeter (NE 107) | `SVC-FlowmeterDiagnostics` |
+| `REQ-002-fermentation-skid/req002-mtp-fermentation-skid-complete.xml` | B — Fermentation Skid | `SVC-FermentationSkid` |
+| `REQ-003-hvac-plant/req003-uaserver-ahu01-complete.json` | C — HVAC Plant | `SVC-HVACTempAnalysis` |
+| `REQ-004-process-variable-analysis/` (no upload file — ontology-native) | D — Process Variable Analysis | `SVC-ProcessVariableAnalytics` (via `requirementId`) |
+| `formats/aas/pump-aas.json`, `formats/mtp/pump-module-mtp.xml`, `formats/opcua/pump-opcua-datasheet.json`, `formats/automationml/sample-caex.aml` | format smoke tests | respective service / category |
 
-**Route:** `/upload`
+#### Combined "full paper" session (upload everything together)
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 10.1 | Click "Upload" in navigation | Upload panel with drag-and-drop area appears |
-| 10.2 | Drag an MTP AML XML file onto the upload area | File is accepted, parsed with MTPAmlParser, triples counted |
-| 10.3 | After upload completes | Results grid shows triple count, file type (MTP AML), summary |
-| 10.4 | Upload an OPC UA NodeSet XML file | Parsed with OpcUaNodeSetParser, triples counted |
-| 10.5 | Upload an OPC UA JSON datasheet file | Detected as AAS format via content sniffing, parsed with AasParser |
-| 10.6 | Upload an AAS JSON file | Parsed with AasParser, Skills/Communication/DataConnector extracted |
-| 10.7 | Upload an invalid file | Error message displayed with clear description |
+1. Open **Mapping Hub** once and stay on the view — the canonical model **accumulates**
+   across uploads within the session.
+2. Drag in, one after another (or multi-select):
+   - `REQ-001-flowmeter-diagnostics/req001-uaserver-nodeset-complete.xml`
+   - `REQ-002-fermentation-skid/req002-mtp-fermentation-skid-complete.xml`
+   - `REQ-003-hvac-plant/req003-uaserver-ahu01-complete.json`
+   - optionally `formats/opcua/temperature-sensor-opcua-datasheet.json` for a PVA-style temperature source
+3. After **each** upload the pipeline re-runs Parse → Lift → Infer → Match over all
+   accumulated entities; the Coverage Dashboard and matched-services list grow.
+4. Expected matched services in the combined session:
+   `SVC-FlowmeterDiagnostics`, `SVC-FermentationSkid`, `SVC-HVACTempAnalysis`
+   (and `SVC-ProcessVariableAnalytics` once a PVA-style input is present or REQ-004 is
+   matched via REST).
+5. Confirm the Coverage Dashboard reflects the union of all uploaded entities and that
+   gaps/red items are limited to reference concepts (Phase 15 non-numbered classes).
 
----
-
-## 11. Deployment
-
-**Route:** `/deployment`
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 11.1 | Click "Deployment" in navigation | Environment cards appear (Development, Testing, Production) |
-| 11.2 | Click "Development" card | Card is selected with highlight |
-| 11.3 | Click "Generate Manifests" button | Docker Compose YAML and Kubernetes YAML appear in text areas |
-| 11.4 | Verify Docker Compose YAML | Contains service name, image, restart policy, environment variables including SAFETY_INTEGRITY_LEVEL, DETERMINISM_CLASS, NETWORK_ZONE |
-| 11.5 | Verify Kubernetes YAML | Contains apiVersion, kind: Deployment, nodeSelector with labels `sda.ontology/sil`, `sda.ontology/determinism`, `sda.ontology/networkZone` |
-| 11.6 | Read the explanation panel | Human-readable explanation of why the service was selected |
-
----
-
-## 12. Monitoring
-
-**Route:** `/monitoring`
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 12.1 | Click "Monitoring" in navigation | System metrics cards appear |
-| 12.2 | Verify CPU usage | Progress bar shows current CPU usage percentage |
-| 12.3 | Verify Memory usage | Progress bar shows used/total memory |
-| 12.4 | Verify Ontology Statistics | Shows triple count (686+) and class count (21) |
-| 12.5 | Verify Uptime | Shows application uptime in human-readable format |
-| 12.6 | Refresh the page | Metrics update with current values |
+> **REQ-004 note:** Process Variable Analysis is evaluated against the demo ABox
+> (`demo-abox-v2.ttl`) already loaded. To include it in a session, call
+> `POST /api/v1/requirements/match {"requirementId":"REQ-004"}`, or upload a temperature
+> process-variable description and confirm it lifts with a `degC` unit + IEC CDD IRDI
+> `semanticID`.
 
 ---
 
-## 13. OPC UA Monitor
+## 5. Session Overview (`/sessions`)
 
-**Route:** `/opcua-visualization`
+| Step | Action | Expected |
+|------|--------|----------|
+| 5.1 | Open Sessions | Grid of mapping sessions with status chips (Complete / Incomplete) |
+| 5.2 | Verify summary counts | Per-user aggregate (including an "Unassigned" bucket) |
+| 5.3 | Filter by status / user / search | Grid narrows accordingly |
+| 5.4 | Open a session | Shows coverage %, gaps, matched services |
+| 5.5 | Refresh / wait 30s | Grid auto-refreshes |
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 13.1 | Click "OPC UA Monitor" in navigation | Server grid appears showing all known OPC UA servers (250px tall) |
-| 13.2 | Verify server grid columns | Name, Type, Host:Port, Path, Status columns visible |
-| 13.3 | Verify built-in server row | "Built-in Tank Server" shows Connected status |
-| 13.4 | Verify server cards below grid | Each server has a card with connection status and node values grid |
-| 13.5 | Click on "Built-in Tank Server" row | Detail panel opens with server name, endpoint, and browsed nodes grid |
-| 13.6 | Verify browsed nodes grid | Shows Node ID, Browse Name, Display Name, Value, Type columns |
-| 13.7 | Verify node values | Tank1.Level, Tank1.FlowRateIn/Out, Temperature, Pump nodes with live values |
-| 13.8 | Wait 5 seconds | Node values refresh automatically in detail view |
-| 13.9 | Click "Back to Servers" button | Returns to server grid view |
-| 13.10 | Click on external server row | If server is unreachable, "Could not connect" message in log; grid shows browsed nodes or empty |
+Sessions are user-attributed; incomplete vs complete is derived from persisted
+coverage (100% & 0 blocking gaps = complete; `FAILED` is never complete).
 
 ---
 
-## 14. REST API Testing
+## 6. Service & Discovery Catalogs (`/catalog`, `/catalog/discover`)
 
-### 14.1 Match by Inline Fields (Mode B)
+| Step | Action | Expected |
+|------|--------|----------|
+| 6.1 | Open Service Catalog | Browsable list of SDA services with capabilities |
+| 6.2 | Open a service | Shows its capability, skill, bindings, connectors |
+| 6.3 | Open Discovery Catalog | Lists discoverable servers/capabilities |
+| 6.4 | Call `GET /api/v1/catalog/discover/servers` | JSON list of known/discoverable servers |
+
+---
+
+## 7. OPC UA Monitor (`/opcua-visualization`)
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 7.1 | Open OPC UA Monitor | Server grid (built-in Tank Server = Connected) |
+| 7.2 | Click "Built-in Tank Server" | Detail panel with browsed nodes (Level, FlowRateIn/Out, Temperature, Pump) and live values |
+| 7.3 | Wait ~5s | Node values refresh automatically |
+| 7.4 | Click "Back to Servers" | Returns to grid |
+
+---
+
+## 8. Settings — LLM Semantic Translation (`/settings`)  · **Phase 18**
+
+The LLM feature is **opt-in** and configured by the user (no key is bundled).
+
+### 8.1 Configure via the Settings UI
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 8.1.1 | Open Settings → "LLM Semantic Translation" | Form with Enable, Provider, API key, Model, Base URL |
+| 8.1.2 | Set Provider = `OPENROUTER` (default) | Base URL field hidden (OpenRouter default used) |
+| 8.1.3 | Paste an OpenRouter API key, set Model to a free model (e.g. `mistralai/mistral-7b-instruct:free`) | Fields accept values |
+| 8.1.4 | Enable the checkbox and click **Save LLM settings** | "LLM settings saved" notification; settings persist on the running bean |
+| 8.1.5 | Set Provider = `CUSTOM` or `AZURE` | Base URL field appears and is required |
+| 8.1.6 | (Optional) Provider = `OPENAI` / `OLLAMA` | Works with the corresponding key / local endpoint |
+
+### 8.2 Configure via environment / `application.yml`
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/requirements/match \
-  -H "Content-Type: application/json" \
-  -d '{
-    "protocol": "OPC-UA",
-    "accessMode": "read-only",
-    "minRecall": 0.90,
-    "maxLatencyMs": 60
-  }'
+export APP_LLM_ENABLED=true
+export APP_LLM_PROVIDER=OPENROUTER
+export APP_LLM_APIKEY=sk-or-...your-openrouter-key
+export APP_LLM_MODEL=mistralai/mistral-7b-instruct:free
 ```
 
-**Expected Response:**
-```json
-{
-  "matched": true,
-  "serviceName": "Flowmeter Diagnostics Service",
-  "containerImage": "registry.local/flowmeter-diagnostics:1.0",
-  "capabilityName": "Asset Condition Monitoring for Flowmeter",
-  "protocol": "OPC-UA",
-  "accessMode": "read-only",
-  "bindingLabel": "OPC-UA binding for flowmeter",
-  "recall": 0.94,
-  "latencyMs": 45,
-  "explanation": "...",
-  "lifecycleStatus": "Matched",
-  "safetyIntegrityLevel": "SIL-0",
-  "determinismClass": "SoftRealTime",
-  "networkZone": "Plant",
-  "dockerComposeManifest": "...",
-  "kubernetesManifest": "..."
-}
-```
+Equivalent `app.llm.*` keys exist in `src/main/resources/application.yml` (the key is
+never committed; supply it via env var).
 
-### 14.2 Match by Requirement ID (Mode A)
+### 8.3 Test the LLM translation
 
+| Step | Action | Expected |
+|------|--------|----------|
+| 8.3.1 | `GET /api/v1/llm/status` | Returns `{enabled, provider, model, configured}` — **API key is never returned** |
+| 8.3.2 | `POST /api/v1/llm/translate` with `{"format":"AutomationML","content":"<CAEX>...</CAEX>"}` | Returns JSON `TranslationResult` with `hints` (className/label/reason) mapping the description to SDA ontology concepts |
+| 8.3.3 | With LLM disabled / no key | `POST /translate` returns **409** with `llm_not_configured` |
+| 8.3.4 | Inspect `TranslationResult.raw` | Contains the raw model response for transparency |
+
+The client speaks the OpenAI-compatible Chat Completions API, so OpenRouter (default,
+free models), OpenAI, local Ollama, and any custom endpoint are all selectable.
+
+### 8.4 User-defined requirements (generic matching)
+
+Matching is now driven by a **single generic SPARQL query** (`match-generic.rq`) that
+serves *any* requirement modeled with the standard SDA properties — no per-requirement
+query file is needed. A requirement may be predefined (e.g. `REQ-001`…`REQ-004` from the
+seeded catalog) or **user-defined** via the UI or REST.
+
+The requirement definition & matching UI is embedded at the bottom of the
+**Mapping Hub** (`/mapping-hub`) under the *Requirement Definition & Matching* section
+(the former standalone `/requirement` view has been consolidated into the hub):
+
+1. Enter a `Requirement ID` (mandatory), `Requirement name`, `Requirement description`,
+   and a `Capability type` (e.g. `FlowmeterDiagnostics`, `ProcessVariableAnalysis`).
+2. Optionally add constraints: `Protocol`, `Access mode`, `Min recall`, `Max latency`,
+   `Network zone`, `Safety integrity level`, `Determinism class`.
+3. Click **Create Requirement** (persists into the live ontology) and/or
+   **Create & Match** (persists then matches). Results show the matched service,
+   capability, protocol, recall, latency, and deployment context.
+4. To match a seeded use case, enter its ID in **Match existing requirement by ID**
+   (e.g. `REQ-001`) and click **Match**. You may enter **any** ID — if it does not
+   yet exist in the model, providing a **Capability type** (or constraints) in the
+   form above creates it on the fly and matches immediately (e.g. ID `REQ-ABC` with
+   Capability type `ProcessVariableAnalysis` returns the Process Variable Analytics
+   service). Unknown IDs with no capability/constraints return "no match".
+
+**Via REST:**
 ```bash
-curl -X POST http://localhost:8080/api/v1/requirements/match \
-  -H "Content-Type: application/json" \
-  -d '{"requirementId": "REQ-001"}'
-```
-
-**Expected Response:** SVC-FlowmeterDiagnostics matched, OPC-UA protocol, recall=0.94, latency=45ms, lifecycleStatus="Matched".
-
-### 14.3 Persist a New Requirement
-
-```bash
+# Persist a user-defined requirement
 curl -X POST http://localhost:8080/api/v1/requirements \
   -H "Content-Type: application/json" \
-  -d '{
-    "functionClass": "FlowRate",
-    "protocol": "OPC-UA",
-    "accessMode": "read-only",
-    "engineeringUnit": "l/min",
-    "safetyIntegrityLevel": "SIL-0",
-    "networkZone": "Plant",
-    "determinismClass": "SoftRealTime"
-  }'
-```
+  -d '{"requirementId":"REQ-USER-1","requirementName":"My analytics req",
+       "capabilityType":"ProcessVariableAnalysis","protocol":"OPC-UA","accessMode":"read-only"}'
 
-**Expected Response:**
-```json
-{
-  "requirementId": "REQ-a1b2c3d4"
-}
+# Match it back
+curl -X POST http://localhost:8080/api/v1/requirements/match \
+  -H "Content-Type: application/json" -d '{"requirementId":"REQ-USER-1"}'
 ```
+A requirement with no `capabilityType` falls back to constraint-only (protocol/recall/
+latency/…) matching, preserving the previous dynamic behaviour.
 
-### 14.4 Verify a Matched Requirement
+---
+
+## 9. Deployment Manager Orchestration  · **Phase 17**
+
+The Deployment Manager applies the generated manifest to a target environment with
+**dry-run, health-gated rollout, and rollback**.
+
+- The manifest (Docker Compose / Kubernetes) is generated by the existing manifest
+  services; the K8s `nodeSelector` is already derived from the requirement's
+  `boundContext` (deployment context).
+- The shipped backend is **`LocalDryRunBackend`** (no external cluster required): it
+  validates the YAML, simulates `Pending → Applying → Ready`, probes a health checker,
+  and **rolls back** if the health gate fails. A real **Kubernetes backend**
+  (`OrchestrationTarget.Type.KUBERNETES`) is a documented extension point that needs a
+  Kubernetes client dependency + infrastructure approval and is **not** shipped.
+- **UAT:** the orchestration logic is covered by automated tests
+  (`LocalDryRunBackendTest`, `DeploymentManagerServiceTest`). For a manual check,
+  generate a manifest in the Mapping Hub (§4.2.5) and confirm the YAML is valid and
+  contains the expected `nodeSelector` constraints; the apply/rollback behaviour is
+  verified by `mvn test`.
+
+---
+
+## 10. REST API
+
+### 10.1 Match by Requirement ID (Mode A)
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/requirements/REQ-001/verify
+curl -X POST http://localhost:8080/api/v1/requirements/match \
+  -H "Content-Type: application/json" \
+  -d '{"requirementId":"REQ-001"}'
 ```
+→ `SVC-FlowmeterDiagnostics`, OPC-UA, recall ≈ 0.94, latency ≈ 45 ms, `lifecycleStatus=Matched`.
 
-**Expected Response:**
-```json
-{
-  "requirementId": "REQ-001",
-  "verified": true,
-  "summary": "All criteria satisfied",
-  "criteria": [
-    {"name": "Recall threshold", "passed": "true", "detail": "recall: actual=0.94 >= 0.90 → PASS"},
-    {"name": "Latency threshold", "passed": "true", "detail": "latency: actual=45.00 <= 60.00 → PASS"}
-  ]
-}
-```
-
-### 14.5 Get Lifecycle Status
+### 10.2 Match by Inline Fields (Mode B)
 
 ```bash
-curl http://localhost:8080/api/v1/requirements/REQ-001/lifecycle
+curl -X POST http://localhost:8080/api/v1/requirements/match \
+  -H "Content-Type: application/json" \
+  -d '{"protocol":"OPC-UA","accessMode":"read-only","minRecall":0.90,"maxLatencyMs":60}'
 ```
 
-**Expected Response:**
-```json
-{
-  "requirementId": "REQ-001",
-  "lifecycleStatus": "Matched",
-  "matched": "true"
-}
-```
-
-### 14.6 Get Dropdown Options
+### 10.3 Options & System Status
 
 ```bash
 curl http://localhost:8080/api/v1/options/protocol
-```
-
-**Expected:** `[{"value":"OPC-UA","label":"OPC-UA"},{"value":"PROFINET","label":"PROFINET"},...]`
-
-### 14.7 Get All Option Field Names
-
-```bash
-curl http://localhost:8080/api/v1/options
-```
-
-**Expected:** `["protocol","accessMode","engineeringUnit","safetyIntegrityLevel","networkZone","determinismClass","informationModel"]`
-
-### 14.8 Validation Error — Neither Mode
-
-```bash
-curl -X POST http://localhost:8080/api/v1/requirements/match \
-  -H "Content-Type: application/json" \
-  -d '{}'
-```
-
-**Expected:** 400 Bad Request with validation error.
-
-### 14.9 Validation Error — Both Modes
-
-```bash
-curl -X POST http://localhost:8080/api/v1/requirements/match \
-  -H "Content-Type: application/json" \
-  -d '{"requirementId": "REQ-001", "protocol": "OPC-UA"}'
-```
-
-**Expected:** 400 Bad Request with validation error.
-
----
-
-## 15. Health Endpoints
-
-```bash
-# Application health
-curl http://localhost:8080/actuator/health
-
-# Prometheus metrics
-curl http://localhost:8080/actuator/prometheus
-
-# System status
 curl http://localhost:8080/api/v1/system/status
+curl http://localhost:8080/actuator/health
+curl http://localhost:8080/actuator/prometheus
 ```
+
+### 10.4 Pipeline & Catalog
+
+```bash
+curl -X POST http://localhost:8080/api/v1/pipeline/execute -H "Content-Type: application/json" -d '{}'
+curl http://localhost:8080/api/v1/catalog/discover/servers
+```
+
+### 10.5 LLM (Phase 18)
+
+```bash
+curl http://localhost:8080/api/v1/llm/status
+curl -X POST http://localhost:8080/api/v1/llm/translate \
+  -H "Content-Type: application/json" \
+  -d '{"format":"AAS","content":"<...>"}'
+```
+
+### 10.6 Validation errors
+
+- Empty body `{}` → **400** (Mode B requires at least one field).
+- Both `requirementId` **and** inline fields → **400**.
 
 ---
 
-## 16. Theme and Responsive Design
+## 11. Evaluation / Paper Use-Case Scenarios
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 16.1 | Click sun/moon icon in header | Theme toggles between light and dark mode |
-| 16.2 | Resize browser to tablet width (~768px) | Navigation drawer collapses to hamburger menu |
-| 16.3 | Resize browser to mobile width (~375px) | Navigation becomes overlay, content fills width |
-| 16.4 | Click hamburger menu on mobile | Navigation drawer slides in as overlay |
-| 16.5 | Refresh page | Last selected theme is remembered |
+The input files for these scenarios are in `docs/use-case-inputs/` (see §4.4 for the
+combined-session upload workflow). Match each requirement via
+`POST /api/v1/requirements/match`:
+
+| Use case | requirementId | Expected service | Notes |
+|----------|---------------|------------------|-------|
+| A — Flowmeter NE 107 | `REQ-001` | `SVC-FlowmeterDiagnostics` | OPC-UA, recall ≥ 0.90 |
+| B — Fermentation Skid | `REQ-002` | `SVC-FermentationSkid` | PROFINET, SIL-2, HardRealTime |
+| C — HVAC Plant | `REQ-003` | `SVC-HVACTempAnalysis` | BACnet, SoftRealTime, OT-Zone-3 |
+| **D — Process Variable Analysis** | `REQ-004` | `SVC-ProcessVariableAnalytics` | **Phase 16** — analytics over a process variable with UCUM unit (`degC`) + IEC CDD IRDI semanticID; R2a concept-coverage enforced |
+
+**Process Variable Analysis (Phase 16) detail:**
+
+```bash
+curl -X POST http://localhost:8080/api/v1/requirements/match \
+  -H "Content-Type: application/json" \
+  -d '{"requirementId":"REQ-004"}'
+```
+→ `SVC-ProcessVariableAnalytics`, OPC-UA, with the process variable carrying the
+`degC` unit and an IEC CDD IRDI `semanticID`. **Negative checks** (also in
+`EvaluationTest`): a requirement asking for the *wrong* concept, *wrong* unit, or
+*wrong* SIL must **not** match `REQ-004`.
+
+**Cross-plant:** `cross-plant-temperature.rq` returns temperature services across both
+plants (verify via Ontology Visualizer / a SPARQL run).
 
 ---
 
-## 17. Evaluation Test Scenarios
-
-These scenarios validate the three use cases from the paper.
-
-### Use Case A: Flowmeter NE 107
-
-```bash
-# Match flowmeter diagnostics requirement
-curl -X POST http://localhost:8080/api/v1/requirements/match \
-  -H "Content-Type: application/json" \
-  -d '{"requirementId": "REQ-001"}'
-```
-
-**Expected:** SVC-FlowmeterDiagnostics matched, OPC-UA protocol, recall=0.94, latency=45ms.
-
-### Use Case B: Fermentation Skid
-
-```bash
-# Match fermentation temperature control
-curl -X POST http://localhost:8080/api/v1/requirements/match \
-  -H "Content-Type: application/json" \
-  -d '{"requirementId": "REQ-002"}'
-```
-
-**Expected:** SVC-FermentationSkid matched, PROFINET protocol, SIL-2, HardRealTime.
-
-### Use Case C: HVAC Plant
-
-```bash
-# Match HVAC temperature monitoring
-curl -X POST http://localhost:8080/api/v1/requirements/match \
-  -H "Content-Type: application/json" \
-  -d '{"requirementId": "REQ-003"}'
-```
-
-**Expected:** SVC-HVACTempAnalysis matched, BACnet protocol, SoftRealTime, OT-Zone-3.
-
-### Cross-Plant Query
-
-The SPARQL query `cross-plant-temperature.rq` finds all temperature-related services across both plants. Verify it via the Ontology Explorer or by loading the query manually.
-
----
-
-## 18. Negative Test Scenarios
+## 12. Negative Test Scenarios
 
 | Scenario | Input | Expected |
 |----------|-------|----------|
-| Wrong protocol | Protocol=HTTP in Mode B | No match returned with explanation |
-| Nonexistent requirement | requirementId="REQ-999" | No match returned |
-| Invalid XML upload | Upload a .txt file | Parser error message |
-| Empty search | Search with no input | Empty results |
-| Both match modes | requirementId + inline fields | 400 Bad Request |
-| No match mode | Empty request body | 400 Bad Request |
+| Wrong protocol (Mode B) | `protocol=HTTP` | No match |
+| Unknown requirement | `requirementId=REQ-999` | No match |
+| Invalid upload | non-CAEX / corrupt XML | Clear parse error |
+| LLM disabled | `POST /api/v1/llm/translate` | 409 `llm_not_configured` |
+| Both match modes | `requirementId` + inline fields | 400 |
+| Empty match body | `{}` | 400 |
 
 ---
 
-## 19. Automated Test Suite
-
-Run all 296 automated tests:
+## 13. Automated Test Suite
 
 ```bash
 mvn clean test
 ```
 
-**Expected:** BUILD SUCCESS with 296 tests, 0 failures, 0 errors.
+**Expected:** `BUILD SUCCESS` — **523 tests, 0 failures, 0 errors**.
 
-Test categories:
-- Unit tests: Ontology loading, SPARQL matching, parser parsing, manifest generation
-- Integration tests: REST API endpoints, option loading, system status
-- UI tests: View rendering, component instantiation, route annotations
-- Evaluation tests: All 3 use cases, cross-plant queries, file parsing
-- Deployment tests: Docker Compose and Kubernetes manifest generation with deployment context
+Coverage includes: ontology loading, SPARQL matching, parsers (AAS/MTP/OPC UA/AutomationML),
+manifest generation, Mapping Hub pipeline/UI, Session overview, Ontology Visualizer,
+REST API, evaluation use cases (incl. Process Variable Analysis), capability typing
+(Phase 15), Deployment Manager orchestration (Phase 17), and LLM translation
+(Phase 18, stubbed transport — no external calls).
 
 ---
 
-## 20. Troubleshooting
+## 14. Acceptance Criteria Checklist
+
+- [ ] App starts; login works; navigation shows all 7 routes.
+- [ ] Ontology Visualizer renders 24 classes / 5 layers; Phase 15 relations present.
+- [ ] Mapping Hub ingests AAS, MTP, OPC UA **and** AutomationML/CAEX (Phase 19) without MTP misclassification.
+- [ ] Pipeline runs; coverage dashboard + matching work; manifest exports.
+- [ ] Sessions overview shows complete/incomplete with filters.
+- [ ] OPC UA Monitor shows live tank values.
+- [ ] Settings LLM form saves; `/api/v1/llm/status` and `/translate` behave (409 when unconfigured).
+- [ ] REST match returns REQ-001/002/003/004 correctly; negatives excluded.
+- [ ] `mvn clean test` → 523 green.
+
+---
+
+## 15. Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
-| Application won't start | Check PostgreSQL is running, or use `test` profile for H2 |
-| OPC UA connection refused | Java Milo server starts automatically; check port 4840 |
-| Login fails | Use `user`/`password` credentials |
-| Blank dashboard | Ontology may not have loaded; check `/actuator/health` |
-| Search returns nothing | Try different search terms; check ontology has entities |
-| Upload fails | Ensure file is valid XML (MTP AML / OPC UA NodeSet) or JSON (AAS / OPC UA Datasheet) |
-| Dropdowns empty | Options are loaded from `config/options.json` at startup; verify file exists on classpath |
+| App won't start | Ensure PostgreSQL is up, or run with the `test` profile (H2). |
+| Login fails | Use `user` / `password` (form login active outside `test` profile). |
+| OPC UA refused | Milo server auto-starts on 4840; check the port. |
+| Upload misclassified | Generic AutomationML must not contain MTP markers; it routes to `AutomationML`. |
+| LLM 409 | Enable the feature and supply `APP_LLM_APIKEY` (or use the Settings form). |
+| Blank dashboard / no entities | Check `/actuator/health`; confirm ontology loaded. |
+| Manifest missing nodeSelector | The K8s `nodeSelector` is derived from the requirement's `boundContext`; ensure the match carried a deployment context. |

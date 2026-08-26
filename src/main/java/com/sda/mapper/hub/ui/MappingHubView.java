@@ -28,14 +28,12 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.theme.lumo.LumoUtility;
-import com.sda.mapper.observability.PipelineEvent;
 import com.sda.mapper.ui.SdaAppShell;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
-import java.util.function.Consumer;
 
 /**
  * Universal semantic mapping hub: ingests AAS XML, MTP AML and OPC UA JSON
@@ -43,12 +41,10 @@ import java.util.function.Consumer;
  * &rarr; Manifest with per-layer coverage, gap actions and context-aware
  * recommendations.
  *
- * <p>Consolidates all pipeline observability into a single console at the top
- * of the view: the stage timeline ({@link StageTimeline}), the run log
- * ({@link ConsolePanel}), the trace panel ({@link PipelineTracePanel}) and the
- * live audit feed ({@link PipelineConsolePanel}). Server push is enabled
- * application-wide via {@link SdaAppShell} so streamed audit events render
- * without manual refresh.</p>
+ * <p>Consolidates pipeline observability into a single console at the top of
+ * the view: a run log ({@link ConsolePanel}) that shows the per-stage pipeline
+ * output (Parse, Instantiate, Lift, Infer, Match). Server push is enabled
+ * application-wide via {@link SdaAppShell}.</p>
  */
 @Route(value = "mapping-hub", layout = MainLayout.class)
 @PageTitle("Mapping Hub")
@@ -66,11 +62,6 @@ public class MappingHubView extends VerticalLayout {
     private final VerticalLayout dashboard;
     private final ConceptSuggestionPanel suggestionPanel;
     private Button exportButton;
-
-    private final StageTimeline stageTimeline = new StageTimeline();
-    private final PipelineTracePanel tracePanel = new PipelineTracePanel();
-    private final PipelineConsolePanel pipelineConsole = new PipelineConsolePanel();
-    private Consumer<PipelineEvent> auditListener;
 
     private String selectedLayerId = "ALL";
     private String selectedClassName;
@@ -170,49 +161,11 @@ public class MappingHubView extends VerticalLayout {
         H2 title = new H2("Pipeline Console");
         title.addClassNames(LumoUtility.Margin.Bottom.NONE, "section-title");
 
-        var timelineRow = new HorizontalLayout(stageTimeline);
-        timelineRow.setSpacing(true);
-        timelineRow.setWidthFull();
-
-        var traceAndLive = new VerticalLayout(tracePanel, pipelineConsole);
-        traceAndLive.setPadding(false);
-        traceAndLive.setSpacing(true);
-        traceAndLive.setWidthFull();
-
-        var consoleRow = new HorizontalLayout(console, traceAndLive);
-        consoleRow.addClassName("hub-console-row");
-        consoleRow.setWidthFull();
-        consoleRow.setSpacing(true);
-        consoleRow.setAlignItems(FlexComponent.Alignment.STRETCH);
-        consoleRow.setFlexGrow(1, console);
-        consoleRow.setFlexGrow(1, traceAndLive);
-        console.setWidthFull();
-
-        var section = new VerticalLayout(title, timelineRow, consoleRow);
+        var section = new VerticalLayout(title, console);
         section.addClassName("hub-console-section");
         section.setPadding(true);
         section.setSpacing(true);
         return section;
-    }
-
-    @Override
-    protected void onAttach(com.vaadin.flow.component.AttachEvent attachEvent) {
-        super.onAttach(attachEvent);
-        auditListener = event -> getUI().ifPresent(ui -> ui.access(() -> {
-            stageTimeline.onEvent(event);
-            tracePanel.onEvent(event);
-            pipelineConsole.onEvent(event);
-        }));
-        hubService.getAuditPublisher().addListener(auditListener);
-    }
-
-    @Override
-    protected void onDetach(com.vaadin.flow.component.DetachEvent detachEvent) {
-        if (auditListener != null) {
-            hubService.getAuditPublisher().removeListener(auditListener);
-            auditListener = null;
-        }
-        super.onDetach(detachEvent);
     }
 
     private VerticalLayout createUploadSection() {

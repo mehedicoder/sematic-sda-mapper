@@ -1,6 +1,14 @@
 package com.sda.mapper.reasoning;
 
 import com.sda.mapper.ontology.OntologyModelLoader;
+import com.sda.mapper.observability.MatchDimensionTagger;
+import com.sda.mapper.observability.PipelineAuditPublisher;
+import com.sda.mapper.observability.PipelineMetrics;
+import com.sda.mapper.observability.PipelineStageObserver;
+import com.sda.mapper.observability.PipelineTracingContext;
+import com.sda.mapper.observability.TracedSparqlExecutor;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.jena.query.Query;
 import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
@@ -50,13 +58,58 @@ public class SemanticReasonerService {
     private final OntologyModelLoader ontologyModelLoader;
     private final SparqlQueryLoader sparqlQueryLoader;
     private final RDeployService rDeployService;
+    private final TracedSparqlExecutor tracedSparqlExecutor;
+    private final MatchDimensionTagger dimensionTagger;
+    private final PipelineStageObserver stageObserver;
+    private final PipelineTracingContext tracingContext;
+    private final PipelineAuditPublisher auditPublisher;
+    private final PipelineMetrics metrics;
 
+    /**
+     * Creates the reasoner with no observability wiring (unit tests).
+     */
     public SemanticReasonerService(OntologyModelLoader ontologyModelLoader,
                                    SparqlQueryLoader sparqlQueryLoader,
                                    RDeployService rDeployService) {
+        this(ontologyModelLoader, sparqlQueryLoader, rDeployService,
+            new TracedSparqlExecutor(new PipelineMetrics(new SimpleMeterRegistry())),
+            new MatchDimensionTagger(),
+            new PipelineStageObserver(ObservationRegistry.NOOP,
+                new PipelineAuditPublisher(null), new PipelineMetrics(new SimpleMeterRegistry())),
+            new PipelineTracingContext(ObservationRegistry.NOOP),
+            new PipelineAuditPublisher(null),
+            new PipelineMetrics(new SimpleMeterRegistry()));
+    }
+
+    /**
+     * Creates the reasoner with full pipeline observability.
+     *
+     * @param tracedSparqlExecutor SPARQL execution tracing wrapper
+     * @param dimensionTagger      per-dimension match classification
+     * @param stageObserver        stage instrumentation
+     * @param tracingContext       run correlation context
+     * @param auditPublisher       audit event publisher
+     * @param metrics              pipeline SLI metrics
+     */
+    @org.springframework.beans.factory.annotation.Autowired
+    public SemanticReasonerService(OntologyModelLoader ontologyModelLoader,
+                                   SparqlQueryLoader sparqlQueryLoader,
+                                   RDeployService rDeployService,
+                                   TracedSparqlExecutor tracedSparqlExecutor,
+                                   MatchDimensionTagger dimensionTagger,
+                                   PipelineStageObserver stageObserver,
+                                   PipelineTracingContext tracingContext,
+                                   PipelineAuditPublisher auditPublisher,
+                                   PipelineMetrics metrics) {
         this.ontologyModelLoader = ontologyModelLoader;
         this.sparqlQueryLoader = sparqlQueryLoader;
         this.rDeployService = rDeployService;
+        this.tracedSparqlExecutor = tracedSparqlExecutor;
+        this.dimensionTagger = dimensionTagger;
+        this.stageObserver = stageObserver;
+        this.tracingContext = tracingContext;
+        this.auditPublisher = auditPublisher;
+        this.metrics = metrics;
     }
 
     /**
@@ -69,7 +122,31 @@ public class SemanticReasonerService {
         if (requirementId == null || requirementId.isBlank()) {
             return ServiceMatchResult.noMatch("UseCaseRequirement ID is null or blank");
         }
+        String requirement = requirementId.trim();
+        java.util.UUID runUuid = java.util.UUID.randomUUID();
+        try (PipelineTracingContext.RunScope run = tracingContext.openRun(runUuid.toString(), null, requirement);
+             PipelineStageObserver.Stage stage = stageObserver.begin("MATCH", runUuid, null, requirement)) {
+            try {
+                ServiceMatchResult result = matchRequirement(requirementId);
+                metrics.recordMatchResult(result.matched() ? "hit" : "no-hit");
+                dimensionTagger.dimensions(result).forEach((dimension, status) ->
+                    stage.attribute("match.dimension." + dimension, status));
+                String failureSummary = dimensionTagger.failureSummary(result);
+                stage.detail(result.matched()
+                    ? "Matched service " + result.serviceName() + " for " + requirementId
+                    : "No match for " + requirementId
+                        + (failureSummary != null ? " — " + failureSummary : ""));
+                metrics.recordRun("reasoning", "success");
+                return result;
+            } catch (RuntimeException e) {
+                stage.error(e);
+                metrics.recordRun("reasoning", "failure");
+                throw e;
+            }
+        }
+    }
 
+    private ServiceMatchResult matchRequirement(String requirementId) {
         Model model = ontologyModelLoader.getModel();
         Resource reqResource = model.getResource(INST_NS + requirementId);
         boolean exists = reqResource.hasProperty(RDF.type,
@@ -96,31 +173,34 @@ public class SemanticReasonerService {
             Query query = QueryFactory.create(queryStr);
             Model model = ontologyModelLoader.getModel();
 
-            try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
-                ResultSet rs = qe.execSelect();
-                if (!rs.hasNext()) {
-                    return ServiceMatchResult.noMatch(
-                        "No service matched requirement " + requirementId);
-                }
+            ServiceMatchResult outcome = tracedSparqlExecutor.execute(GENERIC_QUERY, () -> {
+                try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
+                    ResultSet rs = qe.execSelect();
+                    if (!rs.hasNext()) {
+                        return ServiceMatchResult.noMatch(
+                            "No service matched requirement " + requirementId);
+                    }
 
-                QuerySolution sol = rs.next();
-                ServiceMatchResult result = extractMatchResult(sol, requirementId);
-                if (result.matched()) {
-                    rDeployService.execute(requirementId, result.serviceName(),
-                        result.bindingLabel(), result.connector(),
-                        result.deploymentContext());
-                    String lifecycleStatus = rDeployService.getLifecycleStatus(requirementId);
-                    return new ServiceMatchResult(
-                        result.matched(), result.serviceName(), result.containerImage(),
-                        result.capabilityName(), result.skillName(), result.protocol(), result.accessMode(),
-                        result.bindingLabel(), result.connector(), result.deploymentContext(),
-                        result.recall(), result.latencyMs(), result.explanation(),
-                        lifecycleStatus, requirementId,
-                        result.safetyIntegrityLevel(), result.determinismClass(),
-                        result.networkZone());
+                    QuerySolution sol = rs.next();
+                    ServiceMatchResult result = extractMatchResult(sol, requirementId);
+                    if (result.matched()) {
+                        rDeployService.execute(requirementId, result.serviceName(),
+                            result.bindingLabel(), result.connector(),
+                            result.deploymentContext());
+                        String lifecycleStatus = rDeployService.getLifecycleStatus(requirementId);
+                        return new ServiceMatchResult(
+                            result.matched(), result.serviceName(), result.containerImage(),
+                            result.capabilityName(), result.skillName(), result.protocol(), result.accessMode(),
+                            result.bindingLabel(), result.connector(), result.deploymentContext(),
+                            result.recall(), result.latencyMs(), result.explanation(),
+                            lifecycleStatus, requirementId,
+                            result.safetyIntegrityLevel(), result.determinismClass(),
+                            result.networkZone());
+                    }
+                    return result;
                 }
-                return result;
-            }
+            }, r -> r.matched() ? 1 : 0);
+            return outcome;
         } catch (SparqlExecutionException e) {
             throw e;
         } catch (Exception e) {

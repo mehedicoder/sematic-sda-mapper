@@ -1,7 +1,13 @@
 package com.sda.mapper.reasoning;
 
 import com.sda.mapper.ontology.OntologyModelLoader;
+import com.sda.mapper.observability.PipelineAuditPublisher;
+import com.sda.mapper.observability.PipelineMetrics;
+import com.sda.mapper.observability.PipelineStageObserver;
+import com.sda.mapper.observability.PipelineTracingContext;
 import com.sda.mapper.parser.ParseResult;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.slf4j.Logger;
@@ -38,16 +44,43 @@ public class EndToEndPipelineService {
     private final OntologyModelLoader ontologyModelLoader;
     private final OntologyInferenceService inferenceService;
     private final SemanticReasonerService reasonerService;
+    private final PipelineStageObserver stageObserver;
+    private final PipelineTracingContext tracingContext;
 
+    /**
+     * Creates the pipeline service with no-op observability (unit tests).
+     */
     public EndToEndPipelineService(
             com.sda.mapper.parser.UploadService uploadService,
             OntologyModelLoader ontologyModelLoader,
             OntologyInferenceService inferenceService,
             SemanticReasonerService reasonerService) {
+        this(uploadService, ontologyModelLoader, inferenceService, reasonerService,
+            new PipelineStageObserver(ObservationRegistry.NOOP,
+                new PipelineAuditPublisher(null), new PipelineMetrics(new SimpleMeterRegistry())),
+            new PipelineTracingContext(ObservationRegistry.NOOP));
+    }
+
+    /**
+     * Creates the pipeline service with full pipeline observability.
+     *
+     * @param stageObserver  per-stage tracing/audit instrumentation
+     * @param tracingContext run correlation context
+     */
+    @org.springframework.beans.factory.annotation.Autowired
+    public EndToEndPipelineService(
+            com.sda.mapper.parser.UploadService uploadService,
+            OntologyModelLoader ontologyModelLoader,
+            OntologyInferenceService inferenceService,
+            SemanticReasonerService reasonerService,
+            PipelineStageObserver stageObserver,
+            PipelineTracingContext tracingContext) {
         this.uploadService = uploadService;
         this.ontologyModelLoader = ontologyModelLoader;
         this.inferenceService = inferenceService;
         this.reasonerService = reasonerService;
+        this.stageObserver = stageObserver;
+        this.tracingContext = tracingContext;
     }
 
     /**
@@ -69,68 +102,93 @@ public class EndToEndPipelineService {
                                    Map<String, String> newRequirementParams) {
         log.info("Starting end-to-end pipeline for: {}", filename);
         long startTime = System.currentTimeMillis();
+        java.util.UUID runUuid = java.util.UUID.randomUUID();
+        String runId = runUuid.toString();
 
-        // 1. Parse
-        ParseResult parseResult = uploadService.parseUpload(filename, input);
-        log.info("Parse completed: {} triples, type={}", parseResult.tripleCount(), parseResult.fileType());
+        try (PipelineTracingContext.RunScope run =
+                 tracingContext.openRun(runId, null, firstRequirement(requirementIds))) {
 
-        // 2. Lift — merge parsed model into base ontology model
-        List<String> warnings = new ArrayList<>();
-        Model parsedModel = parseResult.model();
-        if (parsedModel == null) {
-            warnings.add("Parser did not produce a Jena Model — skipping lift step");
-        } else {
-            Model baseModel = ontologyModelLoader.getModel();
-            baseModel.add(parsedModel);
-            log.info("Lift completed: merged {} triples into base model (now {} triples)",
-                parsedModel.size(), baseModel.size());
-        }
-
-        // 2.5 Create new requirement from form params if provided
-        List<String> targetRequirements = (requirementIds == null)
-            ? new ArrayList<>()
-            : new ArrayList<>(requirementIds);
-
-        if (newRequirementParams != null && !newRequirementParams.isEmpty()) {
-            String newReqId = createRequirementInModel(newRequirementParams);
-            if (newReqId != null) {
-                targetRequirements.add(newReqId);
-                warnings.add("Created new requirement: " + newReqId);
-                log.info("Created new requirement {} with params: {}", newReqId, newRequirementParams);
+            // 1. Parse
+            ParseResult parseResult;
+            try (PipelineStageObserver.Stage stage = stageObserver.begin("PARSE", runUuid, null, null)) {
+                parseResult = uploadService.parseUpload(filename, input);
+                stage.detail("Parsed " + parseResult.tripleCount() + " triples (" + parseResult.fileType() + ")");
             }
+            log.info("Parse completed: {} triples, type={}", parseResult.tripleCount(), parseResult.fileType());
+
+            // 2. Lift — merge parsed model into base ontology model
+            List<String> warnings = new ArrayList<>();
+            Model parsedModel = parseResult.model();
+            if (parsedModel == null) {
+                warnings.add("Parser did not produce a Jena Model — skipping lift step");
+            } else {
+                try (PipelineStageObserver.Stage stage = stageObserver.begin("LIFT", runUuid, null, null)) {
+                    Model baseModel = ontologyModelLoader.getModel();
+                    baseModel.add(parsedModel);
+                    stage.detail("Merged " + parsedModel.size() + " triples into base model");
+                    log.info("Lift completed: merged {} triples into base model (now {} triples)",
+                        parsedModel.size(), baseModel.size());
+                }
+            }
+
+            // 2.5 Create new requirement from form params if provided
+            List<String> targetRequirements = (requirementIds == null)
+                ? new ArrayList<>()
+                : new ArrayList<>(requirementIds);
+
+            if (newRequirementParams != null && !newRequirementParams.isEmpty()) {
+                String newReqId = createRequirementInModel(newRequirementParams);
+                if (newReqId != null) {
+                    targetRequirements.add(newReqId);
+                    warnings.add("Created new requirement: " + newReqId);
+                    log.info("Created new requirement {} with params: {}", newReqId, newRequirementParams);
+                }
+            }
+
+            if (targetRequirements.isEmpty()) {
+                warnings.add("No requirements selected — input was parsed and lifted but no requirements were matched");
+                log.info("No requirements to match for: {}", filename);
+            }
+
+            // 3. Infer — rerun inference on the enriched model
+            int inferredTriples;
+            try (PipelineStageObserver.Stage stage = stageObserver.begin("INFER", runUuid, null, null)) {
+                inferenceService.runInference();
+                inferredTriples = inferenceService.getInferredTripleCount();
+                stage.detail("Inferred " + inferredTriples + " triples");
+            }
+            log.info("Inference completed: {} inferred triples", inferredTriples);
+
+            // 4. Match requirements — each match is instrumented inside
+            //    SemanticReasonerService as a MATCH child span of this run.
+            Map<String, ServiceMatchResult> matches = new LinkedHashMap<>();
+            for (String reqId : targetRequirements) {
+                ServiceMatchResult result = reasonerService.matchByRequirementId(reqId);
+                matches.put(reqId, result);
+                log.info("Match {}: {} — {}", reqId, result.matched() ? result.serviceName() : "no match",
+                    result.explanation());
+            }
+
+            long elapsed = System.currentTimeMillis() - startTime;
+            log.info("Pipeline completed in {}ms", elapsed);
+
+            return new PipelineResult(
+                parseResult.fileType(),
+                parseResult.tripleCount(),
+                parsedModel != null ? (int) parsedModel.size() : 0,
+                inferredTriples,
+                matches,
+                warnings,
+                elapsed
+            );
         }
+    }
 
-        if (targetRequirements.isEmpty()) {
-            warnings.add("No requirements selected — input was parsed and lifted but no requirements were matched");
-            log.info("No requirements to match for: {}", filename);
+    private String firstRequirement(List<String> requirementIds) {
+        if (requirementIds != null && !requirementIds.isEmpty()) {
+            return requirementIds.get(0);
         }
-
-        // 3. Infer — rerun inference on the enriched model
-        inferenceService.runInference();
-        int inferredTriples = inferenceService.getInferredTripleCount();
-        log.info("Inference completed: {} inferred triples", inferredTriples);
-
-        // 4. Match requirements
-        Map<String, ServiceMatchResult> matches = new LinkedHashMap<>();
-        for (String reqId : targetRequirements) {
-            ServiceMatchResult result = reasonerService.matchByRequirementId(reqId);
-            matches.put(reqId, result);
-            log.info("Match {}: {} — {}", reqId, result.matched() ? result.serviceName() : "no match",
-                result.explanation());
-        }
-
-        long elapsed = System.currentTimeMillis() - startTime;
-        log.info("Pipeline completed in {}ms", elapsed);
-
-        return new PipelineResult(
-            parseResult.fileType(),
-            parseResult.tripleCount(),
-            parsedModel != null ? (int) parsedModel.size() : 0,
-            inferredTriples,
-            matches,
-            warnings,
-            elapsed
-        );
+        return null;
     }
 
     /**

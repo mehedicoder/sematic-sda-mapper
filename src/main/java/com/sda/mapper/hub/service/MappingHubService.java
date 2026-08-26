@@ -15,6 +15,12 @@ import com.sda.mapper.hub.persistence.MappingHubPersistenceService;
 import com.sda.mapper.hub.parser.CanonicalParserRegistry;
 import com.sda.mapper.hub.parser.HubFileTypeDetector;
 import com.sda.mapper.hub.parser.ParsingException;
+import com.sda.mapper.observability.PipelineAuditPublisher;
+import com.sda.mapper.observability.PipelineMetrics;
+import com.sda.mapper.observability.PipelineStageObserver;
+import com.sda.mapper.observability.PipelineTracingContext;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.jena.rdf.model.Model;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -48,9 +54,14 @@ public class MappingHubService {
     private final MappingHubPersistenceService persistenceService;
     private final CanonicalTripleMapper tripleMapper;
     private final MappingHubGraphService graphService;
+    private final PipelineStageObserver stageObserver;
+    private final PipelineTracingContext tracingContext;
+    private final PipelineAuditPublisher auditPublisher;
+    private final PipelineMetrics metrics;
 
     /**
-     * Creates the mapping hub service with all pipeline stages.
+     * Creates the mapping hub service with all pipeline stages and default
+     * (no-op) observability — for unit tests.
      */
     public MappingHubService(CanonicalParserRegistry parserRegistry,
                              HubFileTypeDetector fileTypeDetector,
@@ -68,7 +79,38 @@ public class MappingHubService {
 
     /**
      * Creates the mapping hub service with database-backed instance graph
-     * persistence enabled.
+     * persistence enabled and no-op observability.
+     */
+    public MappingHubService(CanonicalParserRegistry parserRegistry,
+                             HubFileTypeDetector fileTypeDetector,
+                             LiftService liftService,
+                             InferenceService inferenceService,
+                             MatchingService matchingService,
+                             SemanticMatchService semanticMatchService,
+                             RecommendationService recommendationService,
+                             ManifestExportService manifestExportService,
+                             @Lazy MappingHubSession session,
+                             MappingHubPersistenceService persistenceService,
+                             CanonicalTripleMapper tripleMapper,
+                             MappingHubGraphService graphService) {
+        this(parserRegistry, fileTypeDetector, liftService, inferenceService, matchingService,
+            semanticMatchService, recommendationService, manifestExportService, session,
+            persistenceService, tripleMapper, graphService,
+            new PipelineStageObserver(ObservationRegistry.NOOP,
+                new PipelineAuditPublisher(null), new PipelineMetrics(new SimpleMeterRegistry())),
+            new PipelineTracingContext(ObservationRegistry.NOOP),
+            new PipelineAuditPublisher(null),
+            new PipelineMetrics(new SimpleMeterRegistry()));
+    }
+
+    /**
+     * Creates the fully wired mapping hub service including pipeline
+     * observability (tracing, audit, metrics).
+     *
+     * @param stageObserver  per-stage tracing/audit instrumentation
+     * @param tracingContext run-scoped correlation context
+     * @param auditPublisher audit event publisher (broadcasts to live listeners)
+     * @param metrics        pipeline SLI metrics
      */
     @Autowired
     public MappingHubService(CanonicalParserRegistry parserRegistry,
@@ -82,7 +124,11 @@ public class MappingHubService {
                              @Lazy MappingHubSession session,
                              MappingHubPersistenceService persistenceService,
                              CanonicalTripleMapper tripleMapper,
-                             MappingHubGraphService graphService) {
+                             MappingHubGraphService graphService,
+                             PipelineStageObserver stageObserver,
+                             PipelineTracingContext tracingContext,
+                             PipelineAuditPublisher auditPublisher,
+                             PipelineMetrics metrics) {
         this.parserRegistry = parserRegistry;
         this.fileTypeDetector = fileTypeDetector;
         this.liftService = liftService;
@@ -95,6 +141,10 @@ public class MappingHubService {
         this.persistenceService = persistenceService;
         this.tripleMapper = tripleMapper;
         this.graphService = graphService;
+        this.stageObserver = stageObserver;
+        this.tracingContext = tracingContext;
+        this.auditPublisher = auditPublisher;
+        this.metrics = metrics;
     }
 
     /**
@@ -211,6 +261,15 @@ public class MappingHubService {
     }
 
     /**
+     * Returns the audit publisher for live pipeline event listeners (UI console).
+     *
+     * @return the pipeline audit publisher
+     */
+    public PipelineAuditPublisher getAuditPublisher() {
+        return auditPublisher;
+    }
+
+    /**
      * Hydrates the transient runtime graph from the read-only ontology and
      * persisted session triples.
      *
@@ -257,53 +316,96 @@ public class MappingHubService {
         return runStages(file, logs, fileId, parsedEntities, startRun());
     }
 
+    /**
+     * Runs the dynamic stages inside one correlated run scope so every stage
+     * produces a child span and an audit transition under a single trace.
+     */
     private PipelineResult runStages(UploadedFileInfo file, List<String> logs,
                                      UUID fileId, List<CanonicalEntity> parsedEntities, UUID runId) {
+        UUID effectiveRunId = runId != null ? runId : UUID.randomUUID();
+        String sessionId = session.getId().toString();
+        try (PipelineTracingContext.RunScope run =
+                 tracingContext.openRun(effectiveRunId.toString(), sessionId, null)) {
+            try {
+                PipelineResult result = executeStages(file, logs, fileId, parsedEntities, effectiveRunId);
+                metrics.recordRun("hub", "success");
+                return result;
+            } catch (RuntimeException e) {
+                metrics.recordRun("hub", "failure");
+                throw e;
+            }
+        }
+    }
+
+    private PipelineResult executeStages(UploadedFileInfo file, List<String> logs,
+                                         UUID fileId, List<CanonicalEntity> parsedEntities, UUID runId) {
         CanonicalAssetModel model = session.getModel();
 
-        if (!parsedEntities.isEmpty()) {
-            saveEntities(runId, fileId, "INSTANTIATE", EntityOrigin.PARSED, false, parsedEntities);
-            logs.add("[INSTANTIATE] Stored " + parsedEntities.size()
-                + " parsed entities as CSS-SDA RDF instance triples");
-        } else {
-            logs.add("[INSTANTIATE] No new parsed entities; using persisted session graph");
+        try (PipelineStageObserver.Stage ignored = stageObserver.begin("INSTANTIATE", runId, session.getId(), null)) {
+            if (!parsedEntities.isEmpty()) {
+                saveEntities(runId, fileId, "INSTANTIATE", EntityOrigin.PARSED, false, parsedEntities);
+                logs.add("[INSTANTIATE] Stored " + parsedEntities.size()
+                    + " parsed entities as CSS-SDA RDF instance triples");
+            } else {
+                logs.add("[INSTANTIATE] No new parsed entities; using persisted session graph");
+            }
         }
 
-        List<CanonicalEntity> lifted = liftService.lift(model);
-        for (CanonicalEntity entity : lifted) {
-            model.addEntity(entity);
-        }
-        saveEntities(runId, null, "LIFT", EntityOrigin.LIFTED, false, lifted);
-        logs.add("[LIFT] Derived " + lifted.size()
-            + " lifted entities (semantic concepts / information models)");
-
-        List<CanonicalEntity> inferred = inferenceService.infer(model);
-        session.setInferred(inferred);
-        saveEntities(runId, null, "INFER", EntityOrigin.INFERRED, false, inferred);
-        logs.add("[INFER] Inferred " + inferred.size()
-            + " entities (sensors, capabilities, instances, nodes, zones)");
-
-        GapReport report = matchingService.compute(model, inferred);
-        logs.add(String.format("[MATCH] Coverage %.1f%% \u2014 %d present, %d inferred, %d partial, %d missing",
-            report.coveragePercent(),
-            report.count(CoverageStatus.PRESENT),
-            report.count(CoverageStatus.INFERRED),
-            report.count(CoverageStatus.PARTIAL),
-            report.count(CoverageStatus.MISSING)));
-        if (!report.blockingGaps().isEmpty()) {
-            logs.add("[MATCH] " + report.blockingGaps().size() + " blocking gap(s) detected");
+        List<CanonicalEntity> lifted;
+        try (PipelineStageObserver.Stage stage = stageObserver.begin("LIFT", runId, session.getId(), null)) {
+            lifted = liftService.lift(model);
+            for (CanonicalEntity entity : lifted) {
+                model.addEntity(entity);
+            }
+            saveEntities(runId, null, "LIFT", EntityOrigin.LIFTED, false, lifted);
+            String detail = "Derived " + lifted.size() + " lifted entities";
+            stage.detail(detail);
+            logs.add("[LIFT] Derived " + lifted.size()
+                + " lifted entities (semantic concepts / information models)");
         }
 
-        List<CapabilityMatch> matches = semanticMatchService.match(model, inferred);
-        logs.add("[MATCH] SPARQL match: " + matches.size() + " semantic capability match(es)");
-        for (CapabilityMatch match : matches) {
-            logs.add("[MATCH] " + match.requiredCapabilityId() + " \u2192 " + match.offeredCapabilityId()
-                + " via " + match.skillId() + " \u2014 " + match.endpointUrl());
+        List<CanonicalEntity> inferred;
+        try (PipelineStageObserver.Stage stage = stageObserver.begin("INFER", runId, session.getId(), null)) {
+            inferred = inferenceService.infer(model);
+            session.setInferred(inferred);
+            saveEntities(runId, null, "INFER", EntityOrigin.INFERRED, false, inferred);
+            String detail = "Inferred " + inferred.size() + " entities";
+            stage.detail(detail);
+            logs.add("[INFER] Inferred " + inferred.size()
+                + " entities (sensors, capabilities, instances, nodes, zones)");
         }
 
-        List<Recommendation> recommendations = recommendationService.recommend(
-            report, session.getUploadedFormats());
-        logs.add("[MATCH] " + recommendations.size() + " recommendation(s) for supplementary uploads");
+        GapReport report;
+        List<CapabilityMatch> matches;
+        List<Recommendation> recommendations;
+        try (PipelineStageObserver.Stage stage = stageObserver.begin("MATCH", runId, session.getId(), null)) {
+            report = matchingService.compute(model, inferred);
+            logs.add(String.format("[MATCH] Coverage %.1f%% \u2014 %d present, %d inferred, %d partial, %d missing",
+                report.coveragePercent(),
+                report.count(CoverageStatus.PRESENT),
+                report.count(CoverageStatus.INFERRED),
+                report.count(CoverageStatus.PARTIAL),
+                report.count(CoverageStatus.MISSING)));
+            if (!report.blockingGaps().isEmpty()) {
+                logs.add("[MATCH] " + report.blockingGaps().size() + " blocking gap(s) detected");
+            }
+
+            matches = semanticMatchService.match(model, inferred);
+            metrics.recordMatchResult(matches.isEmpty() ? "no-hit" : "hit");
+            logs.add("[MATCH] SPARQL match: " + matches.size() + " semantic capability match(es)");
+            for (CapabilityMatch match : matches) {
+                logs.add("[MATCH] " + match.requiredCapabilityId() + " \u2192 " + match.offeredCapabilityId()
+                    + " via " + match.skillId() + " \u2014 " + match.endpointUrl());
+            }
+
+            recommendations = recommendationService.recommend(
+                report, session.getUploadedFormats());
+            logs.add("[MATCH] " + recommendations.size() + " recommendation(s) for supplementary uploads");
+
+            stage.detail("Coverage " + String.format(java.util.Locale.ROOT, "%.1f%%", report.coveragePercent())
+                + ", " + matches.size() + " SPARQL match(es), "
+                + recommendations.size() + " recommendation(s)");
+        }
 
         completeRun(runId, report);
         return new PipelineResult(file, model, inferred, report, matches, recommendations, List.copyOf(logs));

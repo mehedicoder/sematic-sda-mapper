@@ -3,10 +3,11 @@
 **Scope:** Full user acceptance testing of the Semantic SDA Mapper, including the
 Mapping Hub, Ontology Visualizer, Session overview, Service/Discovery Catalogs,
 Settings (incl. LLM translation), OPC UA Monitor, the REST API, and the paper-derived
-use cases. Covers the completed roadmap phases 1–19, specifically the recently added
+use cases. Covers the completed roadmap phases 1–21, specifically the recently added
 **Phase 15** (capability typing / PlantUnit), **Phase 16** (Process Variable Analysis),
-**Phase 17** (Deployment Manager orchestration) and **Phase 19** (AutomationML / CAEX
-ingest), plus the configurable **LLM-based semantic translation** (Phase 18).
+**Phase 17** (Deployment Manager orchestration), **Phase 19** (AutomationML / CAEX
+ingest), the configurable **LLM-based semantic translation** (Phase 18) and
+**Phase 21** (end-to-end pipeline observability).
 
 **Prerequisites**
 
@@ -32,8 +33,8 @@ mvn spring-boot:run
 - The OPC UA simulation server starts automatically on port **4840**.
 - On first load you are presented with the login page.
 
-**Login (default):** `user` / `password` (form login; security is active outside the
-`test` profile).
+**Login (default):** `user` / `user` or `admin` / `admin` (form login; security is
+active outside the `test` profile).
 
 ---
 
@@ -105,7 +106,25 @@ The Hub is the single place to ingest device descriptions and run the semantic p
 | 4.2.4 | Click a matched service in results | Shows the matched `Service`, `Skill`, `CommunicationBinding`, `DataConnector`, deployment context |
 | 4.2.5 | Click **Export** | Manifest (Docker Compose + Kubernetes YAML) is produced/previewed |
 
-### 4.3 Manual Entry
+### 4.3 Pipeline Observability Console · **Phase 21**
+
+Embedded in the Mapping Hub below the dashboard: a **Stage Timeline**, a **Trace
+Panel** and a streaming **Pipeline Console**. Server push is enabled, so events
+appear without manual refresh.
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 4.3.1 | Click **Run Pipeline** (or upload a file) | Timeline chips switch waiting → running → succeeded with per-stage durations; no manual refresh needed |
+| 4.3.2 | Watch the Trace Panel during the run | Current run id plus one row per stage (PARSE / INSTANTIATE / LIFT / INFER / MATCH) with status and duration |
+| 4.3.3 | Watch the Pipeline Console | One `[HH:mm:ss] [STAGE] STARTED/SUCCEEDED (Xms)` line per transition, newest at bottom |
+| 4.3.4 | Force a **no-match** run (e.g. match an unknown requirement id via §8.4) | MATCH chip/trace shows failure; audit detail names the failed dimensions (capability / protocol / deployment / R2a concept), consistent with the user-facing explanation |
+| 4.3.5 | Query history after the run | `GET /api/v1/pipeline-audits?sessionId=…` (or `?requirementId=…`, `?runId=…`) returns the chronological timeline — see §10.6 |
+
+Every stage transition is persisted to `pipeline_audit_log` (Flyway V6) and every
+stage emits a child span under one `sda.pipeline.run` trace per pipeline run; logs
+carry `runId` / `sessionId` / `requirementId` MDC entries plus trace/span ids.
+
+### 4.4 Manual Entry
 
 | Step | Action | Expected |
 |------|--------|----------|
@@ -113,7 +132,7 @@ The Hub is the single place to ingest device descriptions and run the semantic p
 | 4.3.2 | Fill required attributes and Save | Entity is added to the canonical model; coverage updates |
 | 4.3.3 | Submit an entity missing a required attribute | Validation error, entity not added |
 
-### 4.4 UAT Input Files & Combined Matching Sessions
+### 4.5 UAT Input Files & Combined Matching Sessions
 
 The sample device descriptions for the paper's use cases are collected in
 `docs/use-case-inputs/` (copies of the repo samples). They can be dragged into the
@@ -338,7 +357,36 @@ curl -X POST http://localhost:8080/api/v1/llm/translate \
   -d '{"format":"AAS","content":"<...>"}'
 ```
 
-### 10.6 Validation errors
+### 10.6 Pipeline audit history & observability SLIs · **Phase 21**
+
+The API is form-login protected; run the calls from an authenticated browser session
+or use the `test` profile for unauthenticated smoke tests.
+
+```bash
+# Chronological audit timeline (all filters optional; limit default 200, max 1000)
+curl "http://localhost:8080/api/v1/pipeline-audits?requirementId=REQ-001&limit=50"
+curl "http://localhost:8080/api/v1/pipeline-audits?sessionId=<session-id>"
+curl "http://localhost:8080/api/v1/pipeline-audits?runId=<run-id>"
+```
+
+Each element: `{id, runId, sessionId, requirementId, stage, status, startedAt,
+durationMs, detail}` ordered by `started_at`. `limit` outside 1–1000 → **400**
+ProblemDetail.
+
+```bash
+# Observability SLIs exposed at the standard endpoint
+curl -s http://localhost:8080/actuator/prometheus | grep sda_pipeline
+#   sda_pipeline_runs_total{path,outcome}
+#   sda_pipeline_match_result_total{result="hit|no-hit"}
+#   sda_pipeline_stage_duration_seconds{stage}
+curl -s http://localhost:8080/actuator/prometheus | grep sda_sparql
+#   sda_sparql_query_seconds{query} / sda_sparql_results_total{query}
+```
+
+A ready-made Grafana dashboard visualizing these metrics ships at
+`docs/grafana/sda-mapper-pipeline-dashboard.json`.
+
+### 10.7 Validation errors
 
 - Empty body `{}` → **400** (Mode B requires at least one field).
 - Both `requirementId` **and** inline fields → **400**.
@@ -347,7 +395,7 @@ curl -X POST http://localhost:8080/api/v1/llm/translate \
 
 ## 11. Evaluation / Paper Use-Case Scenarios
 
-The input files for these scenarios are in `docs/use-case-inputs/` (see §4.4 for the
+The input files for these scenarios are in `docs/use-case-inputs/` (see §4.5 for the
 combined-session upload workflow). Match each requirement via
 `POST /api/v1/requirements/match`:
 
@@ -394,13 +442,15 @@ plants (verify via Ontology Visualizer / a SPARQL run).
 mvn clean test
 ```
 
-**Expected:** `BUILD SUCCESS` — **523 tests, 0 failures, 0 errors**.
+**Expected:** `BUILD SUCCESS` — **556 tests, 0 failures, 0 errors**.
 
 Coverage includes: ontology loading, SPARQL matching, parsers (AAS/MTP/OPC UA/AutomationML),
 manifest generation, Mapping Hub pipeline/UI, Session overview, Ontology Visualizer,
 REST API, evaluation use cases (incl. Process Variable Analysis), capability typing
-(Phase 15), Deployment Manager orchestration (Phase 17), and LLM translation
-(Phase 18, stubbed transport — no external calls).
+(Phase 15), Deployment Manager orchestration (Phase 17), LLM translation
+(Phase 18, stubbed transport — no external calls), and end-to-end pipeline
+observability (Phase 21: trace shape, audit persistence/query, SPARQL metrics,
+dimension span tags, Grafana JSON parse, live console components).
 
 ---
 
@@ -410,11 +460,13 @@ REST API, evaluation use cases (incl. Process Variable Analysis), capability typ
 - [ ] Ontology Visualizer renders 24 classes / 5 layers; Phase 15 relations present.
 - [ ] Mapping Hub ingests AAS, MTP, OPC UA **and** AutomationML/CAEX (Phase 19) without MTP misclassification.
 - [ ] Pipeline runs; coverage dashboard + matching work; manifest exports.
+- [ ] **Phase 21:** Stage Timeline chips advance live during a run without refresh; Trace Panel and Pipeline Console fill in; no-match runs expose failed dimensions.
+- [ ] **Phase 21:** `/api/v1/pipeline-audits` returns the persisted timeline; `/actuator/prometheus` exposes `sda_pipeline_*` / `sda_sparql_*`.
 - [ ] Sessions overview shows complete/incomplete with filters.
 - [ ] OPC UA Monitor shows live tank values.
 - [ ] Settings LLM form saves; `/api/v1/llm/status` and `/translate` behave (409 when unconfigured).
 - [ ] REST match returns REQ-001/002/003/004 correctly; negatives excluded.
-- [ ] `mvn clean test` → 523 green.
+- [ ] `mvn clean test` → 556 green.
 
 ---
 
@@ -423,9 +475,12 @@ REST API, evaluation use cases (incl. Process Variable Analysis), capability typ
 | Issue | Solution |
 |-------|----------|
 | App won't start | Ensure PostgreSQL is up, or run with the `test` profile (H2). |
-| Login fails | Use `user` / `password` (form login active outside `test` profile). |
+| Login fails | Use `user` / `user` or `admin` / `admin` (form login active outside `test` profile). |
 | OPC UA refused | Milo server auto-starts on 4840; check the port. |
 | Upload misclassified | Generic AutomationML must not contain MTP markers; it routes to `AutomationML`. |
 | LLM 409 | Enable the feature and supply `APP_LLM_APIKEY` (or use the Settings form). |
 | Blank dashboard / no entities | Check `/actuator/health`; confirm ontology loaded. |
 | Manifest missing nodeSelector | The K8s `nodeSelector` is derived from the requirement's `boundContext`; ensure the match carried a deployment context. |
+| Timeline/console not updating | Server push is enabled app-wide (`SdaAppShell`); check the browser console for a failed WebSocket/push connection and reload the page once. |
+| Pipeline audits empty | Audit rows persist per executed stage — run the pipeline first; if rows are still missing, check the app log for `Failed to persist pipeline audit event` (persistence errors never abort the pipeline). |
+| `pipeline-audits` 401/403 | The API requires form login; authenticate in the same browser session or use the `test` profile. |

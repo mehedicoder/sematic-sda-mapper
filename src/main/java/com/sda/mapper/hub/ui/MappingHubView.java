@@ -43,10 +43,12 @@ import java.util.function.Consumer;
  * &rarr; Manifest with per-layer coverage, gap actions and context-aware
  * recommendations.
  *
- * <p>Embeds the live pipeline observability console ({@link StageTimeline},
- * {@link PipelineTracePanel}, {@link PipelineConsolePanel}); server push is
- * enabled application-wide via {@link SdaAppShell} so streamed audit events
- * render without manual refresh.</p>
+ * <p>Consolidates all pipeline observability into a single console at the top
+ * of the view: the stage timeline ({@link StageTimeline}), the run log
+ * ({@link ConsolePanel}), the trace panel ({@link PipelineTracePanel}) and the
+ * live audit feed ({@link PipelineConsolePanel}). Server push is enabled
+ * application-wide via {@link SdaAppShell} so streamed audit events render
+ * without manual refresh.</p>
  */
 @Route(value = "mapping-hub", layout = MainLayout.class)
 @PageTitle("Mapping Hub")
@@ -100,15 +102,7 @@ public class MappingHubView extends VerticalLayout {
         fileQueue.setPadding(false);
         fileQueue.setSpacing(false);
 
-        var uploadPanel = createUploadSection();
-        uploadPanel.add(fileQueue);
-
-        var uploadAndConsole = new HorizontalLayout(uploadPanel, console);
-        uploadAndConsole.addClassName("hub-upload-row");
-        uploadAndConsole.setWidthFull();
-        uploadAndConsole.setSpacing(true);
-        uploadAndConsole.setAlignItems(FlexComponent.Alignment.STRETCH);
-        add(uploadAndConsole);
+        add(createConsoleSection());
 
         suggestionPanel = new ConceptSuggestionPanel(
             hubService.isLlmAvailable(),
@@ -116,13 +110,15 @@ public class MappingHubView extends VerticalLayout {
             this::onConceptSuggestionAdd);
         add(createSuggestionSection());
 
+        var uploadPanel = createUploadSection();
+        uploadPanel.add(fileQueue);
+        add(uploadPanel);
+
         dashboard = new VerticalLayout();
         dashboard.addClassName("hub-dashboard-panel");
         dashboard.setPadding(false);
         dashboard.setSpacing(true);
         add(dashboard);
-
-        add(createObservabilitySection());
 
         layerTabs = new LayerTabs(this::selectLayer);
         add(layerTabs);
@@ -170,20 +166,30 @@ public class MappingHubView extends VerticalLayout {
         return section;
     }
 
-    private VerticalLayout createObservabilitySection() {
-        H2 title = new H2("Pipeline Observability");
+    private VerticalLayout createConsoleSection() {
+        H2 title = new H2("Pipeline Console");
         title.addClassNames(LumoUtility.Margin.Bottom.NONE, "section-title");
 
         var timelineRow = new HorizontalLayout(stageTimeline);
         timelineRow.setSpacing(true);
+        timelineRow.setWidthFull();
 
-        var traceAndConsole = new HorizontalLayout(tracePanel, pipelineConsole);
-        traceAndConsole.setWidthFull();
-        traceAndConsole.setSpacing(true);
-        traceAndConsole.setAlignItems(FlexComponent.Alignment.STRETCH);
+        var traceAndLive = new VerticalLayout(tracePanel, pipelineConsole);
+        traceAndLive.setPadding(false);
+        traceAndLive.setSpacing(true);
+        traceAndLive.setWidthFull();
 
-        var section = new VerticalLayout(title, timelineRow, traceAndConsole);
-        section.addClassName("hub-observability-panel");
+        var consoleRow = new HorizontalLayout(console, traceAndLive);
+        consoleRow.addClassName("hub-console-row");
+        consoleRow.setWidthFull();
+        consoleRow.setSpacing(true);
+        consoleRow.setAlignItems(FlexComponent.Alignment.STRETCH);
+        consoleRow.setFlexGrow(1, console);
+        consoleRow.setFlexGrow(1, traceAndLive);
+        console.setWidthFull();
+
+        var section = new VerticalLayout(title, timelineRow, consoleRow);
+        section.addClassName("hub-console-section");
         section.setPadding(true);
         section.setSpacing(true);
         return section;

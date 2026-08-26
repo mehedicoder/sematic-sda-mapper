@@ -17,6 +17,16 @@
 .hub-root {
   color: var(--hub-text-1);
   background: var(--hub-bg);
+  padding: 16px;
+  margin: 0;
+  gap: 16px;
+}
+
+.hub-root > * {
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
 }
 
 .hub-root .section-title {
@@ -131,6 +141,31 @@
 
 .hub-console-line {
   display: block;
+}
+
+.hub-console-section {
+  background: var(--hub-surface, #0b1220);
+  border: 1px solid var(--hub-border);
+  border-radius: 12px;
+}
+
+.hub-console-row {
+  flex-wrap: wrap;
+}
+
+.hub-console-row > .hub-console {
+  flex: 1 1 320px;
+  min-width: 280px;
+}
+
+.hub-console-row > * {
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .hub-console-row {
+    flex-direction: column;
+  }
 }
 
 .hub-dashboard {

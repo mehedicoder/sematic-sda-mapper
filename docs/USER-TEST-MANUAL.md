@@ -135,43 +135,73 @@ carry `runId` / `sessionId` / `requirementId` MDC entries plus trace/span ids.
 ### 4.5 UAT Input Files & Combined Matching Sessions
 
 The sample upload files for the paper's use cases are collected in a single
-canonical location: `src/main/resources/device-descriptions/`. They can be
-dragged into the Mapping Hub dropzone for manual UAT, or used to drive the REST
-matcher. (The previous duplicate copies under `docs/use-case-inputs/formats/`
-have been removed.)
+canonical location: `docs/usecases/`. They can be dragged into the Mapping Hub
+dropzone for manual UAT, or used to drive the REST matcher. (The previous
+duplicate copies under `docs/use-case-inputs/formats/` have been removed, and the
+per-use-case bundles were moved out of `src/main/resources/device-descriptions/`
+into `docs/usecases/` so all use-case packages live with their documentation.)
 
-They are organized **by use case** under `use-cases/REQ-*`. Each such folder
+They are organized **by use case** under `docs/usecases/REQ-*`. Each such folder
 holds every file you upload together for that use case — the device
 description(s) **and** the requirement file(s) — so a multi-file session is
 stored in one place. The folders contain only upload/test inputs (no
-documentation files); testing steps live in this manual and in
-`src/main/resources/device-descriptions/README.md`.
+documentation files); testing steps live in this manual.
 
 #### Per-use-case upload (one folder per session)
 
-| File (relative to `src/main/resources/device-descriptions/`) | Use case | Expected matched service |
+| File (under `docs/usecases/`) | Use case | Expected matched service |
 |-------------------------------------------------------------|----------|--------------------------|
-| `use-cases/REQ-001-flowmeter-diagnostics/req001-uaserver-nodeset-complete.xml` | A — Flowmeter (NE 107) | `SVC-FlowmeterDiagnostics` |
-| `use-cases/REQ-002-fermentation-skid/req002-mtp-fermentation-skid-complete.xml` | B — Fermentation Skid | `SVC-FermentationSkid` |
-| `use-cases/REQ-003-hvac-plant/req003-uaserver-ahu01-complete.json` | C — HVAC Plant | `SVC-HVACTempAnalysis` |
+| `REQ-001-flowmeter-diagnostics/req001-uaserver-nodeset-complete.xml` | A — Flowmeter (NE 107) | `SVC-FlowmeterDiagnostics` |
+| `REQ-002-fermentation-skid/req002-mtp-fermentation-skid-complete.xml` | B — Fermentation Skid | `SVC-FermentationSkid` |
+| `REQ-003-hvac-plant/req003-uaserver-ahu01-complete.json` | C — HVAC Plant | `SVC-HVACTempAnalysis` |
 | `REQ-004-process-variable-analysis/` (no upload file — ontology-native) | D — Process Variable Analysis | `SVC-ProcessVariableAnalytics` (via `requirementId`) |
-| `use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json`, `use-cases/REQ-001-flowmeter-diagnostics/pump-module-mtp.xml`, `use-cases/REQ-001-flowmeter-diagnostics/pump-opcua-datasheet.json`, `reference-formats/sample-caex.aml` | format smoke tests | respective service / category |
+| `REQ-001-flowmeter-diagnostics/pump-aas.json`, `REQ-001-flowmeter-diagnostics/pump-module-mtp.xml`, `REQ-001-flowmeter-diagnostics/pump-opcua-datasheet.json`, `docs/usecases/reference-formats/sample-caex.aml` | format smoke tests | respective service / category |
 
 #### Supplementary requirement upload
 
-`use-cases/REQ-001-flowmeter-diagnostics/requirement-flowdiagnostics.ttl` can be uploaded through the Mapping
+`docs/usecases/REQ-001-flowmeter-diagnostics/requirement-flowdiagnostics.ttl` can be uploaded through the Mapping
 Hub dropzone to match the seeded Flowmeter Diagnostics Service via its
-`FlowDiagnostics` capability (see `docs/use-case-inputs/README.md`).
+`FlowDiagnostics` capability (see `docs/usecases/REQ-001-flowmeter-diagnostics/requirement-flowdiagnostics.ttl`).
+
+#### Pump Asset Health Monitoring use-case package (ABox TTL)
+
+The `docs/usecases/Pump Asset Health Monitoring/` package is a complete SDA ABox
+described with four Turtle files. Upload them together into the Mapping Hub
+dropzone (multi-select or one at a time — the session accumulates):
+
+| File | Detected as | Role |
+|------|-------------|------|
+| `req_pump_health.ttl` | Requirement TTL | Demand side — `REQ-03` → capability `AssetConditionMonitoring` |
+| `catalogue_services.ttl` | **ABox TTL** | Supply side — `Service_Diagnostics_v1` (NE107), skills, bindings, connectors |
+| `catalogue_assets.ttl` | **ABox TTL** | Layer 4 — physical asset, sensors, process variables, IEC CDD semantic concepts |
+| `edge_nodes.ttl` | **ABox TTL** | Layer 2b — deployment context, cluster node, network zone, policy |
+
+Behaviour:
+
+- ABox TTL files (`catalogue_*`, `edge_*`) are **merged directly into the shared
+  Service Catalogue model** (the same model the matcher queries), so they
+  *update the catalogue service/asset/edge list*. This is how an uploaded
+  `catalogue_services.ttl` augments the catalogue rather than a per-session copy.
+- Uploaded ABox triples are removed again when you delete that file from the
+  session, or when you **Reset** the session (so the shared model returns to its
+  seeded state).
+- After all four files are uploaded, the MATCH stage reports `Service_Diagnostics_v1`
+  (skill `Skill_NE107_Diag`, offered capability `OCap_AssetConditionMonitoring`) as the
+  semantic capability match for `REQ-03`.
+
+> Note: because ABox TTL updates the shared catalogue, it persists for the life of
+> the application process. Use **Reset** (or restart the app) to clear uploaded
+> catalogue data between runs.
 
 #### Combined "full paper" session (upload everything together)
 
 1. Open **Mapping Hub** once and stay on the view — the canonical model **accumulates**
    across uploads within the session.
 2. Drag in, one after another (or multi-select):
-    - `use-cases/REQ-001-flowmeter-diagnostics/req001-uaserver-nodeset-complete.xml`
-    - `use-cases/REQ-002-fermentation-skid/req002-mtp-fermentation-skid-complete.xml`
-    - `use-cases/REQ-003-hvac-plant/req003-uaserver-ahu01-complete.json`
-    - optionally `use-cases/REQ-003-hvac-plant/temperature-sensor-opcua-datasheet.json` for a PVA-style temperature source
+     - `docs/usecases/REQ-001-flowmeter-diagnostics/req001-uaserver-nodeset-complete.xml`
+     - `docs/usecases/REQ-002-fermentation-skid/req002-mtp-fermentation-skid-complete.xml`
+     - `docs/usecases/REQ-003-hvac-plant/req003-uaserver-ahu01-complete.json`
+     - optionally `docs/usecases/REQ-003-hvac-plant/temperature-sensor-opcua-datasheet.json` for a PVA-style temperature source
 3. After **each** upload the pipeline re-runs Parse → Lift → Infer → Match over all
    accumulated entities; the Coverage Dashboard and matched-services list grow.
 4. Expected matched services in the combined session:
@@ -410,7 +440,7 @@ A ready-made Grafana dashboard visualizing these metrics ships at
 
 ## 11. Evaluation / Paper Use-Case Scenarios
 
-The input files for these scenarios are in `src/main/resources/device-descriptions/`
+The input files for these scenarios are in `docs/usecases/`
 (see §4.5 for the combined-session upload workflow). Match each requirement via
 `POST /api/v1/requirements/match`:
 

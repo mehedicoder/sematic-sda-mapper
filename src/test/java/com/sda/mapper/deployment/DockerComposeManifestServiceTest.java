@@ -18,7 +18,7 @@ class DockerComposeManifestServiceTest {
     private static final ServiceMatchResult MATCHED_RESULT = new ServiceMatchResult(
         true, "Flowmeter Diagnostics Service", "ghcr.io/sda/flowmeter-diag:1.0",
         "FlowRate Diagnostics", "Flowmeter Diagnostics Skill", "OPC-UA", "read-only", "OPC-UA binding", "OPC-UA Gateway", "Plant Network",
-        0.95, 45, "Matched", "Defined", null, "SIL-2", "HardRealTime", null
+        0.95, 45, "Matched", "Defined", null, "SIL-2", "HardRealTime", null, null
     );
 
     @BeforeEach
@@ -85,7 +85,7 @@ class DockerComposeManifestServiceTest {
         ServiceMatchResult cloudResult = new ServiceMatchResult(
             true, "Cloud Analytics", "analytics:latest",
             "Analytics", "Cloud Analytics Skill", "MQTT", "read-write", "MQTT binding", "MQTT Broker", "Cloud Zone",
-            0.88, 120, "Matched", "Defined", null, null, null, null
+            0.88, 120, "Matched", "Defined", null, null, null, null, null
         );
         String yaml = service.generate(cloudResult);
         assertFalse(yaml.contains("network_mode"),

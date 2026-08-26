@@ -533,9 +533,10 @@ public class MappingHubView extends VerticalLayout {
         return switch (format) {
             case AAS_XML, AAS_JSON -> "aas";
             case MTP_AML -> "mtp";
-            case OPCUA_JSON -> "opcua";
+            case OPCUA_JSON, OPCUA_XML -> "opcua";
             case AUTOMATION_ML -> "aml";
             case REQUIREMENT_TTL -> "req";
+            case ABOX_TTL -> "abox";
         };
     }
 

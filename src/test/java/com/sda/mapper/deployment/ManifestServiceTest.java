@@ -16,7 +16,7 @@ class ManifestServiceTest {
     private static final ServiceMatchResult MATCHED_RESULT = new ServiceMatchResult(
         true, "Flowmeter Diagnostics Service", "ghcr.io/sda/flowmeter-diag:1.0",
         "FlowRate Diagnostics", "Flowmeter Diagnostics Skill", "OPC-UA", "read-only", "OPC-UA binding", "OPC-UA Gateway", "Plant Network",
-        0.95, 45, "Matched", "Defined", null, "SIL-2", "HardRealTime", null
+        0.95, 45, "Matched", "Defined", null, "SIL-2", "HardRealTime", null, null
     );
 
     @BeforeEach
@@ -60,7 +60,7 @@ class ManifestServiceTest {
         ServiceMatchResult noImageResult = new ServiceMatchResult(
             true, "Test Service", null,
             "Test Capability", "Test Skill", "MQTT", "read-write", "MQTT binding", null, "Cloud Zone",
-            0.80, 100, "Matched", "Defined", null, null, null, null
+            0.80, 100, "Matched", "Defined", null, null, null, null, null
         );
         ManifestResult result = manifestService.generateManifests(noImageResult);
         assertNotNull(result.dockerComposeYaml());

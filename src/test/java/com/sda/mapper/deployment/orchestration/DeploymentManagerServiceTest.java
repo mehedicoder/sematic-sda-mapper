@@ -32,8 +32,9 @@ class DeploymentManagerServiceTest {
                 "Matched",
                 "REQ-001",
                 "SIL-1",
-                "SoftRealTime",
-                "OT-Zone-1");
+                 "SoftRealTime",
+                 "OT-Zone-1",
+                 null);
     }
 
     private DeploymentManagerService service(HealthChecker checker) {

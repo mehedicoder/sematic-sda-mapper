@@ -16,7 +16,7 @@ class MatchDimensionTaggerTest {
             true, "FlowmeterDiagnosticsService", "registry.local/flowmeter-diagnostics:1.0",
             "AssetConditionMonitoringCapability", "AssetDiagnosticsSkill", "OPC-UA", "read-only",
             "PumpBinding", "PumpConnector", "DEPLOY-OnPrem",
-            0.94, 45, "The service matches...", null, "REQ-001", "SIL-2", "SoftRealTime", "plant-network");
+            0.94, 45, "The service matches...", null, "REQ-001", "SIL-2", "SoftRealTime", "plant-network", null);
     }
 
     @Test

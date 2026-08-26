@@ -47,7 +47,7 @@ public class HubFileTypeDetector {
             return Optional.of(AssetFileFormat.MTP_AML);
         }
         if (lower.endsWith(".ttl") || lower.endsWith(".rdf")) {
-            return Optional.of(AssetFileFormat.REQUIREMENT_TTL);
+            return Optional.of(AssetFileFormat.ABOX_TTL);
         }
         return Optional.empty();
     }
@@ -77,6 +77,9 @@ public class HubFileTypeDetector {
                 && text.contains("capabilitytype")) {
             return Optional.of(AssetFileFormat.REQUIREMENT_TTL);
         }
+        if (text.contains("uanodeset") || text.contains("opcfoundation.org/ua/2011/03/uanodeset")) {
+            return Optional.of(AssetFileFormat.OPCUA_XML);
+        }
         if (text.contains("mtpaml") || text.contains("mtp-aml") || text.contains("opcuaserver")) {
             return Optional.of(AssetFileFormat.MTP_AML);
         }
@@ -94,6 +97,11 @@ public class HubFileTypeDetector {
         }
         if (text.contains("assetadministrationshell")) {
             return Optional.of(AssetFileFormat.AAS_XML);
+        }
+        if (text.contains("offeredcapability") || text.contains("edgecontext")
+                || text.contains("semanticconcept") || text.contains("deploymentcontext")
+                || text.contains("communicationbinding") || text.contains("clusternode")) {
+            return Optional.of(AssetFileFormat.ABOX_TTL);
         }
         return Optional.empty();
     }

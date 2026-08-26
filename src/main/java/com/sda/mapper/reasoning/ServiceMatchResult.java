@@ -22,6 +22,7 @@ package com.sda.mapper.reasoning;
  * @param safetyIntegrityLevel sda:safetyIntegrityLevel from the linked SafetyClass (e.g. "SIL-2")
  * @param determinismClass     sda:determinismClass from the DeploymentContext (e.g. "HardRealTime")
  * @param networkZone          rdfs:label of the NetworkZone hosting the DeploymentContext (e.g. "OT-Zone-3")
+ * @param bindingEndpointUri   sda:bindingEndpointUri of the matched CommunicationBinding (the real endpoint URL)
  */
 public record ServiceMatchResult(boolean matched, String serviceName, String containerImage,
                                   String capabilityName, String skillName,
@@ -31,7 +32,7 @@ public record ServiceMatchResult(boolean matched, String serviceName, String con
                                   double recall, int latencyMs, String explanation,
                                   String lifecycleStatus, String requirementId,
                                   String safetyIntegrityLevel, String determinismClass,
-                                  String networkZone) {
+                                  String networkZone, String bindingEndpointUri) {
 
     /**
      * Creates a no-match result with the given reason.
@@ -41,6 +42,6 @@ public record ServiceMatchResult(boolean matched, String serviceName, String con
      */
     public static ServiceMatchResult noMatch(String reason) {
         return new ServiceMatchResult(false, null, null, null, null, null, null,
-            null, null, null, 0.0, 0, reason, "Defined", null, null, null, null);
+            null, null, null, 0.0, 0, reason, "Defined", null, null, null, null, null);
     }
 }

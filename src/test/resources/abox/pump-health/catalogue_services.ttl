@@ -1,0 +1,190 @@
+@prefix : <http://sda-platform.org/ontology#> .
+@prefix ex: <http://sda-platform.org/examples/pump-health#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# ============================================================================
+# CANDIDATE 1: GOOD MATCH — NE107 Asset Health Diagnostics
+# ============================================================================
+
+# --- Offered Capability ---
+ex:OCap_AssetConditionMonitoring a :OfferedCapability ;
+    :capabilityID "OCAP-001" ;
+    :capabilityName "AssetConditionMonitoring" ;
+    :capabilityType "AssetConditionMonitoring" ;
+    :capabilityDescription "NE107-based asset health diagnostics with predictive degradation indicators" ;
+    :capabilityVersion "2.1.0" ;
+    :accuracy "0.95"^^xsd:decimal ;
+    :engineeringUnit "percent" ;
+    :nominalRange_min "0.0"^^xsd:decimal ;
+    :nominalRange_max "100.0"^^xsd:decimal ;
+    :operatesOn ex:Flowmeter_TankFill_01 ;
+    :realisedBy ex:Skill_NE107_Diag ;
+    :exposedAs ex:Service_Diagnostics_v1 .
+
+# --- Skill ---
+ex:Skill_NE107_Diag a :MTPSkill ;
+    :skillID "SKILL-NE107-001" ;
+    :skillName "NE107 Pump Diagnostics" ;
+    :skillType "Diagnostics" ;
+    :status "Active" ;
+    :mtpDescriptorURI "https://sda.local/mtp/NE107_Diagnostics_v2.1.aml" ;
+    :aasSubmodelRef "https://sda.local/aas/AssetHealthDiagnostics/submodel" ;
+    :realises ex:OCap_AssetConditionMonitoring ;
+    :isImplementedBy ex:Service_Diagnostics_v1 ;
+    :usesBinding ex:CB_OPCUA_ReadOnly ;
+    :usesConnector ex:DC_Flowmeter_PADIM ;
+    :requiresConcept ex:CDD_FlowRate, ex:CDD_SignalQuality ;
+    :hasSkillParameter ex:SP_Threshold, ex:SP_WindowSize .
+
+# --- Skill Parameters ---
+ex:SP_Threshold a :SkillParameter ;
+    :paramID "SP-001" ;
+    :paramName "DegradationThreshold" ;
+    :paramDataType "0.75"^^xsd:decimal ;
+    :paramUnit "percent" ;
+    :paramDirection "InputParameter" ;
+    :paramImmutable false ;
+    :paramMinValue "0.0" ;
+    :paramMaxValue "1.0" ;
+    :parameterisesSkill ex:Skill_NE107_Diag .
+
+ex:SP_WindowSize a :SkillParameter ;
+    :paramID "SP-002" ;
+    :paramName "AnalysisWindowSize" ;
+    :paramDataType "3600"^^xsd:decimal ;
+    :paramUnit "seconds" ;
+    :paramDirection "InputParameter" ;
+    :paramImmutable false ;
+    :paramMinValue "60" ;
+    :paramMaxValue "86400" ;
+    :parameterisesSkill ex:Skill_NE107_Diag .
+
+# --- Service ---
+ex:Service_Diagnostics_v1 a :AnalyticsService ;
+    :serviceID "SVC-DIAG-001" ;
+    :serviceName "NE107 Asset Health Service v2.1" ;
+    :serviceType "Analytics" ;
+    :serviceVersion "2.1.0" ;
+    :implementsSkill ex:Skill_NE107_Diag ;
+    :exposesCapability ex:OCap_AssetConditionMonitoring ;
+    :isDeployedBy ex:DC_OnPremEdge01 ;
+    :hasBinding ex:CB_OPCUA_ReadOnly ;
+    :hasConnector ex:DC_Flowmeter_PADIM ;
+    :consumesInformationModel ex:IM_PADIM_Flowmeter ;
+    :governedByPolicy ex:DP_Diagnostics ;
+    :reportedRecall "0.95"^^xsd:decimal ;
+    :reportedLatency "45"^^xsd:integer ;
+    :requiredCpuCores "2.0"^^xsd:double ;
+    :requiredMemory "4Gi" ;
+    :requiredStorage "10Gi" ;
+    :requiredInterfaces "OPC-UA, MQTT" ;
+    :requiredPeripherals "none" ;
+    :cpuArchitectures "amd64, arm64" ;
+    :helmChartRepository "oci://registry.sda.local/charts" ;
+    :helmChartRevision "2.1.0" ;
+    :composePackageLocation "/opt/sda/packages/ne107-diagnostics" .
+
+# --- Communication Binding ---
+ex:CB_OPCUA_ReadOnly a :CommunicationBinding ;
+    :bindingID "CB-OPCUA-001" ;
+    :protocol "OPC-UA" ;
+    :accessMode "read-only" ;
+    :securityMode "SignAndEncrypt" ;
+    :securityPolicy "http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256" ;
+    :transportProfile "http://opcfoundation.org/UA-Profile/Transport/uatcp-uasc-uabinary" ;
+    :discoveryUrl "opc.tcp://edge-node-01.plant.local:4840" ;
+    :securityLevel 3 ;
+    :bindingEndpointUri "opc.tcp://edge-node-01.plant.local:4840/sda/diagnostics" ;
+    :bindsService ex:Service_Diagnostics_v1 ;
+    :usedBySkill ex:Skill_NE107_Diag ;
+    :usedByConnector ex:DC_Flowmeter_PADIM .
+
+# --- Data Connector ---
+ex:DC_Flowmeter_PADIM a :DataConnector ;
+    :connectorID "DC-PADIM-001" ;
+    :connectorType "OPC-UA" ;
+    :connectorSemanticIRI "http://opcfoundation.org/UA/DI/PA-DIM" ;
+    :nodeSetFile "Flowmeter_PADIM_NodeSet_v1.3.xml" ;
+    :semanticID "0112/2///61987#ABA231" ;
+    :addressMapping "ns=2;s=MassFlow;ns=2;s=SignalQuality" ;
+    :mapsVariable ex:PV_FlowRate, ex:PV_SignalQuality ;
+    :connectorMapsToInformationModel ex:IM_PADIM_Flowmeter ;
+    :connectorUsesBinding ex:CB_OPCUA_ReadOnly ;
+    :connectsService ex:Service_Diagnostics_v1 ;
+    :referencedBySkill ex:Skill_NE107_Diag .
+
+# ============================================================================
+# CANDIDATE 2: BAD MATCH — Wrong Capability Type (Temperature Control)
+# ============================================================================
+
+ex:OCap_TemperatureControl a :OfferedCapability ;
+    :capabilityID "OCAP-002" ;
+    :capabilityName "TemperatureControl" ;
+    :capabilityType "TemperatureControl" ;
+    :capabilityDescription "PID temperature control for reactor vessels" ;
+    :realisedBy ex:Skill_TempControl ;
+    :exposedAs ex:Service_TempControl_v1 .
+
+ex:Skill_TempControl a :ControlLogicSkill ;
+    :skillID "SKILL-TEMP-001" ;
+    :skillName "Reactor Temperature PID Control" ;
+    :skillType "Control" ;
+    :status "Active" ;
+    :realises ex:OCap_TemperatureControl ;
+    :isImplementedBy ex:Service_TempControl_v1 .
+
+ex:Service_TempControl_v1 a :CPCService ;
+    :serviceID "SVC-TEMP-001" ;
+    :serviceName "Temperature Control Service v1.0" ;
+    :serviceType "Control" ;
+    :serviceVersion "1.0.0" ;
+    :implementsSkill ex:Skill_TempControl ;
+    :exposesCapability ex:OCap_TemperatureControl ;
+    :isDeployedBy ex:DC_OnPremEdge01 ;
+    :reportedRecall "0.99"^^xsd:decimal ;
+    :reportedLatency "20"^^xsd:integer ;
+    :requiredCpuCores "1.0"^^xsd:double ;
+    :requiredMemory "2Gi" .
+
+# ============================================================================
+# CANDIDATE 3: BAD MATCH — Right Capability, Wrong Protocol (Modbus)
+# ============================================================================
+
+ex:OCap_AssetConditionMonitoring_Modbus a :OfferedCapability ;
+    :capabilityID "OCAP-003" ;
+    :capabilityName "AssetConditionMonitoring" ;
+    :capabilityType "AssetConditionMonitoring" ;
+    :capabilityDescription "Legacy Modbus-based vibration monitoring" ;
+    :realisedBy ex:Skill_Vibration_Modbus ;
+    :exposedAs ex:Service_Vibration_Modbus .
+
+ex:Skill_Vibration_Modbus a :AASSkill ;
+    :skillID "SKILL-VIB-001" ;
+    :skillName "Legacy Vibration Monitor (Modbus)" ;
+    :skillType "Diagnostics" ;
+    :status "Deprecated" ;
+    :realises ex:OCap_AssetConditionMonitoring_Modbus ;
+    :isImplementedBy ex:Service_Vibration_Modbus ;
+    :usesBinding ex:CB_Modbus_RTU .
+
+ex:Service_Vibration_Modbus a :AnalyticsService ;
+    :serviceID "SVC-VIB-001" ;
+    :serviceName "Legacy Vibration Monitor Service" ;
+    :serviceType "Analytics" ;
+    :serviceVersion "0.9.0" ;
+    :implementsSkill ex:Skill_Vibration_Modbus ;
+    :exposesCapability ex:OCap_AssetConditionMonitoring_Modbus ;
+    :isDeployedBy ex:DC_OnPremEdge01 ;
+    :reportedRecall "0.92"^^xsd:decimal ;
+    :reportedLatency "55"^^xsd:integer ;
+    :requiredCpuCores "1.0"^^xsd:double ;
+    :requiredMemory "1Gi" .
+
+ex:CB_Modbus_RTU a :CommunicationBinding ;
+    :bindingID "CB-MODBUS-001" ;
+    :protocol "Modbus-RTU" ;
+    :accessMode "read-only" ;
+    :securityMode "None" ;
+    :bindingEndpointUri "rtu:///dev/ttyUSB0:19200" ;
+    :bindsService ex:Service_Vibration_Modbus ;
+    :usedBySkill ex:Skill_Vibration_Modbus .

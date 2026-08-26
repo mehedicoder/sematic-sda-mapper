@@ -38,7 +38,7 @@ Input Files (MTP AML, OPC UA Server Datasheet, AAS)
 
 The CSS-SDA model: SDA-Service := ⟨ Capability, Skill, Service, CommunicationBinding, DataConnector, DeploymentContext ⟩
 
-**Input sources** (vendor-supplied device description files, under `src/main/resources/device-descriptions/`):
+**Input sources** (vendor-supplied device description files, under `docs/usecases/`):
 - **MTP AML files** (VDI/VDE/NAMUR 2658) — modular process equipment (`mtp/*.xml`)
 - **OPC UA Server Datasheets** (IDTA 02009-1-0) — AAS submodel (`opcua/*.json`)
 - **AAS submodels** — device metadata (`aas/*.json`)
@@ -130,7 +130,7 @@ Production **v2 ontology** (`src/main/resources/ontology/sda_ontology_v2_structu
 
 * [x] `parser/` set — `MTPAmlParser` (VDI/VDE/NAMUR 2658 AML → `css:Skill` + `css:SkillParameter` with UCUM units / IEC CDD IRDI), `UaServerDatasheetParser` (IDTA 02009-1-0 → `CommunicationBinding` with endpointUri/securityMode/securityPolicy/securityLevel/transportProfile/discoveryUrl, `DataConnector`), `AasParser`, `OpcUaNodeSetParser`, `ParserFactory`, `UploadService`, `ParseResult`
 * [x] `hub/parser/` set — canonical-model parsers: `MtpModelParser`, `AasModelParser`, `OpcUaModelParser`, `CanonicalModelParser`, `CanonicalParserRegistry`, `HubFileTypeDetector` (drives the Mapping Hub ingest)
-* [x] Example files under `src/main/resources/device-descriptions/` (mtp, aas, opcua) + tests under `src/test/resources/examples/`
+* [x] Example files under `docs/usecases/` (mtp, aas, opcua) + tests under `src/test/resources/examples/`
 * [x] Unit/integration tests: valid / missing-element / invalid-input for each parser; parsed triples loadable into Jena `Model`
 * [x] Upload re-scoped: file upload is delivered as `UploadDropzone` inside `MappingHubView` (not a standalone `UploadView`)
 

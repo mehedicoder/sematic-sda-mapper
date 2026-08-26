@@ -1,0 +1,28 @@
+# Example supplementary requirement file for the Mapping Hub.
+#
+# Upload this alongside a device description (e.g. pump-aas.json). The hub parses
+# the UseCaseRequirement + RequiredCapability, then matches the RequiredCapability
+# against the seeded Service Catalogue on sda:capabilityType.
+#
+# Here capabilityType "FlowDiagnostics" joins to the offered capability of the
+# "Flowmeter Diagnostics Service" (OPC-UA), so a deployment-manifest entry is
+# produced. Change capabilityType to any offered type (e.g. FermentationControl,
+# HVACTempMonitoring, ProcessVariableAnalysis) to match a different service.
+
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sda:  <http://sda-platform.org/ontology#> .
+@prefix :     <http://sda-platform.org/instance#> .
+
+:REQ-SUPP-001 a sda:UseCaseRequirement ;
+    rdfs:label "Flowmeter Diagnostics (supplementary)" ;
+    sda:requirementID "REQ-SUPP-001" ;
+    sda:requirementName "Flowmeter Diagnostics (supplementary)" ;
+    sda:requirementDescription "Match a flowmeter diagnostics service for the uploaded asset." ;
+    sda:mapsToCapability :CAP-SUPP-FlowDiagnostics .
+
+:CAP-SUPP-FlowDiagnostics a sda:RequiredCapability ;
+    rdfs:label "Flowmeter Diagnostics (Required)" ;
+    sda:capabilityID "CAP-SUPP-FLOW-DIAG-001" ;
+    sda:capabilityName "Flowmeter Diagnostics" ;
+    sda:capabilityType "FlowDiagnostics" .

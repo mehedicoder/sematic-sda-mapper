@@ -119,6 +119,17 @@ public class SemanticReasonerService {
     }
 
     /**
+     * Returns the shared reasoning model (the Service Catalogue) backing this
+     * reasoner. Used by the mapping hub to merge uploaded ABox Turtle files so
+     * the semantic matcher can reason over them.
+     *
+     * @return the shared Jena model
+     */
+    public Model getOntologyModel() {
+        return ontologyModelLoader.getModel();
+    }
+
+    /**
      * Matches a requirement against the ontology.
      *
      * @param requirementId the requirement ID (e.g. "REQ-001" or a user-created ID)
@@ -313,7 +324,7 @@ public class SemanticReasonerService {
                             result.recall(), result.latencyMs(), result.explanation(),
                             lifecycleStatus, requirementId,
                             result.safetyIntegrityLevel(), result.determinismClass(),
-                            result.networkZone());
+                            result.networkZone(), result.bindingEndpointUri());
                     }
                     return result;
                 }
@@ -541,6 +552,7 @@ public class SemanticReasonerService {
         }
 
         String bindingLabel = null;
+        String bindingEndpointUri = null;
         if (sol.contains("binding") && sol.get("binding").isResource()) {
             Resource bindingRes = sol.getResource("binding");
             var bindingLabelStmt = bindingRes.getProperty(RDFS.label);
@@ -548,6 +560,11 @@ public class SemanticReasonerService {
                 bindingLabel = bindingLabelStmt.getString();
             } else {
                 bindingLabel = getLocalName(bindingRes);
+            }
+            var endpointStmt = bindingRes.getProperty(
+                ontologyModelLoader.getModel().createProperty(SDA_NS + "bindingEndpointUri"));
+            if (endpointStmt != null && endpointStmt.getObject().isLiteral()) {
+                bindingEndpointUri = endpointStmt.getLiteral().getString();
             }
         }
 
@@ -563,7 +580,7 @@ public class SemanticReasonerService {
         return new ServiceMatchResult(true, serviceName, containerImage,
             capabilityName, skillName, protocol, accessMode, bindingLabel, connector, deploymentContext,
             recall, latency, explanation, "Defined", requirementId,
-            safetyIntegrityLevel, determinismClass, networkZone);
+            safetyIntegrityLevel, determinismClass, networkZone, bindingEndpointUri);
     }
 
     private static String getLocalName(Resource resource) {

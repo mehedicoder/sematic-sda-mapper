@@ -1,0 +1,96 @@
+@prefix : <http://sda-platform.org/ontology#> .
+@prefix ex: <http://sda-platform.org/examples/pump-health#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# ---------------------------------------------------------------------------
+# Network Zone: OT Production Zone
+# ---------------------------------------------------------------------------
+ex:NZ_OT_Zone01 a :OTZone ;
+    :zoneID "ZONE-OT-01" ;
+    :zoneName "OT Production Zone Alpha" ;
+    :zoneType "OTZone" ;
+    :iec62443Level "SL-2" ;
+    :internetReachable false ;
+    :contains ex:Node_Edge01 ;
+    :containsDeploymentContext ex:DC_OnPremEdge01 .
+
+# ---------------------------------------------------------------------------
+# Safety Class: SIL-2
+# ---------------------------------------------------------------------------
+ex:SC_SIL2 a :SafetyClass ;
+    :classID "SIL-2" ;
+    :safetyStandard "IEC 61508" ;
+    :safetyIntegrityLevel 2 ;
+    :certificationRequired true ;
+    :constrainsContext ex:DC_OnPremEdge01 ;
+    :constrainsPolicy ex:DP_Diagnostics .
+
+# ---------------------------------------------------------------------------
+# Deployment Context: On-Premise Edge Node
+# ---------------------------------------------------------------------------
+ex:DC_OnPremEdge01 a :EdgeContext ;
+    :contextID "DC-EDGE-01" ;
+    :hostType "edge" ;
+    :deploymentMethod "Kubernetes" ;
+    :onPlantNetwork true ;
+    :determinismClass "SoftRealTime" ;
+    :safetyZone "OT-Zone-A" ;
+    :marginCompliant true ;
+    :maxCycleTime_ms "100.0"^^xsd:decimal ;
+    :contextConstrainedBy ex:SC_SIL2 ;
+    :hasPolicy ex:DP_Diagnostics ;
+    :containsNode ex:Node_Edge01 ;
+    :locatedInZone ex:NZ_OT_Zone01 ;
+    :contextForAsset ex:Flowmeter_TankFill_01 ;
+    :deploysService ex:Service_Diagnostics_v1, ex:Service_TempControl_v1, ex:Service_Vibration_Modbus ;
+    :hostsService ex:SI_Diagnostics_01 .
+
+# ---------------------------------------------------------------------------
+# Cluster Node: Edge Compute
+# ---------------------------------------------------------------------------
+ex:Node_Edge01 a :ClusterNode ;
+    :nodeID "NODE-EDGE-01" ;
+    :hostname "edge-node-01.plant.local" ;
+    :cpuCores 8 ;
+    :ramGB 16.0 ;
+    :hasOTELCollector true ;
+    :ociRuntimeCompliant true ;
+    :marginDeviceRole "StandaloneCluster" ;
+    :secureBootEnabled true ;
+    :hasHSM true ;
+    :hasPolicyAgent true ;
+    :hasFleetManagementClient true ;
+    :orchestrationPlatform "Kubernetes" ;
+    :helmChartApiVersion "v2" ;
+    :partOf ex:DC_OnPremEdge01 ;
+    :locatedInNetworkZone ex:NZ_OT_Zone01 ;
+    :scheduledByPolicy ex:DP_Diagnostics ;
+    :hostsServiceInstance ex:SI_Diagnostics_01 .
+
+# ---------------------------------------------------------------------------
+# Deployment Policy: Diagnostics Workload
+# ---------------------------------------------------------------------------
+ex:DP_Diagnostics a :DeploymentPolicy ;
+    :policyID "POL-DIAG-001" ;
+    :appliesToOrchestrator "Kubernetes" ;
+    :cpuRequest "500m" ;
+    :memRequest "1Gi" ;
+    :minReplicas 1 ;
+    :maxReplicas 3 ;
+    :affinityLabel "zone=ot, workload=diagnostics" ;
+    :appliesTo ex:Service_Diagnostics_v1 ;
+    :governsContext ex:DC_OnPremEdge01 ;
+    :policyConstrainedBy ex:SC_SIL2 ;
+    :scheduledOn ex:Node_Edge01 .
+
+# ---------------------------------------------------------------------------
+# Service Instance: Running Container
+# ---------------------------------------------------------------------------
+ex:SI_Diagnostics_01 a :ServiceInstance ;
+    :instanceID "SI-DIAG-001" ;
+    :deployStatus "Running" ;
+    :endpointURI "http://edge-node-01.plant.local:8080/ne107" ;
+    :startTime "2026-08-26T10:00:00Z"^^xsd:dateTime ;
+    :instantiates ex:Service_Diagnostics_v1 ;
+    :deployedOn ex:Node_Edge01 ;
+    :resolves ex:OCap_AssetConditionMonitoring .

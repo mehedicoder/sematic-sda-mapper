@@ -19,7 +19,7 @@ import java.util.Set;
 
 /**
  * Parses OPC UA server datasheets in the JSON format used by
- * {@code device-descriptions/use-cases/REQ-001-flowmeter-diagnostics} into canonical entities: assets from the
+ * {@code docs/usecases/REQ-001-flowmeter-diagnostics} into canonical entities: assets from the
  * identification block, communication bindings from endpoint descriptions and
  * process variables plus semantic concepts from the configured node sets.
  */

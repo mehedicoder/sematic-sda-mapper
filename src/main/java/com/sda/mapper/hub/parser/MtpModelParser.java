@@ -23,7 +23,7 @@ import java.util.Map;
 
 /**
  * Parses MTP (Module Type Package) AML XML files, as used by
- * {@code device-descriptions/use-cases/REQ-001-flowmeter-diagnostics}, into canonical entities: skills and skill
+ * {@code docs/usecases/REQ-001-flowmeter-diagnostics}, into canonical entities: skills and skill
  * parameters from {@code Service} blocks, communication bindings from
  * {@code OpcUaServer} blocks and process variables from {@code OpcUaNode}
  * blocks of the data assembly.
@@ -67,13 +67,23 @@ public class MtpModelParser implements CanonicalModelParser {
             CanonicalAssetModel model = new CanonicalAssetModel();
             Map<String, String> parameterUnits = new LinkedHashMap<>();
 
+            String moduleName = baseName(fileName);
             NodeList instances = doc.getElementsByTagName("Instance");
-            for (int i = 0; i < instances.getLength(); i++) {
-                Element instance = (Element) instances.item(i);
-                String instanceName = attribute(instance, "Name", "Instance" + i);
-                parseServices(instance, instanceName, fileName, model, parameterUnits);
-                parseCommunication(instance, instanceName, fileName, model);
-                parseDataAssembly(instance, instanceName, fileName, model, parameterUnits);
+            if (instances.getLength() > 0) {
+                for (int i = 0; i < instances.getLength(); i++) {
+                    Element instance = (Element) instances.item(i);
+                    String instanceName = attribute(instance, "Name", moduleName + ".Instance" + i);
+                    parseServices(instance, instanceName, fileName, model, parameterUnits);
+                    parseCommunication(instance, instanceName, fileName, model);
+                    parseDataAssembly(instance, instanceName, fileName, model, parameterUnits);
+                }
+            } else {
+                // Flat MTP documents place Service / Communication /
+                // DataAssembly directly under the MtpAml root without an
+                // <Instance> wrapper (see docs/usecases/REQ-002).
+                parseServices(root, moduleName, fileName, model, parameterUnits);
+                parseCommunication(root, moduleName, fileName, model);
+                parseDataAssembly(root, moduleName, fileName, model, parameterUnits);
             }
 
             if (model.isEmpty()) {
@@ -148,6 +158,22 @@ public class MtpModelParser implements CanonicalModelParser {
     private static String attribute(Element element, String name, String fallback) {
         String value = element.getAttribute(name);
         return value == null || value.isBlank() ? fallback : value.trim();
+    }
+
+    private static String baseName(String fileName) {
+        if (fileName == null || fileName.isBlank()) {
+            return "Module";
+        }
+        String name = fileName;
+        int slash = Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\'));
+        if (slash >= 0) {
+            name = name.substring(slash + 1);
+        }
+        int dot = name.lastIndexOf('.');
+        if (dot > 0) {
+            name = name.substring(0, dot);
+        }
+        return name.isBlank() ? "Module" : name;
     }
 
     private static String firstChildText(Element parent, String tagName) {

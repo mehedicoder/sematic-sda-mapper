@@ -41,9 +41,9 @@ WHERE {
 
     ?service      sda:hasConnector    ?connector .
 
-    ?connector    rdfs:label          ?connectorLabel .
+    OPTIONAL { ?connector rdfs:label ?connectorLabel }
 
-    # R3: Performance constraints — only constrained if the requirement declares them
+    # R3: Performance constraints - only constrained if the requirement declares them
     ?service      sda:reportedRecall  ?recall ;
                   sda:reportedLatency ?latency .
 
@@ -55,8 +55,8 @@ WHERE {
 
     ?service      sda:isDeployedBy    ?deploy .
 
-    ?deploy       rdfs:label          ?deployLabel ;
-                  sda:onPlantNetwork  ?onPlantNetwork .
+    ?deploy       sda:onPlantNetwork  ?onPlantNetwork .
+    OPTIONAL { ?deploy rdfs:label ?deployLabel }
 
     OPTIONAL { ?requirement sda:onPlantNetwork ?reqOnPlant }
     FILTER(!bound(?reqOnPlant) || ?onPlantNetwork = ?reqOnPlant)
@@ -68,7 +68,12 @@ WHERE {
         ?safetyClass sda:safetyIntegrityLevel ?safetyIntegrityLevel
     }
     OPTIONAL { ?deploy sda:determinismClass ?determinismClass }
-    OPTIONAL { ?deploy sda:locatedInZone ?zone . ?zone rdfs:label ?networkZone }
+    OPTIONAL {
+        ?deploy sda:locatedInZone ?zone .
+        OPTIONAL { ?zone rdfs:label ?zoneLabel }
+        OPTIONAL { ?zone sda:zoneName ?zoneName }
+        BIND(COALESCE(?zoneLabel, ?zoneName) AS ?networkZone)
+    }
 
     OPTIONAL { ?requirement sda:safetyIntegrityLevel ?reqSil }
     FILTER(!bound(?reqSil) || (?safetyIntegrityLevel = ?reqSil))

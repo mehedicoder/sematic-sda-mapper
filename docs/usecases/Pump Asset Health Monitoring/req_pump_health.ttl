@@ -1,0 +1,106 @@
+@prefix : <http://sda-platform.org/ontology#> .
+@prefix ex: <http://sda-platform.org/examples/pump-health#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# ---------------------------------------------------------------------------
+# Use Case: Pump Asset-Health Monitoring (NAMUR NE 107)
+# ---------------------------------------------------------------------------
+ex:UC_PumpHealth a :UseCase ;
+    :useCaseID "UC-PUMP-001" ;
+    :useCaseName "Pump Asset-Health Monitoring" ;
+    :businessGoal "Prevent unplanned interruptions by monitoring pump degradation via NE107 diagnostics" ;
+    :priority "High" ;
+    :creationDate "2026-08-26"^^xsd:string ;
+    :targetsAsset ex:Flowmeter_TankFill_01 ;
+    :hasRequirement ex:REQ_03 .
+
+# ---------------------------------------------------------------------------
+# Stakeholder
+# ---------------------------------------------------------------------------
+ex:Stakeholder_Operator a :Stakeholder ;
+    :stakeholderID "SH-001" ;
+    :stakeholderName "Plant Operator" ;
+    :role "ProcessEngineer" ;
+    :organization "Chemical Plant Alpha" ;
+    :contactInfo "operator@plant-alpha.local" ;
+    :definesUseCase ex:UC_PumpHealth ;
+    :ownsRequirement ex:REQ_03 .
+
+# ---------------------------------------------------------------------------
+# Requirement REQ-03: Asset Condition Monitoring for Pump
+# ---------------------------------------------------------------------------
+ex:REQ_03 a :UseCaseRequirement ;
+    :requirementID "REQ-03" ;
+    :title "Pump Asset Condition Monitoring" ;
+    :description "Continuous diagnostics and condition monitoring for tank-fill pump based on NAMUR NE107. Must run on-premise with deterministic soft-realtime response." ;
+    :requirementType "Functional" ;
+    :lifecycleStatus "Open" ;
+    :derivedFromUseCase ex:UC_PumpHealth ;
+    :ownedByStakeholder ex:Stakeholder_Operator ;
+    :mapsToCapability ex:RCap_AssetConditionMonitoring ;
+    :mapsToInformationModel ex:IM_PADIM_Flowmeter ;
+    :mapsToDeploymentContext ex:DC_OnPremEdge01 ;
+    :hasParameter ex:PARAM_Recall, ex:PARAM_Latency ;
+    :hasConstraint ex:CONST_OnPrem, ex:CONST_SoftRealTime ;
+    :verifiedBy ex:VC_01 .
+
+# ---------------------------------------------------------------------------
+# Required Capability (demand side)
+# ---------------------------------------------------------------------------
+ex:RCap_AssetConditionMonitoring a :RequiredCapability ;
+    :capabilityID "RCAP-001" ;
+    :capabilityName "AssetConditionMonitoring" ;
+    :capabilityType "AssetConditionMonitoring" ;
+    :capabilityDescription "Monitor asset health, detect degradation, provide NE107 status (MaintenanceRequired, Failure, etc.)" ;
+    :capabilityVersion "1.0" ;
+    :operatesOn ex:Flowmeter_TankFill_01 ;
+    :mapsTo ex:REQ_03 .
+
+# ---------------------------------------------------------------------------
+# Parameters (R3 filter targets)
+# ---------------------------------------------------------------------------
+ex:PARAM_Recall a :UseCaseRequirementParameter ;
+    :parameterID "PARAM-001" ;
+    :parameterName "reportedRecall" ;
+    :dataType "xsd:decimal" ;
+    :minValue "0.90" ;
+    :unit "ratio" ;
+    :allowEmpty false ;
+    :belongsToUseCaseRequirement ex:REQ_03 .
+
+ex:PARAM_Latency a :UseCaseRequirementParameter ;
+    :parameterID "PARAM-002" ;
+    :parameterName "reportedLatency" ;
+    :dataType "xsd:integer" ;
+    :maxValue "60" ;
+    :unit "ms" ;
+    :allowEmpty false ;
+    :belongsToUseCaseRequirement ex:REQ_03 .
+
+# ---------------------------------------------------------------------------
+# Constraints (R0 pre-filter + R3)
+# ---------------------------------------------------------------------------
+ex:CONST_OnPrem a :UseCaseRequirementConstraint ;
+    :constraintID "CONST-001" ;
+    :constraintType "deploymentContext" ;
+    :expression "?onPlantNetwork = true" ;
+    :isHardConstraint true ;
+    :constrains ex:REQ_03 .
+
+ex:CONST_SoftRealTime a :UseCaseRequirementConstraint ;
+    :constraintID "CONST-002" ;
+    :constraintType "determinism" ;
+    :expression "?determinismClass = 'SoftRealTime'" ;
+    :isHardConstraint true ;
+    :constrains ex:REQ_03 .
+
+# ---------------------------------------------------------------------------
+# Verification Criterion (R-Verify target)
+# ---------------------------------------------------------------------------
+ex:VC_01 a :VerificationCriterion ;
+    :criterionID "VC-01" ;
+    :criterionDescription "Service must achieve recall >= 0.90 and latency <= 60 ms under plant network conditions" ;
+    :passThreshold "recall >= 0.90 AND latency <= 60" ;
+    :testMethod "Run NE107 diagnostic test suite against live flowmeter data for 24h" ;
+    :verifies ex:REQ_03 ;
+    :validatedBy ex:Stakeholder_Operator .

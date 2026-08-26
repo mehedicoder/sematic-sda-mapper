@@ -105,6 +105,6 @@ class ManualEntityConverterTest {
         attributes.put("id", "x");
         attributes.put("name", "x");
         assertThrows(IllegalArgumentException.class,
-            () -> model.addEntity(manual("InformationModel", attributes)));
+            () -> model.addEntity(manual("NonExistentClass", attributes)));
     }
 }

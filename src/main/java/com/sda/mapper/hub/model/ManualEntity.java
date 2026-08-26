@@ -19,9 +19,10 @@ public final class ManualEntity implements CanonicalEntity {
     private final String id;
     private final String name;
     private final Map<String, Object> attributes;
+    private final String sourceFileName;
 
     /**
-     * Creates a manual entity.
+     * Creates a manual entity with the default {@code "manual-entry"} source.
      *
      * @param className  the ontology class name
      * @param id         a stable identifier
@@ -29,10 +30,27 @@ public final class ManualEntity implements CanonicalEntity {
      * @param attributes the domain attributes in insertion order
      */
     public ManualEntity(String className, String id, String name, Map<String, Object> attributes) {
+        this(className, id, name, attributes, "manual-entry");
+    }
+
+    /**
+     * Creates a manual entity with an explicit source file name (used when
+     * projecting uploaded ABox Turtle individuals so coverage provenance points
+     * at the originating upload rather than {@code "manual-entry"}).
+     *
+     * @param className       the ontology class name
+     * @param id              a stable identifier
+     * @param name            the display name
+     * @param attributes      the domain attributes in insertion order
+     * @param sourceFileName  the originating file name, or blank for the default
+     */
+    public ManualEntity(String className, String id, String name, Map<String, Object> attributes,
+                        String sourceFileName) {
         this.className = className;
         this.id = id;
         this.name = name;
         this.attributes = Collections.unmodifiableMap(new LinkedHashMap<>(attributes));
+        this.sourceFileName = sourceFileName;
     }
 
     @Override
@@ -52,7 +70,9 @@ public final class ManualEntity implements CanonicalEntity {
 
     @Override
     public Optional<String> sourceFileName() {
-        return Optional.of("manual-entry");
+        return Optional.ofNullable(sourceFileName)
+            .filter(s -> !s.isBlank())
+            .or(() -> Optional.of("manual-entry"));
     }
 
     @Override

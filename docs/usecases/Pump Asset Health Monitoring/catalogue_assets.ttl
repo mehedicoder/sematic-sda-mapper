@@ -1,0 +1,92 @@
+@prefix : <http://sda-platform.org/ontology#> .
+@prefix ex: <http://sda-platform.org/examples/pump-health#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# ---------------------------------------------------------------------------
+# Asset: Tank Fill Flowmeter (the physical device)
+# ---------------------------------------------------------------------------
+ex:Flowmeter_TankFill_01 a :Asset ;
+    :assetID "AST-FM-001" ;
+    :assetName "Tank Fill Coriolis Flowmeter" ;
+    :locatedIn "Tank Farm T-101" ;
+    :hasContext ex:DC_OnPremEdge01 ;
+    :hasCapability ex:RCap_AssetConditionMonitoring ;
+    :hasSensor ex:Sensor_Flowmeter_01 .
+
+# ---------------------------------------------------------------------------
+# Sensor
+# ---------------------------------------------------------------------------
+ex:Sensor_Flowmeter_01 a :Sensor ;
+    :sensorID "SNS-FM-001" ;
+    :sensorName "Coriolis Flow Sensor" ;
+    :sensorType "CoriolisFlowmeter" ;
+    :measures ex:PV_FlowRate, ex:PV_SignalQuality ;
+    :locatedOn ex:Flowmeter_TankFill_01 ;
+    :produces ex:Obs_Flow_20260826T120000 .
+
+# ---------------------------------------------------------------------------
+# Process Variables (measured physical quantities)
+# ---------------------------------------------------------------------------
+ex:PV_FlowRate a :ProcessVariable ;
+    :variableID "PV-FLOW-001" ;
+    :variableName "MassFlow" ;
+    :variableUnit "kg/h" ;
+    :describedBy ex:CDD_FlowRate ;
+    :measuredBy ex:Sensor_Flowmeter_01 ;
+    :hasObservation ex:Obs_Flow_20260826T120000 ;
+    :variableMappedByConnector ex:DC_Flowmeter_PADIM .
+
+ex:PV_SignalQuality a :ProcessVariable ;
+    :variableID "PV-SIG-001" ;
+    :variableName "SignalQuality" ;
+    :variableUnit "percent" ;
+    :describedBy ex:CDD_SignalQuality ;
+    :measuredBy ex:Sensor_Flowmeter_01 ;
+    :variableMappedByConnector ex:DC_Flowmeter_PADIM .
+
+# ---------------------------------------------------------------------------
+# Observations (timestamped measurements)
+# ---------------------------------------------------------------------------
+ex:Obs_Flow_20260826T120000 a :Observation ;
+    :observationID "OBS-001" ;
+    :timestamp "2026-08-26T12:00:00Z"^^xsd:dateTime ;
+    :value "1250.5" ;
+    :observes ex:PV_FlowRate ;
+    :producedBy ex:Sensor_Flowmeter_01 .
+
+# ---------------------------------------------------------------------------
+# Semantic Concepts (IEC CDD / PA-DIM identifiers)
+# ---------------------------------------------------------------------------
+ex:CDD_FlowRate a :SemanticConcept ;
+    :conceptID "0112/2///61987#ABA231" ;
+    :conceptName "Mass flow rate" ;
+    :conceptDataType "xsd:double" ;
+    :conceptUnit "kg/h" ;
+    :semanticIRI "https://cdd.iec.ch/cdd/iec61987/iec61987.nsf/ABA231" ;
+    :describesConcept ex:PV_FlowRate ;
+    :definedByModel ex:IM_PADIM_Flowmeter ;
+    :requiredBySkill ex:Skill_NE107_Diag .
+
+ex:CDD_SignalQuality a :SemanticConcept ;
+    :conceptID "0112/2///61987#ABA232" ;
+    :conceptName "Signal quality indicator" ;
+    :conceptDataType "xsd:decimal" ;
+    :conceptUnit "percent" ;
+    :semanticIRI "https://cdd.iec.ch/cdd/iec61987/iec61987.nsf/ABA232" ;
+    :describesConcept ex:PV_SignalQuality ;
+    :definedByModel ex:IM_PADIM_Flowmeter ;
+    :requiredBySkill ex:Skill_NE107_Diag .
+
+# ---------------------------------------------------------------------------
+# Information Model (PA-DIM Companion Specification)
+# ---------------------------------------------------------------------------
+ex:IM_PADIM_Flowmeter a :InformationModel ;
+    :modelID "IM-PADIM-001" ;
+    :modelName "PA-DIM Flowmeter Companion Specification" ;
+    :modelURI "https://opcfoundation.org/UA/DI/PA-DIM" ;
+    :modelVersion "1.3.0" ;
+    :standardRef "IEC 61987 / OPC UA PA-DIM Companion Spec" ;
+    :mappedTo ex:CDD_FlowRate, ex:CDD_SignalQuality ;
+    :mappedByConnector ex:DC_Flowmeter_PADIM ;
+    :usedBy ex:Service_Diagnostics_v1 ;
+    :requiredByRequirement ex:REQ_03 .

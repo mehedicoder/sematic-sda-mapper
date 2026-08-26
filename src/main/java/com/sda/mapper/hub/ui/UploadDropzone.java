@@ -75,7 +75,9 @@ public class UploadDropzone {
             case MTP_AML -> List.of("application/xml", ".xml", ".aml");
             case AUTOMATION_ML -> List.of("application/xml", ".xml", ".aml");
             case OPCUA_JSON -> List.of("application/json", ".json");
+            case OPCUA_XML -> List.of("application/xml", ".xml", ".aml");
             case REQUIREMENT_TTL -> List.of("text/turtle", ".ttl", ".rdf");
+            case ABOX_TTL -> List.of("text/turtle", ".ttl", ".rdf");
         };
     }
 

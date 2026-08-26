@@ -29,6 +29,7 @@ import com.sda.mapper.observability.PipelineTracingContext;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
 import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -195,7 +197,11 @@ public class MappingHubService {
 
         CanonicalAssetModel parsed;
         try {
-            parsed = parserRegistry.parse(new ByteArrayInputStream(content), fileName, format);
+            if (format == AssetFileFormat.ABOX_TTL) {
+                parsed = parseAndMergeAbox(fileName, content);
+            } else {
+                parsed = parserRegistry.parse(new ByteArrayInputStream(content), fileName, format);
+            }
             markUploadedFileParsed(fileId);
         } catch (ParsingException e) {
             markUploadedFileFailed(fileId, e.getMessage());
@@ -234,6 +240,7 @@ public class MappingHubService {
      * Clears all accumulated session state.
      */
     public void reset() {
+        removeAllAboxFromSharedModel();
         deletePersistedSession();
         session.reset();
         this.lastRawFormat = null;
@@ -249,6 +256,11 @@ public class MappingHubService {
      * @return the pipeline result after rebuilding and re-running
      */
     public PipelineResult removeUploadedFile(int index) {
+        List<MappingHubSession.UploadedFile> uploads = session.getUploads();
+        if (index >= 0 && index < uploads.size()
+                && uploads.get(index).format() == AssetFileFormat.ABOX_TTL) {
+            removeAboxFromSharedModel(uploads.get(index).content());
+        }
         session.removeFileAt(index);
         rebuildModelFromUploads();
         return reRunPipeline();
@@ -272,6 +284,84 @@ public class MappingHubService {
                     uf.fileName(), e.getMessage());
             }
         }
+    }
+
+    /**
+     * Parses an ABox Turtle file, merges its triples into the shared reasoning
+     * model (the Service Catalogue) so the semantic matcher can reason over the
+     * uploaded supply/asset/edge individuals, and projects the declared
+     * individuals onto the session's canonical model (resolving subclass types
+     * to their canonical parent class) so coverage, lift, inference and the
+     * manifest entity listing reflect them.
+     *
+     * @param fileName name of the uploaded file
+     * @param content  the file content
+     * @return the projected canonical model
+     * @throws ParsingException when the content is not valid Turtle
+     */
+    private CanonicalAssetModel parseAndMergeAbox(String fileName, byte[] content) {
+        Model raw = ModelFactory.createDefaultModel();
+        try (InputStream in = new ByteArrayInputStream(content)) {
+            raw.read(in, null, "TTL");
+        } catch (Exception e) {
+            throw new ParsingException(fileName, "Invalid ABox TTL: " + e.getMessage());
+        }
+        Model shared = sharedCatalogModel();
+        if (shared != null) {
+            shared.add(raw);
+            log.info("Merged {} ABox triples from {} into the shared catalog model",
+                raw.size(), fileName);
+        } else {
+            log.warn("No shared ontology model available; ABox triples from {} were not merged",
+                fileName);
+        }
+        return parserRegistry.parse(new ByteArrayInputStream(content), fileName, AssetFileFormat.ABOX_TTL);
+    }
+
+    /**
+     * Removes the triples of an uploaded ABox file from the shared reasoning
+     * model, reversing {@link #parseAndMergeAbox}.
+     *
+     * @param content the previously uploaded file content
+     */
+    private void removeAboxFromSharedModel(byte[] content) {
+        Model shared = sharedCatalogModel();
+        if (shared == null) {
+            return;
+        }
+        Model raw = ModelFactory.createDefaultModel();
+        try (InputStream in = new ByteArrayInputStream(content)) {
+            raw.read(in, null, "TTL");
+        } catch (Exception e) {
+            log.warn("Skipping ABox removal from shared model: {}", e.getMessage());
+            return;
+        }
+        shared.remove(raw);
+    }
+
+    /**
+     * Removes every uploaded ABox file's triples from the shared reasoning model.
+     */
+    private void removeAllAboxFromSharedModel() {
+        Model shared = sharedCatalogModel();
+        if (shared == null) {
+            return;
+        }
+        for (MappingHubSession.UploadedFile uf : session.getUploads()) {
+            if (uf.format() == AssetFileFormat.ABOX_TTL) {
+                removeAboxFromSharedModel(uf.content());
+            }
+        }
+    }
+
+    /**
+     * Returns the shared reasoning model (the Service Catalogue) used for
+     * semantic matching, or {@code null} when no reasoner is wired.
+     *
+     * @return the shared Jena model, or {@code null}
+     */
+    private Model sharedCatalogModel() {
+        return semanticReasonerService != null ? semanticReasonerService.getOntologyModel() : null;
     }
 
     /**
@@ -580,7 +670,9 @@ public class MappingHubService {
             r.capabilityName() != null ? r.capabilityName() : "",
             r.skillName() != null ? r.skillName() : "",
             r.serviceName() != null ? r.serviceName() : "",
-            r.bindingLabel() != null ? r.bindingLabel() : "",
+            r.bindingEndpointUri() != null && !r.bindingEndpointUri().isBlank()
+                ? r.bindingEndpointUri()
+                : (r.bindingLabel() != null ? r.bindingLabel() : ""),
             r.protocol() != null ? r.protocol() : "",
             r.networkZone() != null ? r.networkZone() : "",
             r.safetyIntegrityLevel() != null ? r.safetyIntegrityLevel() : "");

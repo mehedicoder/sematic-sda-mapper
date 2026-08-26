@@ -653,7 +653,7 @@ Interactive dark-themed ontology visualizer at `/visualizer` grounded in the can
 | Dark-palette stylesheet | `src/main/frontend/hub-styles.css` |
 | Drawer nav ("Mapping Hub" + "Ontology Browser") | `src/main/java/com/sda/mapper/ui/MainLayout.java` |
 | 12 test classes (parsers, services, UI) | `src/test/java/com/sda/mapper/hub/**/*.java` |
-| Fixtures for parser/hub tests | `src/main/resources/device-descriptions/{aas,mtp,opcua}/` |
+| Fixtures for parser/hub tests | `src/test/resources/device-descriptions/` (canonical copies in `docs/usecases/`) |
 
 ### Key technical decisions
 
@@ -685,7 +685,7 @@ Interactive dark-themed ontology visualizer at `/visualizer` grounded in the can
 | Component | Files |
 |---|---|
 | `OfferedCapability`, `RequiredCapability`, `CapabilityMatch` canonical records; `DeploymentContext.networkZone`; model support for all three | `src/main/java/com/sda/mapper/hub/model/*.java` |
-| `SkillParameter.functionClass`; MTP/AAS parsers read `FunctionClass`; fixtures updated | `src/main/java/com/sda/mapper/hub/model/SkillParameter.java`, `src/main/java/com/sda/mapper/hub/parser/{Mtp,Aas}ModelParser.java`, `src/main/resources/device-descriptions/{mtp/pump-module-mtp.xml,aas/pump-aas.json}` |
+| `SkillParameter.functionClass`; MTP/AAS parsers read `FunctionClass`; fixtures updated | `src/main/java/com/sda/mapper/hub/model/SkillParameter.java`, `src/main/java/com/sda/mapper/hub/parser/{Mtp,Aas}ModelParser.java`, `src/test/resources/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/` |
 | Ontology: `OfferedCapability`/`RequiredCapability` classes + 9 datatype properties (functionClass, engineeringUnit, nominalRange_min/max, accuracy, safetyIntegrityLevel, networkZone, protocol, accessMode, endpointUrl) | `src/main/resources/ontology/css-sda-unified.ttl` |
 | INFER rework — OfferedCapability per skill from primary parameter (functionClass-bearing preferred) | `src/main/java/com/sda/mapper/hub/service/InferenceService.java` |
 | SPARQL match asset (offered vs required across three dimensions) | `src/main/resources/queries/hub-match-offered-required.rq` |
@@ -1200,3 +1200,127 @@ Interactive dark-themed ontology visualizer at `/visualizer` grounded in the can
   stage observer, violating `run_id NOT NULL`; silently dropped audit rows while matching kept
   working. Fixed by generating real run UUIDs in both paths + regression test
   (`shouldPersistReasonerMatchTransitions`) running the reasoner against a real database.
+
+---
+
+## Feature: ABox TTL catalogue upload (Pump Asset Health Monitoring use case)
+
+**Status:** [x] Completed
+**Completed:** 2026-08-26
+**Tests:** 598 passing (0 failures) — MappingHubAboxUploadTest (2), AboxTtlParserTest (2) added; full suite green
+
+### What was built
+
+Enables the Mapping Hub pipeline to ingest a complete SDA ABox package (requirement + service
+catalogue + asset description + edge-node topology) so a use case such as
+docs/usecases/Pump Asset Health Monitoring/ can be implemented end-to-end through upload.
+
+- New AssetFileFormat.ABOX_TTL ("ABox TTL", Turtle) for raw SDA ABox files
+  (catalogue_services.ttl, catalogue_assets.ttl, dge_nodes.ttl).
+- HubFileTypeDetector now falls back .ttl/.rdf to ABOX_TTL (requirement files are still
+  detected as REQUIREMENT_TTL by content sniff); added an ABox content sniff.
+- AboxTtlParser (Spring bean) registered so session rebuilds recognise the format; it returns an
+  empty canonical model because ABox triples are merged into the shared catalogue model.
+- MappingHubService merges uploaded ABox TTL triples directly into the shared reasoning model via
+  SemanticReasonerService.getOntologyModel() (the same model the matcher queries), so an uploaded
+  catalogue_services.ttl **updates the catalogue service/asset/edge list**. Removal of the file and
+  eset() reverse the merge.
+- match-generic.rq: made dfs:label on connector and deployment context OPTIONAL (they are
+  presentation-only) so example packages that omit them still match — strictly more permissive.
+- V8__allow_abox_ttl_upload_format.sql: extended the uploaded-file format check constraint.
+- UI: UploadDropzone accepts .ttl/.rdf for ABOX_TTL; MappingHubView.formatClass covers it.
+
+### Validation evidence
+
+- MappingHubAboxUploadTest.shouldImplementPumpHealthUseCase uploads the 4 use-case files and asserts
+  the NE107 Service_Diagnostics_v1 (OCap_AssetConditionMonitoring / Skill_NE107_Diag) is matched
+  for REQ-03.
+- shouldDetectAboxTtl confirms catalogue_services.ttl / dge_nodes.ttl detect as ABOX_TTL.
+- Full suite: 598 passing (was 594).
+
+### Files created / modified
+
+| Component | Files |
+|-----------|-------|
+| Format + detection | hub/model/AssetFileFormat.java, hub/parser/HubFileTypeDetector.java, hub/parser/AboxTtlParser.java (new), hub/ui/UploadDropzone.java, hub/ui/MappingHubView.java |
+| Merge logic | hub/service/MappingHubService.java, easoning/SemanticReasonerService.java (getOntologyModel) |
+| Matching | esources/queries/match-generic.rq |
+| Persistence | esources/db/migration/V8__allow_abox_ttl_upload_format.sql |
+| Docs | docs/USER-TEST-MANUAL.md (4.5 ABox TTL use-case) |
+| Tests | MappingHubAboxUploadTest.java (new), AboxTtlParserTest.java (new), 	est/resources/abox/pump-health/* (copied fixtures) |
+
+### Key technical decisions
+
+- ABox TTL is merged into the **shared** catalogue model (not the per-session canonical model) so the
+  existing matchManualRequirement path (which queries the shared model) sees the uploaded supply and
+  matches it. This realises the previously-identified "upload updates the catalogue" capability.
+- The requirement (eq_pump_health.ttl) continues through the existing REQUIREMENT_TTL path and
+  becomes an active requirement; the match is produced by the catalogue matcher with an
+  AssetConditionMonitoring capability join.
+- Reused SemanticReasonerService.getOntologyModel() to avoid adding a new constructor parameter to
+   MappingHubService (kept test churn minimal).
+
+---
+
+## Maintenance: ABox → Canonical Model Projection (coverage/manifest fix) + device-descriptions cleanup
+
+**Status:** [x] Completed
+**Branch:** `main`
+**Completed:** 2026-08-26
+**Tests:** 600 passing (0 failures, 0 errors, 0 skipped) — up from 598; +2 new ABox parser/hub tests, 1 converter test assertion corrected
+
+### Completion Evidence
+
+- `mvn clean test` — BUILD SUCCESS, 600 tests, 0 failures, 0 errors
+- Before fix: uploading the Pump package produced a matched `Service_Diagnostics_v1` in the
+  deployment manifest, but coverage reported `4.2%` with `Service`/`Asset`/`Capability`/`Skill`
+  etc. `MISSING` (ABox individuals were merged into the Jena model for the matcher but never into
+  the session `CanonicalAssetModel` that coverage/manifest `entities`/lift/inference read).
+- After fix: `MappingHubAboxUploadTest.shouldReflectAboxEntitiesInCoverage` asserts coverage ≥ 75%
+  and `Service`/`Asset`/`Capability`/`Skill` = `PRESENT` after uploading the 4 Pump files.
+- `AboxTtlParserTest` (3 tests) confirms subclass→canonical resolution (`OfferedCapability`→
+  `Capability`, `AnalyticsService`/`CPCService`→`Service`, `MTPSkill`/`AASSkill`/`ControlLogicSkill`/
+  `OrganisationalSkill`→`Skill`, `EdgeContext`→`DeploymentContext`, `OTZone`→`NetworkZone`) and
+  source provenance.
+- `ManualEntityConverterTest.shouldRejectUnknownClass` updated: `InformationModel` is now a
+  supported canonical class, so the "no mapping" case uses a genuine non-canonical name.
+- **Live UI validation (2026-08-26):** uploaded the Pump package → `coveragePercent: 77.1`
+  (was 4.2% before the fix), L2/L3/L4 all `PRESENT`, `deploymentManifest` matched
+  `Service_Diagnostics_v1` for `RCAP-001`. Remaining `blockingGaps` are L1
+  `UseCaseRequirementParameter` / `UseCaseRequirementConstraint` / `VerificationCriterion`,
+  which the package does not supply (no parameters/constraints/verification criteria in
+  `req_pump_health.ttl`); `ServiceInstance` is `PARTIAL` (display name derived from `serviceId`,
+  canonical `name` empty in source TTL). Both are expected data gaps, not defects.
+
+### What was built / changed
+
+| Component | Files |
+|---|---|
+| `ManualEntity` carries real source file name (5-arg ctor; 4-arg defaults to `"manual-entry"`); `sourceFileName()` returns it | `src/main/java/com/sda/mapper/hub/model/ManualEntity.java` |
+| `ManualEntityConverter.toTyped` extended to all 24 canonical classes; uses `manual.sourceFileName().orElse(MANUAL_SOURCE)` | `src/main/java/com/sda/mapper/hub/model/ManualEntityConverter.java` |
+| `AboxTtlParser` rewritten to `project(Model, fileName)` — resolves each ABox individual's subclass to its canonical parent via `OntologyDataService` and returns the projected `CanonicalAssetModel`; ctor now requires `OntologyDataService` | `src/main/java/com/sda/mapper/hub/parser/AboxTtlParser.java` |
+| `MappingHubService.parseAndMergeAbox` returns the projected model (still merges triples into the shared Jena model for the matcher) | `src/main/java/com/sda/mapper/hub/service/MappingHubService.java` |
+| Tests | `src/test/java/com/sda/mapper/hub/parser/AboxTtlParserTest.java` (3), `src/test/java/com/sda/mapper/hub/service/MappingHubAboxUploadTest.java` (3), `src/test/java/com/sda/mapper/hub/model/ManualEntityConverterTest.java` (assertion fix) |
+
+### device-descriptions resource cleanup (no runtime references)
+
+- Removed `src/main/resources/device-descriptions/` (no production code referenced it; assets are
+  uploaded at runtime, not shipped).
+- Relocated reference-format samples to `src/test/resources/device-descriptions/reference-formats/`
+  (classpath, used by tests) and `docs/usecases/reference-formats/` (canonical UAT copies).
+- Relocated REQ-001 fixtures to `src/test/resources/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/`
+  so the 38 classpath test references stay green; canonical copies remain in `docs/usecases/`.
+- Fixed stale JavaDoc/spec/path references: `AasModelParser`, `MtpModelParser`, `OpcUaModelParser`
+  (point to `docs/usecases/...`), `docs/USER-TEST-MANUAL.md`, `specs/roadmap.md`,
+  `specs/2026-08-25-process-variable-analysis/requirements.md`, `tasks.md`.
+
+### Key technical decisions
+
+- ABox individuals are projected as `ManualEntity` → `ManualEntityConverter.toTyped` (the same
+  path used by manual entry and the persisted-entity restorer) → typed canonical records, so
+  `CanonicalAssetModel.addEntity` auto-converts them; this avoids duplicating 24 typed constructors
+  and keeps semantic mapping in the converter/ontology rather than Java rules.
+- Subclass→canonical resolution uses `OntologyDataService.getClassByName` + `parent()` walk; all
+  ABox subclasses are declared in the TBox, so the projection is fully ontology-driven.
+- The shared Jena merge for the SPARQL matcher is preserved unchanged, so the existing
+  `deploymentManifest` matches continue to work alongside the now-correct coverage/entities.

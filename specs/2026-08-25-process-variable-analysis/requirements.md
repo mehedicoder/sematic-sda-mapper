@@ -6,7 +6,7 @@ next validation step, alongside existing flowmeter / fermentation / HVAC example
 
 - Define a ProcessVariable-analysis `UseCase` + `UseCaseRequirement` (capability = analytic
   function over a process variable with UCUM unit + IEC CDD IRDI semanticID).
-- Provide an example device description under `src/main/resources/device-descriptions/`
+- Provide an example device description under `docs/usecases/`
   (MTP and/or OPC UA datasheet).
 - Add a SPARQL match path exercising R1–R3 and R2a (`requiresConcept` CDD coverage).
 - Add positive match + negative tests (wrong concept / wrong unit / wrong SIL) to `EvaluationTest`.

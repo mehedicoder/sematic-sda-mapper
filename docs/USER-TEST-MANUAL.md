@@ -140,7 +140,14 @@ dragged into the Mapping Hub dropzone for manual UAT, or used to drive the REST
 matcher. (The previous duplicate copies under `docs/use-case-inputs/formats/`
 have been removed.)
 
-#### Per-use-case upload (one file per session)
+They are organized **by use case** under `use-cases/REQ-*`. Each such folder
+holds every file you upload together for that use case — the device
+description(s) **and** the requirement file(s) — so a multi-file session is
+stored in one place. The folders contain only upload/test inputs (no
+documentation files); testing steps live in this manual and in
+`src/main/resources/device-descriptions/README.md`.
+
+#### Per-use-case upload (one folder per session)
 
 | File (relative to `src/main/resources/device-descriptions/`) | Use case | Expected matched service |
 |-------------------------------------------------------------|----------|--------------------------|
@@ -164,7 +171,7 @@ Hub dropzone to match the seeded Flowmeter Diagnostics Service via its
     - `use-cases/REQ-001-flowmeter-diagnostics/req001-uaserver-nodeset-complete.xml`
     - `use-cases/REQ-002-fermentation-skid/req002-mtp-fermentation-skid-complete.xml`
     - `use-cases/REQ-003-hvac-plant/req003-uaserver-ahu01-complete.json`
-    - optionally `opcua/temperature-sensor-opcua-datasheet.json` for a PVA-style temperature source
+    - optionally `use-cases/REQ-003-hvac-plant/temperature-sensor-opcua-datasheet.json` for a PVA-style temperature source
 3. After **each** upload the pipeline re-runs Parse → Lift → Infer → Match over all
    accumulated entities; the Coverage Dashboard and matched-services list grow.
 4. Expected matched services in the combined session:

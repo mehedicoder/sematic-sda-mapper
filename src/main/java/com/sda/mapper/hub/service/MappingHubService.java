@@ -93,26 +93,14 @@ public class MappingHubService {
                              MappingHubPersistenceService persistenceService,
                              CanonicalTripleMapper tripleMapper,
                              MappingHubGraphService graphService) {
-        // One shared publisher so stage events reach getAuditPublisher() listeners
-        // even through the legacy constructors.
-        PipelineAuditPublisher sharedPublisher = new PipelineAuditPublisher(null);
-        this.parserRegistry = parserRegistry;
-        this.fileTypeDetector = fileTypeDetector;
-        this.liftService = liftService;
-        this.inferenceService = inferenceService;
-        this.matchingService = matchingService;
-        this.semanticMatchService = semanticMatchService;
-        this.recommendationService = recommendationService;
-        this.manifestExportService = manifestExportService;
-        this.session = session;
-        this.persistenceService = persistenceService;
-        this.tripleMapper = tripleMapper;
-        this.graphService = graphService;
-        this.stageObserver = new PipelineStageObserver(ObservationRegistry.NOOP,
-            sharedPublisher, new PipelineMetrics(new SimpleMeterRegistry()));
-        this.tracingContext = new PipelineTracingContext(ObservationRegistry.NOOP);
-        this.auditPublisher = sharedPublisher;
-        this.metrics = new PipelineMetrics(new SimpleMeterRegistry());
+        this(parserRegistry, fileTypeDetector, liftService, inferenceService, matchingService,
+            semanticMatchService, recommendationService, manifestExportService, session,
+            persistenceService, tripleMapper, graphService,
+            new PipelineStageObserver(ObservationRegistry.NOOP,
+                new PipelineAuditPublisher(null), new PipelineMetrics(new SimpleMeterRegistry())),
+            new PipelineTracingContext(ObservationRegistry.NOOP),
+            new PipelineAuditPublisher(null),
+            new PipelineMetrics(new SimpleMeterRegistry()));
     }
 
     /**

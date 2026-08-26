@@ -139,12 +139,6 @@ public class RequirementMatchingPanel extends VerticalLayout {
             populateForm(loaded);
             Notification.show("Loaded " + id + " — edit the fields if needed, then Create & Match");
         }
-        // Matching must work from the "Match existing" field alone: carry the id
-        // into the form so the built request targets it even when the separate
-        // Requirement ID field was left empty.
-        if (reqId.isEmpty()) {
-            reqId.setValue(id);
-        }
         MatchRequirementRequest request = buildRequest();
         showResult(requirementService.matchOrCreate(request));
     }

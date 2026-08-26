@@ -17,6 +17,7 @@ import com.sda.mapper.hub.service.MatchingService;
 import com.sda.mapper.hub.service.PipelineResult;
 import com.sda.mapper.hub.service.RecommendationService;
 import com.sda.mapper.hub.service.SemanticMatchService;
+import com.sda.mapper.hub.model.OfferedCapability;
 import com.sda.mapper.reasoning.SparqlQueryLoader;
 import com.sda.mapper.service.OntologyDataService;
 import com.vaadin.flow.component.UI;
@@ -29,6 +30,10 @@ import org.junit.jupiter.api.Test;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.List;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.yaml.snakeyaml.Yaml;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -271,6 +276,71 @@ class MappingHubServiceRequesterJourneyTest {
         assertTrue(lines.stream().anyMatch(l ->
                 l.startsWith("[MATCH]") && l.contains("recommendation(s)")),
             "gap-driven recommendations are surfaced to guide the requester");
+    }
+
+    @Test
+    @DisplayName("Should reason from a manual demand to a matched service and export the deployment manifest")
+    void shouldReasonToMatchedServiceAndExportDeploymentManifest() throws Exception {
+        MappingHubView view = createView();
+
+        upload(view, "pump-aas.json", fixture("/device-descriptions/aas/pump-aas.json"));
+
+        // The offered side (inferred from the upload) advertises a capability
+        // type. The only journey gap is the demand side, which the requester
+        // supplies manually as a RequiredCapability.
+        MappingHubService hubService = field(view, "hubService", MappingHubService.class);
+        OfferedCapability offered = hubService.getSession().getInferred().stream()
+            .filter(e -> e instanceof OfferedCapability)
+            .map(e -> (OfferedCapability) e)
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("Expected an inferred OfferedCapability from upload"));
+
+        saveManual(view, new ManualEntity(
+            "RequiredCapability", "RC-JOURNEY", "FlowControl demand",
+            java.util.Map.of(
+                "id", "RC-JOURNEY",
+                "name", "FlowControl demand",
+                "functionClass", offered.functionClass(),
+                "engineeringUnit", "",
+                "nominalRangeMin", "",
+                "nominalRangeMax", "",
+                "safetyIntegrityLevel", "",
+                "protocol", "",
+                "networkZone", "")));
+
+        // Reasoning (R1-R3 SPARQL) now bridges demand to the offered capability.
+        PipelineResult result = lastResult(view);
+        assertNotNull(result);
+        assertTrue(result.matches().size() >= 1,
+            "ontology reasoning produced a semantic capability match from the manual demand");
+        assertTrue(consoleLines(view).stream().anyMatch(l ->
+                l.startsWith("[MATCH]") && l.contains("SPARQL match:")
+                    && l.matches(".*[1-9]\\d* semantic capability match\\(es\\).*")),
+            "console reports a non-zero SPARQL match after manual demand entry");
+
+        // The complete manifest carries the reasoned deployment binding.
+        String manifest = hubService.buildManifest();
+        ObjectMapper om = new ObjectMapper();
+        JsonNode root = om.readTree(manifest);
+        assertTrue(root.path("deploymentManifest").isArray(), "manifest embeds a deploymentManifest");
+        assertTrue(root.path("deploymentManifest").size() >= 1,
+            "at least one reasoned deployment binding is exported");
+        JsonNode binding = root.path("deploymentManifest").get(0);
+        assertEquals("RC-JOURNEY", binding.path("requiredCapabilityId").asText());
+        assertEquals("Matched", binding.path("lifecycleStatus").asText());
+        assertTrue(binding.path("serviceName").asText().length() > 0,
+            "deployment binding names the matched service");
+
+        // The reasoned binding is exportable as deployment infrastructure:
+        // Docker Compose and Kubernetes YAML, both parse-valid.
+        String compose = binding.path("dockerCompose").asText();
+        String kubernetes = binding.path("kubernetes").asText();
+        assertTrue(compose.contains("services:"), "Docker Compose artifact is present");
+        assertTrue(kubernetes.contains("kind: Deployment"), "Kubernetes Deployment artifact is present");
+        assertNotNull(new Yaml().load(compose), "Docker Compose text is valid YAML");
+        java.util.List<Object> k8sDocs = new java.util.ArrayList<>();
+        new Yaml().loadAll(kubernetes).forEach(k8sDocs::add);
+        assertTrue(k8sDocs.size() >= 2, "Kubernetes manifest carries Deployment and Service");
     }
 
     private static <T> T field(Object target, String name, Class<T> type) throws Exception {

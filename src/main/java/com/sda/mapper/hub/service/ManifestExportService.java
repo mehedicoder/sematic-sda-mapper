@@ -9,6 +9,7 @@ import com.sda.mapper.hub.model.AssetFileFormat;
 import com.sda.mapper.hub.model.BlockingGap;
 import com.sda.mapper.hub.model.CanonicalAssetModel;
 import com.sda.mapper.hub.model.CanonicalEntity;
+import com.sda.mapper.hub.model.CapabilityMatch;
 import com.sda.mapper.hub.model.CoverageEntry;
 import com.sda.mapper.hub.model.GapReport;
 import com.sda.mapper.hub.model.Recommendation;
@@ -30,6 +31,7 @@ public class ManifestExportService {
 
     private final MatchingService matchingService;
     private final RecommendationService recommendationService;
+    private final DeploymentManifestGenerator deploymentGenerator;
     private final ObjectMapper mapper = new ObjectMapper();
 
     /**
@@ -40,8 +42,22 @@ public class ManifestExportService {
      */
     public ManifestExportService(MatchingService matchingService,
                                  RecommendationService recommendationService) {
+        this(matchingService, recommendationService, new DeploymentManifestGenerator());
+    }
+
+    /**
+     * Creates the manifest service with an explicit deployment artifact generator.
+     *
+     * @param matchingService        the matching service
+     * @param recommendationService  the recommendation service
+     * @param deploymentGenerator    generates the Docker Compose / Kubernetes artifacts
+     */
+    public ManifestExportService(MatchingService matchingService,
+                                 RecommendationService recommendationService,
+                                 DeploymentManifestGenerator deploymentGenerator) {
         this.matchingService = matchingService;
         this.recommendationService = recommendationService;
+        this.deploymentGenerator = deploymentGenerator;
     }
 
     /**
@@ -56,6 +72,27 @@ public class ManifestExportService {
      */
     public String build(CanonicalAssetModel model, List<CanonicalEntity> inferred,
                         List<UploadedFileInfo> files, Set<AssetFileFormat> uploaded) {
+        return build(model, inferred, files, uploaded, List.of());
+    }
+
+    /**
+     * Builds the JSON manifest, additionally embedding the reasoned
+     * {@code deploymentManifest}: the R-Deploy runtime tuple committed for every
+     * semantic capability match (required capability, offered capability, skill,
+     * service, endpoint, protocol, network zone and SIL evidence). This is the
+     * ontology-driven bridge from requirement to deployment (paper, R-Deploy).
+     *
+     * @param model       the canonical model
+     * @param inferred    the inferred entities
+     * @param files       the uploaded files
+     * @param uploaded    the uploaded formats
+     * @param matches     the semantic capability matches (R1-R3 output)
+     * @return the pretty-printed JSON manifest
+     * @throws MappingException when the manifest cannot be serialized
+     */
+    public String build(CanonicalAssetModel model, List<CanonicalEntity> inferred,
+                        List<UploadedFileInfo> files, Set<AssetFileFormat> uploaded,
+                        List<CapabilityMatch> matches) {
         GapReport report = matchingService.compute(model, inferred);
         List<Recommendation> recommendations = recommendationService.recommend(report, uploaded);
         try {
@@ -107,6 +144,24 @@ public class ManifestExportService {
                 node.put("format", recommendation.format().label());
                 node.put("reason", recommendation.reason());
                 putStrings(node, "fills", recommendation.fills());
+            }
+
+            ArrayNode deploymentManifest = root.putArray("deploymentManifest");
+            for (CapabilityMatch match : matches) {
+                ObjectNode node = deploymentManifest.addObject();
+                node.put("requiredCapabilityId", match.requiredCapabilityId());
+                node.put("offeredCapabilityId", match.offeredCapabilityId());
+                node.put("skillId", match.skillId());
+                node.put("serviceName", match.serviceName());
+                node.put("endpointUrl", match.endpointUrl());
+                node.put("protocol", match.protocol());
+                node.put("networkZone", match.networkZone());
+                node.put("safetyIntegrityLevel", match.safetyIntegrityLevel());
+                node.put("lifecycleStatus", "Matched");
+                DeploymentManifestGenerator.DeploymentArtifacts artifacts =
+                    deploymentGenerator.generate(match);
+                node.put("dockerCompose", artifacts.dockerCompose());
+                node.put("kubernetes", artifacts.kubernetes());
             }
 
             return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(root);

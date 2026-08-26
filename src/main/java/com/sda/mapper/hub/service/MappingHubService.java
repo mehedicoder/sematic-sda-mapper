@@ -59,6 +59,8 @@ public class MappingHubService {
     private final PipelineAuditPublisher auditPublisher;
     private final PipelineMetrics metrics;
 
+    private PipelineResult lastResult;
+
     /**
      * Creates the mapping hub service with all pipeline stages and default
      * (no-op) observability — for unit tests.
@@ -196,8 +198,9 @@ public class MappingHubService {
      * @return the JSON manifest
      */
     public String buildManifest() {
+        List<CapabilityMatch> matches = lastResult != null ? lastResult.matches() : List.of();
         return manifestExportService.build(session.getModel(), session.getInferred(),
-            session.getFiles(), session.getUploadedFormats());
+            session.getFiles(), session.getUploadedFormats(), matches);
     }
 
     /**
@@ -408,7 +411,9 @@ public class MappingHubService {
         }
 
         completeRun(runId, report);
-        return new PipelineResult(file, model, inferred, report, matches, recommendations, List.copyOf(logs));
+        PipelineResult result = new PipelineResult(file, model, inferred, report, matches, recommendations, List.copyOf(logs));
+        this.lastResult = result;
+        return result;
     }
 
     private UUID startRun() {

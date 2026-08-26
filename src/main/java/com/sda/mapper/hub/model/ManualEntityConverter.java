@@ -44,6 +44,12 @@ public final class ManualEntityConverter {
                 text(attributes, "requirementID"), text(attributes, "lifecycleStatus"),
                 text(attributes, "rationale"), text(attributes, "acceptanceCondition"),
                 Optional.of(MANUAL_SOURCE), false);
+            case "RequiredCapability" -> new RequiredCapability(
+                text(attributes, "id"), text(attributes, "name"),
+                text(attributes, "functionClass"), text(attributes, "engineeringUnit"),
+                text(attributes, "nominalRangeMin"), text(attributes, "nominalRangeMax"),
+                text(attributes, "safetyIntegrityLevel"), text(attributes, "protocol"),
+                text(attributes, "networkZone"), MANUAL_SOURCE);
             case "UseCaseRequirementParameter", "RequirementParameter" -> new UseCaseRequirementParameter(
                 text(attributes, "id"), text(attributes, "name"),
                 text(attributes, "value"), text(attributes, "unit"),

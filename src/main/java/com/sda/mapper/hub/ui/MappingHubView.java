@@ -27,17 +27,25 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.theme.lumo.LumoUtility;
+import com.sda.mapper.observability.PipelineEvent;
+import com.sda.mapper.ui.SdaAppShell;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * Universal semantic mapping hub: ingests AAS XML, MTP AML and OPC UA JSON
  * asset descriptions and runs Parse &rarr; Lift &rarr; Infer &rarr; Match
  * &rarr; Manifest with per-layer coverage, gap actions and context-aware
  * recommendations.
+ *
+ * <p>Embeds the live pipeline observability console ({@link StageTimeline},
+ * {@link PipelineTracePanel}, {@link PipelineConsolePanel}); server push is
+ * enabled application-wide via {@link SdaAppShell} so streamed audit events
+ * render without manual refresh.</p>
  */
 @Route(value = "mapping-hub", layout = MainLayout.class)
 @PageTitle("Mapping Hub")
@@ -54,6 +62,11 @@ public class MappingHubView extends VerticalLayout {
     private final VerticalLayout fileQueue;
     private final VerticalLayout dashboard;
     private Button exportButton;
+
+    private final StageTimeline stageTimeline = new StageTimeline();
+    private final PipelineTracePanel tracePanel = new PipelineTracePanel();
+    private final PipelineConsolePanel pipelineConsole = new PipelineConsolePanel();
+    private Consumer<PipelineEvent> auditListener;
 
     private String selectedLayerId = "ALL";
     private String selectedClassName;
@@ -101,6 +114,8 @@ public class MappingHubView extends VerticalLayout {
         dashboard.setSpacing(true);
         add(dashboard);
 
+        add(createObservabilitySection());
+
         layerTabs = new LayerTabs(this::selectLayer);
         add(layerTabs);
 
@@ -134,6 +149,45 @@ public class MappingHubView extends VerticalLayout {
         header.setPadding(false);
         header.setSpacing(false);
         return header;
+    }
+
+    private VerticalLayout createObservabilitySection() {
+        H2 title = new H2("Pipeline Observability");
+        title.addClassNames(LumoUtility.Margin.Bottom.NONE, "section-title");
+
+        var timelineRow = new HorizontalLayout(stageTimeline);
+        timelineRow.setSpacing(true);
+
+        var traceAndConsole = new HorizontalLayout(tracePanel, pipelineConsole);
+        traceAndConsole.setWidthFull();
+        traceAndConsole.setSpacing(true);
+        traceAndConsole.setAlignItems(FlexComponent.Alignment.STRETCH);
+
+        var section = new VerticalLayout(title, timelineRow, traceAndConsole);
+        section.addClassName("hub-observability-panel");
+        section.setPadding(true);
+        section.setSpacing(true);
+        return section;
+    }
+
+    @Override
+    protected void onAttach(com.vaadin.flow.component.AttachEvent attachEvent) {
+        super.onAttach(attachEvent);
+        auditListener = event -> getUI().ifPresent(ui -> ui.access(() -> {
+            stageTimeline.onEvent(event);
+            tracePanel.onEvent(event);
+            pipelineConsole.onEvent(event);
+        }));
+        hubService.getAuditPublisher().addListener(auditListener);
+    }
+
+    @Override
+    protected void onDetach(com.vaadin.flow.component.DetachEvent detachEvent) {
+        if (auditListener != null) {
+            hubService.getAuditPublisher().removeListener(auditListener);
+            auditListener = null;
+        }
+        super.onDetach(detachEvent);
     }
 
     private VerticalLayout createUploadSection() {

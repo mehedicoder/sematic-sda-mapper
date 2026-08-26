@@ -10,6 +10,9 @@ import com.sda.mapper.hub.model.RequiredCapability;
 import com.sda.mapper.hub.model.Skill;
 import com.sda.mapper.reasoning.SparqlExecutionException;
 import com.sda.mapper.reasoning.SparqlQueryLoader;
+import com.sda.mapper.observability.PipelineMetrics;
+import com.sda.mapper.observability.TracedSparqlExecutor;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.apache.jena.query.Query;
 import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
@@ -61,14 +64,29 @@ public class SemanticMatchService {
     private static final String MATCH_QUERY_PATH = "queries/hub-match-offered-required.rq";
 
     private final SparqlQueryLoader sparqlQueryLoader;
+    private final TracedSparqlExecutor tracedSparqlExecutor;
 
     /**
-     * Creates the semantic matching service.
+     * Creates the semantic matching service with no SPARQL tracing (unit tests).
      *
      * @param sparqlQueryLoader loads the SPARQL match query from the classpath
      */
     public SemanticMatchService(SparqlQueryLoader sparqlQueryLoader) {
+        this(sparqlQueryLoader,
+            new TracedSparqlExecutor(new PipelineMetrics(new SimpleMeterRegistry())));
+    }
+
+    /**
+     * Creates the semantic matching service.
+     *
+     * @param sparqlQueryLoader    loads the SPARQL match query from the classpath
+     * @param tracedSparqlExecutor observability wrapper for query executions
+     */
+    @org.springframework.beans.factory.annotation.Autowired
+    public SemanticMatchService(SparqlQueryLoader sparqlQueryLoader,
+                                TracedSparqlExecutor tracedSparqlExecutor) {
         this.sparqlQueryLoader = sparqlQueryLoader;
+        this.tracedSparqlExecutor = tracedSparqlExecutor;
     }
 
     /**
@@ -85,13 +103,16 @@ public class SemanticMatchService {
             String queryStr = sparqlQueryLoader.loadQuery(MATCH_QUERY_PATH);
             Query query = QueryFactory.create(queryStr);
 
-            List<CapabilityMatch> matches = new ArrayList<>();
-            try (QueryExecution qe = QueryExecutionFactory.create(query, abox.model())) {
-                ResultSet rs = qe.execSelect();
-                while (rs.hasNext()) {
-                    matches.add(toMatch(rs.next(), abox.uriToId()));
+            List<CapabilityMatch> matches = tracedSparqlExecutor.execute(MATCH_QUERY_PATH, () -> {
+                List<CapabilityMatch> rows = new ArrayList<>();
+                try (QueryExecution qe = QueryExecutionFactory.create(query, abox.model())) {
+                    ResultSet rs = qe.execSelect();
+                    while (rs.hasNext()) {
+                        rows.add(toMatch(rs.next(), abox.uriToId()));
+                    }
                 }
-            }
+                return rows;
+            }, List::size);
             log.debug("Semantic match produced {} match(es)", matches.size());
             return matches;
         } catch (SparqlExecutionException e) {

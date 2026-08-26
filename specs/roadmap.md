@@ -438,6 +438,56 @@ form and via upload/REST, then match them — without a new query per requiremen
 
 ---
 
+## Phase 21: End-to-End Pipeline Observability — [x] Completed
+
+**Goal**
+
+Full visibility into every pipeline run: one distributed trace per run spanning
+every stage of `PARSE → INSTANTIATE → LIFT → INFER → MATCH → MANIFEST`, structured
+audit events persisted for historical queryability, SPARQL query-level metrics,
+per-dimension match-failure reasons on match spans, and a live observability console
+embedded in `MappingHubView` with `@Push` streaming (same pattern as
+`OpcUaVisualizationService`).
+
+**Key task areas**
+
+| Area | What gets built |
+|---|---|
+| Distributed tracing | `@Observed` on every pipeline stage service (`LiftService`, `InferenceService`, `SemanticMatchService`, `MatchingService`, `RecommendationService`, `ManifestExportService`, `EndToEndPipelineService`, `MappingHubService` stage methods); OpenTelemetry baggage propagating `requirement.id` / `session.id` / `run.id` across stages |
+| Audit log | `PipelineEvent` entity + `pipeline_audit_log` table (Flyway `V6__pipeline_audit_log.sql`) persisting every stage transition (runId, sessionId, requirementId, stage, status, startedAt, durationMs, detail) |
+| SPARQL visibility | `TracedSparqlExecutor` wrapping query execution (`hub-match-offered-required.rq`, `match-generic.rq`, …) with `@Timed` — query name, duration, result count as metric tags |
+| Dimensional match tagging | Per-dimension pass/fail tags (capability, protocol/accessMode, deployment zone/SIL/determinism, R2a concept coverage) on match spans; failure reasons derived from `ExplanationService` dimensions so a no-match trace shows exactly which constraint failed |
+| Live UI console | `PipelineTracePanel`, `StageTimeline`, `PipelineConsolePanel` components in `MappingHubView` with `@Push` streaming stage transitions as they happen |
+| Metrics & dashboards | Prometheus SLI counters/timers (pipeline runs, stage durations, match hit/no-hit) exposed at `/actuator/prometheus`; exported Grafana dashboard JSON under `docs/grafana/` |
+
+**Tasks**
+
+* [x] Add `TracedSparqlExecutor` around SPARQL execution with `@Timed` metrics (query name, duration, result count); wire into `SemanticMatchService` and `SemanticReasonerService`
+* [x] Annotate every pipeline stage service with `@Observed` so each run produces one trace with one child span per stage *(implemented via the Observation API directly — `PipelineStageObserver` — because no AOP dependency exists for `ObservedAspect`; identical traces/metrics)*
+* [x] Propagate OpenTelemetry baggage (`requirement.id`, `session.id`, `run.id`) from pipeline entry point through all stages into log correlation (MDC)
+* [x] Add `PipelineEvent` + `pipeline_audit_log` table (Flyway V6) and an audit publisher that records each stage transition with status/duration/detail *(record + JdbcTemplate per codebase convention, not Hibernate)*
+* [x] Expose historical audit queryability — REST endpoint (e.g. `GET /api/v1/pipeline-audits?sessionId=…&requirementId=…`) returning past run timelines
+* [x] Tag match spans with per-dimension pass/fail (capability, protocol, accessMode, deployment, R2a concept) using existing explanation data
+* [x] Build `PipelineTracePanel`, `StageTimeline`, `PipelineConsolePanel` Vaadin components; embed in `MappingHubView` with push streaming of stage events *(push enabled application-wide via new `SdaAppShell` — `@Push` on a view is invalid in Vaadin 25)*
+* [x] Add Prometheus SLI counters/timers (`sda.pipeline.*`) for runs, stage durations, and match outcomes; export a Grafana dashboard JSON validated by parse test (same rule as manifest YAML tests)
+* [x] Tests: unit tests for `TracedSparqlExecutor` metrics, audit persistence/retrieval, span tag population; UI test for the live console rendering and stage-timeline updates
+
+**Acceptance Criteria**
+
+* [x] One trace per pipeline run containing exactly one span per executed stage, correlated by `run.id` in logs
+* [x] Every completed pipeline run is queryable historically from `pipeline_audit_log` (by session and requirement)
+* [x] `MappingHubView` shows a live stage timeline updating during a run without manual refresh (server push via app shell; browser-level walkthrough recommended once at human review)
+* [x] A no-match run's trace/metrics expose which dimension failed (capability vs protocol vs deployment vs R2a concept), consistent with the user-facing explanation
+* [x] `/actuator/prometheus` exposes the new `sda.pipeline.*` metrics; Grafana dashboard JSON parses
+* [x] Full test suite stays green with new positive/negative observability tests added
+
+**Validation evidence:** `specs/2026-08-26-phase21-pipeline-observability/validation-report.md`
+— live Docker walkthrough on real PostgreSQL: Flyway V6 applied, authenticated match +
+E2E pipeline runs audited end-to-end (PARSE→LIFT→INFER→MATCH under one run id),
+Prometheus SLIs scraped; final suite **556 tests, 0 failures**.
+
+---
+
 ## Summary of corrections vs. prior roadmap
 
 | Old claim (removed/not delivered) | Actual implementation |
@@ -453,4 +503,4 @@ form and via upload/REST, then match them — without a new query per requiremen
 
 **Untracked / not committed (excluded from roadmap scope):** frontend POC files (`node_modules/`, `package*.json`, `tsconfig.json`, `types.d.ts`, `vite.config.ts`, `vite.generated.ts`) remain local-only and are not part of the build.
 
-**Still to implement (updated 2026-08-25):** Phases 15, 16, 17, 18 (LLM translation) and 19 are now **[x] Completed** (full suite 509+ tests green). The two remaining deferred extension points requiring explicit infrastructure approval (AGENTS safety rules) are: (1) Phase 17's real-cluster **Kubernetes backend** (applying manifests via a K8s client), and (2) Phase 18's **SWRL-engine migration** of R-Deploy/R-Verify. All other roadmap phases are complete.
+**Still to implement (updated 2026-08-26):** Phases 15–21 are **[x] Completed**. The two remaining deferred extension points requiring explicit infrastructure approval (AGENTS safety rules) are: (1) Phase 17's real-cluster **Kubernetes backend** (applying manifests via a K8s client), and (2) Phase 18's **SWRL-engine migration** of R-Deploy/R-Verify. All other roadmap phases are complete.

@@ -1150,3 +1150,53 @@ Interactive dark-themed ontology visualizer at `/visualizer` grounded in the can
 - Requirement ID is never auto-generated (user-supplied); constraints stored as typed
   SDA literals, not expression strings.
 - Capability-less requirements fall back to constraint-only `matchInline` (legacy behaviour).
+
+---
+
+## Phase 21: End-to-End Pipeline Observability
+
+**Status:** [x] Completed
+**Branch:** `feature/2026-08-26-phase21-pipeline-observability`
+**Completed:** 2026-08-26
+**Tests:** 556 passing (0 failures) — up from 536 baseline
+
+### Completion Evidence
+
+- `mvn clean test` — BUILD SUCCESS, 556 tests, 0 failures, 0 errors
+- Spec cycle complete: `spec-review-report.md` (5 findings closed), `spec-validation-report.md` (PASS),
+  `review-report.md` (4 findings fixed + re-review closed), `validation-report.md` (PASS)
+- Live Docker walkthrough on real PostgreSQL: Flyway V6 applied; authenticated match +
+  E2E pipeline (`POST /api/v1/pipeline/execute`) audited end-to-end under one run id;
+  `/actuator/prometheus` scraped showing `sda_pipeline_runs_total`,
+  `sda_pipeline_match_result_total`, `sda_sparql_query_seconds`
+- All Phase 21 acceptance criteria marked `[x]` in `specs/roadmap.md`
+
+### What was built
+
+| Component | Files |
+|---|---|
+| Tracing/correlation | `observability/PipelineTracingContext.java` (root run observation + OTel baggage + MDC), `PipelineStageObserver.java` (per-stage span/timer/audit) |
+| SPARQL visibility | `observability/TracedSparqlExecutor.java`; wired into `SemanticMatchService.java`, `SemanticReasonerService.java` |
+| Audit log | Flyway `V6__pipeline_audit_log.sql`, `observability/PipelineEvent.java`, `PipelineAuditRepository.java`, `PipelineAuditPublisher.java` (failure-safe, live listeners) |
+| Audit REST API | `observability/PipelineAuditController.java` (`GET /api/v1/pipeline-audits`, limit 200/1000, ProblemDetail) |
+| Dimensional tags | `observability/MatchDimensionTagger.java`; `match.dimension.*` attributes on MATCH spans |
+| Metrics/dashboard | `observability/PipelineMetrics.java` (`sda.pipeline.*`, `sda.sparql.*`), `docs/grafana/sda-mapper-pipeline-dashboard.json` (+ parse test) |
+| Live UI console | `hub/ui/StageTimeline.java`, `PipelineTracePanel.java`, `PipelineConsolePanel.java`; embedded in `MappingHubView.java`; push via new `ui/SdaAppShell.java` |
+| Wiring | `MappingHubService.java`, `EndToEndPipelineService.java`, `SemanticReasonerService.java`, `SemanticMatchService.java`, `ObservabilityConfig.java` |
+| Tests | `TracedSparqlExecutorTest`, `PipelineAuditPublisherTest`, `PipelineAuditControllerTest`, `PipelineObservabilityTraceShapeTest`, `MatchDimensionTaggerTest`, `MatchDimensionSpanTagTest`, `GrafanaDashboardJsonParseTest`, `MappingHubViewObservabilityTest` |
+
+### Key technical decisions
+
+- Observation API used directly instead of `@Observed`: no AOP dependency exists for
+  `ObservedAspect` (would silently no-op); manual observations produce identical
+  traces/metrics. Zero new dependencies — the approved `micrometer-tracing-test` proved
+  unnecessary because Observation handlers capture span topology natively.
+- Push enabled on the app shell (`SdaAppShell`) rather than the view: Vaadin 25 rejects
+  `@Push` on view classes at servlet init.
+- `pipeline_audit_log` persisted via record + JdbcTemplate (codebase convention), not Hibernate.
+- Audit write failures are logged at ERROR and swallowed so observability can never abort matching.
+- Each requirement match inside one E2E execution is its own correlated run (documented semantics).
+- **Defect caught by live validation (V1):** reasoning/E2E paths passed a null run id into the
+  stage observer, violating `run_id NOT NULL`; silently dropped audit rows while matching kept
+  working. Fixed by generating real run UUIDs in both paths + regression test
+  (`shouldPersistReasonerMatchTransitions`) running the reasoner against a real database.

@@ -20,6 +20,10 @@ import com.sda.mapper.hub.service.SemanticMatchService;
 import com.sda.mapper.hub.model.OfferedCapability;
 import com.sda.mapper.reasoning.SparqlQueryLoader;
 import com.sda.mapper.service.OntologyDataService;
+import com.sda.mapper.llm.ChatCompletionsClient;
+import com.sda.mapper.llm.ConceptHint;
+import com.sda.mapper.llm.LlmProperties;
+import com.sda.mapper.llm.LlmTranslationService;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import org.junit.jupiter.api.AfterEach;
@@ -63,6 +67,10 @@ class MappingHubServiceRequesterJourneyTest {
     }
 
     private MappingHubView createView() {
+        return createView(null);
+    }
+
+    private MappingHubView createView(LlmTranslationService llm) {
         OntologyDataService ontologyDataService = new OntologyDataService();
         MatchingService matchingService = new MatchingService(ontologyDataService);
         RecommendationService recommendationService = new RecommendationService();
@@ -77,7 +85,8 @@ class MappingHubServiceRequesterJourneyTest {
             new SemanticMatchService(new SparqlQueryLoader()),
             recommendationService,
             new ManifestExportService(matchingService, recommendationService),
-            new MappingHubSession());
+            new MappingHubSession(),
+            llm);
         MappingHubView view = new MappingHubView(hubService, ontologyDataService,
             new ManualEntryFormFactory(ontologyDataService));
         ui.add(view);
@@ -341,6 +350,39 @@ class MappingHubServiceRequesterJourneyTest {
         java.util.List<Object> k8sDocs = new java.util.ArrayList<>();
         new Yaml().loadAll(kubernetes).forEach(k8sDocs::add);
         assertTrue(k8sDocs.size() >= 2, "Kubernetes manifest carries Deployment and Service");
+    }
+
+    @Test
+    @DisplayName("Should suggest AI concepts, accept one, and reason to a matched service")
+    void shouldSuggestAndAcceptAiConceptToProduceMatch() throws Exception {
+        LlmProperties props = new LlmProperties();
+        props.setEnabled(true);
+        props.setApiKey("test-key");
+        ChatCompletionsClient stub = (system, user) -> "["
+            + "{\"className\":\"RequiredCapability\",\"label\":\"FlowControl demand\","
+            + "\"reason\":\"pump needs flow control\",\"capabilityType\":\"FlowControl\"},"
+            + "{\"className\":\"CommunicationBinding\",\"label\":\"OPC-UA\",\"reason\":\"uses opcua\"}]";
+        MappingHubView view = createView(new LlmTranslationService(props, stub));
+
+        upload(view, "pump-aas.json", fixture("/device-descriptions/aas/pump-aas.json"));
+
+        MappingHubService hubService = field(view, "hubService", MappingHubService.class);
+        List<ConceptHint> hints = hubService.suggestConcepts();
+        assertEquals(1, hints.size(), "unsupported CommunicationBinding hint must be skipped");
+        assertEquals("RequiredCapability", hints.get(0).className());
+
+        java.lang.reflect.Method accept = MappingHubView.class
+            .getDeclaredMethod("onConceptSuggestionAdd", ConceptHint.class);
+        accept.setAccessible(true);
+        accept.invoke(view, hints.get(0));
+
+        PipelineResult result = lastResult(view);
+        assertTrue(result.matches().size() >= 1,
+            "accepted AI-suggested RequiredCapability must reason to a semantic capability match");
+        assertTrue(consoleLines(view).stream().anyMatch(l ->
+                l.startsWith("[MATCH]") && l.contains("SPARQL match:")
+                    && l.matches(".*[1-9]\\d* semantic capability match\\(es\\).*")),
+            "console reports a non-zero match after accepting the AI suggestion");
     }
 
     private static <T> T field(Object target, String name, Class<T> type) throws Exception {

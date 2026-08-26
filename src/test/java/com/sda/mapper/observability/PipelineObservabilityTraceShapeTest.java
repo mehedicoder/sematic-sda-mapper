@@ -69,7 +69,8 @@ class PipelineObservabilityTraceShapeTest {
             observer,
             new PipelineTracingContext(registry),
             publisher,
-            new PipelineMetrics(meterRegistry));
+            new PipelineMetrics(meterRegistry),
+            null);
     }
 
     @Test

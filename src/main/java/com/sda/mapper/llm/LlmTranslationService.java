@@ -32,8 +32,11 @@ public class LlmTranslationService {
             Return ONLY a JSON array (no prose, no markdown fences) where each element is an \
             object with: "className" (an SDA ontology class such as Capability, Skill, Service, \
             CommunicationBinding, DataConnector, Asset, Sensor, ProcessVariable, Observation, or \
-            DeploymentContext), "label" (a human-readable instance name), and "reason" \
-            (why this concept applies to the input).
+            DeploymentContext), "label" (a human-readable instance name), "reason" \
+            (why this concept applies to the input), and "capabilityType" (for Capability, \
+            RequiredCapability or Skill concepts, the SDA functionClass or skill type that lets \
+            the concept be matched to an offered capability; for every other class use an empty \
+            string "").
             """;
 
     private final LlmProperties properties;
@@ -91,7 +94,8 @@ public class LlmTranslationService {
                     hints.add(new ConceptHint(
                             node.path("className").asText(null),
                             node.path("label").asText(null),
-                            node.path("reason").asText(null)));
+                            node.path("reason").asText(null),
+                            node.path("capabilityType").asText(null)));
                 }
             }
             return hints;

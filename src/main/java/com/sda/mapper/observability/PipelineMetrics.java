@@ -77,4 +77,19 @@ public class PipelineMetrics {
             .record(durationMs, TimeUnit.MILLISECONDS);
         registry.counter("sda.sparql.results", "query", queryName).increment(resultCount);
     }
+
+    /**
+     * Records an LLM concept-suggestion request and its duration.
+     *
+     * @param outcome     {@code success} or {@code failure}
+     * @param durationMs  time spent calling the LLM translation feature
+     */
+    public void recordLlmSuggestion(String outcome, long durationMs) {
+        registry.counter("sda.pipeline.llm.suggestions", "outcome", outcome).increment();
+        Timer.builder("sda.pipeline.llm.duration")
+            .description("LLM concept suggestion duration")
+            .tag("outcome", outcome)
+            .register(registry)
+            .record(durationMs, TimeUnit.MILLISECONDS);
+    }
 }

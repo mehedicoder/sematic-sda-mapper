@@ -7,33 +7,38 @@ import com.sda.mapper.hub.model.CoverageStatus;
 import com.sda.mapper.hub.model.UploadedFileInfo;
 import com.sda.mapper.hub.parser.ParsingException;
 import com.sda.mapper.hub.service.MappingHubService;
+import com.sda.mapper.hub.service.MappingHubSession;
 import com.sda.mapper.hub.service.PipelineResult;
 import com.sda.mapper.llm.ConceptHint;
 import com.sda.mapper.model.OntologyClass;
 import com.sda.mapper.model.OntologyLayer;
 
+import com.sda.mapper.reasoning.SemanticReasonerService;
 import com.sda.mapper.service.OntologyDataService;
 import com.sda.mapper.ui.MainLayout;
+import com.sda.mapper.ui.SdaAppShell;
+
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
-
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.theme.lumo.LumoUtility;
-import com.sda.mapper.ui.SdaAppShell;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Base64;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Universal semantic mapping hub: ingests AAS XML, MTP AML and OPC UA JSON
@@ -61,6 +66,8 @@ public class MappingHubView extends VerticalLayout {
     private final VerticalLayout fileQueue;
     private final VerticalLayout dashboard;
     private final ConceptSuggestionPanel suggestionPanel;
+    private final ComboBox<String> requirementCombo;
+    private final HorizontalLayout activeRequirementsLayout;
     private Button exportButton;
 
     private String selectedLayerId = "ALL";
@@ -93,23 +100,37 @@ public class MappingHubView extends VerticalLayout {
         fileQueue.setPadding(false);
         fileQueue.setSpacing(false);
 
-        add(createConsoleSection());
-
         suggestionPanel = new ConceptSuggestionPanel(
             hubService.isLlmAvailable(),
             hubService::suggestConcepts,
             this::onConceptSuggestionAdd);
-        add(createSuggestionSection());
 
+        requirementCombo = new ComboBox<>("Requirement");
+        requirementCombo.setWidth("320px");
+        requirementCombo.setAllowCustomValue(false);
+        activeRequirementsLayout = new HorizontalLayout();
+        activeRequirementsLayout.addClassName("hub-active-requirements");
+        activeRequirementsLayout.setAlignItems(FlexComponent.Alignment.CENTER);
+        activeRequirementsLayout.setWrap(true);
+
+        var consoleSection = createConsoleSection();
         var uploadPanel = createUploadSection();
         uploadPanel.add(fileQueue);
-        add(uploadPanel);
 
-        dashboard = new VerticalLayout();
-        dashboard.addClassName("hub-dashboard-panel");
-        dashboard.setPadding(false);
-        dashboard.setSpacing(true);
-        add(dashboard);
+        var topRow = new HorizontalLayout(uploadPanel, consoleSection);
+        topRow.addClassName("hub-top-row");
+        topRow.setWidthFull();
+        topRow.setSpacing(true);
+        topRow.setAlignItems(FlexComponent.Alignment.STRETCH);
+        topRow.setFlexGrow(1, consoleSection);
+        topRow.setFlexGrow(1, uploadPanel);
+        add(topRow);
+
+        add(createRequirementBar());
+
+        var suggestionSection = createSuggestionSection();
+        suggestionSection.setVisible(false);
+        add(suggestionSection);
 
         layerTabs = new LayerTabs(this::selectLayer);
         add(layerTabs);
@@ -130,6 +151,12 @@ public class MappingHubView extends VerticalLayout {
         body.setFlexGrow(1, detailPanel);
         add(body);
         setFlexGrow(1, body);
+
+        dashboard = new VerticalLayout();
+        dashboard.addClassName("hub-dashboard-panel");
+        dashboard.setPadding(false);
+        dashboard.setSpacing(true);
+        add(dashboard);
 
         add(createActionBar());
         runInitialPipeline();
@@ -182,7 +209,7 @@ public class MappingHubView extends VerticalLayout {
         badges.setSpacing(true);
 
         UploadDropzone dropzone = new UploadDropzone(
-            "Drop AAS .xml, MTP .aml/.xml, AutomationML .aml/.xml, or OPC UA .json here",
+            "Drop AAS .xml, MTP .aml/.xml, AutomationML .aml/.xml, OPC UA .json, or a Requirement .ttl here",
             List.of(AssetFileFormat.values()),
             this::onUpload,
             this::showError);
@@ -338,11 +365,77 @@ public class MappingHubView extends VerticalLayout {
         console.logLines(lastResult.consoleLines());
         renderFileQueue();
         renderDashboard();
+        renderActiveRequirements();
         layerTabs.update(ontologyDataService.getLayers(), lastResult.gapReport(), selectedLayerId);
         renderClassList();
         renderDetail();
         exportButton.setEnabled(true);
         suggestionPanel.setSuggestEnabled(hubService.isLlmAvailable());
+    }
+
+    /**
+     * Builds the requirement activation bar: a dropdown of catalogue
+     * requirements the user can add to the pipeline, plus chips for the
+     * requirements currently active.
+     *
+     * @return the requirement bar layout
+     */
+    private HorizontalLayout createRequirementBar() {
+        Span label = new Span("Active requirements");
+        label.addClassName("hub-section-label");
+
+        Button addReq = new Button("Add");
+        addReq.addThemeName("primary");
+        addReq.addClickListener(e -> {
+            String reqId = requirementCombo.getValue();
+            if (reqId == null || reqId.isBlank()) {
+                Notification.show("Select a requirement first", 2000,
+                    Notification.Position.TOP_CENTER);
+                return;
+            }
+            lastResult = hubService.addActiveRequirement(reqId);
+            requirementCombo.clear();
+            refresh();
+        });
+
+        var bar = new HorizontalLayout(label, requirementCombo, addReq, activeRequirementsLayout);
+        bar.addClassName("hub-requirement-bar");
+        bar.setAlignItems(FlexComponent.Alignment.CENTER);
+        bar.setSpacing(true);
+        populateRequirementCombo();
+        return bar;
+    }
+
+    private void populateRequirementCombo() {
+        List<SemanticReasonerService.CatalogueRequirement> requirements =
+            hubService.getAvailableRequirements();
+        Map<String, String> idToLabel = requirements.stream().collect(Collectors.toMap(
+            SemanticReasonerService.CatalogueRequirement::id,
+            r -> r.label() + " (" + r.id() + ")",
+            (a, b) -> a, LinkedHashMap::new));
+        requirementCombo.setItems(idToLabel.keySet());
+        requirementCombo.setItemLabelGenerator(id -> idToLabel.getOrDefault(id, id));
+    }
+
+    private void renderActiveRequirements() {
+        activeRequirementsLayout.removeAll();
+        for (MappingHubSession.ActiveRequirement active :
+                hubService.getSession().getActiveRequirements()) {
+            String reqId = active.id();
+            Span chip = new Span(reqId + (active.capabilityType() != null
+                ? " (" + active.capabilityType() + ")" : ""));
+            chip.addClassName("hub-requirement-chip");
+            Button remove = new Button("×");
+            remove.addClassName("hub-requirement-remove");
+            remove.addClickListener(e -> {
+                lastResult = hubService.removeActiveRequirement(reqId);
+                refresh();
+            });
+            var chipRow = new HorizontalLayout(chip, remove);
+            chipRow.setAlignItems(FlexComponent.Alignment.CENTER);
+            chipRow.setSpacing(false);
+            activeRequirementsLayout.add(chipRow);
+        }
     }
 
     private void renderClassList() {
@@ -388,13 +481,15 @@ public class MappingHubView extends VerticalLayout {
         Span title = new Span("Uploaded files");
         title.addClassName("hub-section-label");
         fileQueue.add(title);
-        if (hubService.getSession().getFiles().isEmpty()) {
+        List<UploadedFileInfo> files = hubService.getSession().getFiles();
+        if (files.isEmpty()) {
             Span empty = new Span("No files uploaded");
             empty.addClassName("hub-recommendations-empty");
             fileQueue.add(empty);
             return;
         }
-        for (UploadedFileInfo file : hubService.getSession().getFiles()) {
+        for (int i = 0; i < files.size(); i++) {
+            UploadedFileInfo file = files.get(i);
             HorizontalLayout row = new HorizontalLayout();
             row.addClassName("hub-file-row");
             row.setAlignItems(FlexComponent.Alignment.CENTER);
@@ -402,8 +497,11 @@ public class MappingHubView extends VerticalLayout {
             name.addClassName("hub-file-name");
             Span format = formatBadge(file.format().label(), "hub-format--" + formatClass(file.format()));
             Button remove = new Button("Remove");
-            remove.setEnabled(false);
-            remove.setTooltipText("Reset clears the current session file queue");
+            int index = i;
+            remove.addClickListener(e -> {
+                lastResult = hubService.removeUploadedFile(index);
+                refresh();
+            });
             row.add(name, format, remove);
             fileQueue.add(row);
         }
@@ -437,13 +535,18 @@ public class MappingHubView extends VerticalLayout {
             case MTP_AML -> "mtp";
             case OPCUA_JSON -> "opcua";
             case AUTOMATION_ML -> "aml";
+            case REQUIREMENT_TTL -> "req";
         };
     }
 
     private void exportManifest() {
         String json = hubService.buildManifest();
-        String base64 = Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
-        UI.getCurrent().getPage().openUnsafe("data:application/json;base64," + base64, "_blank");
+        UI.getCurrent().getPage().executeJs(
+            "const a=document.createElement('a');"
+                + "a.href='data:application/json;charset=utf-8,'+encodeURIComponent($0);"
+                + "a.download='complete-manifest.json';"
+                + "document.body.appendChild(a);a.click();document.body.removeChild(a);",
+            json);
         Notification.show("Manifest exported", 3000, Notification.Position.TOP_CENTER);
     }
 

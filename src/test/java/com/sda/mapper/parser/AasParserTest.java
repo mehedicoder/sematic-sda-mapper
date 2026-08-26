@@ -17,15 +17,15 @@ class AasParserTest {
 
     private final AasParser parser = new AasParser();
 
-    private static InputStream resource(String name) {
+    private static InputStream resource(String path) {
         return AasParserTest.class.getClassLoader()
-            .getResourceAsStream("device-descriptions/aas/" + name);
+            .getResourceAsStream(path);
     }
 
     @Test
     @DisplayName("Should parse valid AAS JSON and return ParseResult with correct triple count")
     void shouldParseValidAasJson() {
-        try (InputStream input = resource("pump-aas.json")) {
+        try (InputStream input = resource("device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json")) {
             assertNotNull(input, "Test resource pump-aas.json must exist");
 
             ParseResult result = parser.parse(input);
@@ -44,7 +44,7 @@ class AasParserTest {
     @Test
     @DisplayName("Should extract CommunicationBinding from Communication submodel")
     void shouldExtractCommunicationBinding() {
-        try (InputStream input = resource("pump-aas.json")) {
+        try (InputStream input = resource("device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json")) {
             assertNotNull(input);
 
             ParseResult result = parser.parse(input);
@@ -60,7 +60,7 @@ class AasParserTest {
     @Test
     @DisplayName("Should extract Skills from Skills submodel")
     void shouldExtractSkills() {
-        try (InputStream input = resource("pump-aas.json")) {
+        try (InputStream input = resource("device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json")) {
             assertNotNull(input);
 
             ParseResult result = parser.parse(input);
@@ -80,7 +80,7 @@ class AasParserTest {
     @Test
     @DisplayName("Should create Skill resources with sda:Skill rdf:type")
     void shouldCreateCssSkillType() {
-        try (InputStream input = resource("pump-aas.json")) {
+        try (InputStream input = resource("device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json")) {
             assertNotNull(input);
 
             ParseResult result = parser.parse(input);
@@ -99,7 +99,7 @@ class AasParserTest {
     @Test
     @DisplayName("Should extract engineering unit from Skills submodel")
     void shouldExtractEngineeringUnit() {
-        try (InputStream input = resource("pump-aas.json")) {
+        try (InputStream input = resource("device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json")) {
             assertNotNull(input);
 
             ParseResult result = parser.parse(input);
@@ -115,7 +115,7 @@ class AasParserTest {
     @Test
     @DisplayName("Should extract DataConnector from ProcessValues submodel")
     void shouldExtractDataConnector() {
-        try (InputStream input = resource("pump-aas.json")) {
+        try (InputStream input = resource("device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json")) {
             assertNotNull(input);
 
             ParseResult result = parser.parse(input);
@@ -131,7 +131,7 @@ class AasParserTest {
     @Test
     @DisplayName("Should parse second AAS file (motor-aas.json)")
     void shouldParseMotorAas() {
-        try (InputStream input = resource("motor-aas.json")) {
+        try (InputStream input = resource("device-descriptions/reference-formats/motor-aas.json")) {
             assertNotNull(input, "Test resource motor-aas.json must exist");
 
             ParseResult result = parser.parse(input);

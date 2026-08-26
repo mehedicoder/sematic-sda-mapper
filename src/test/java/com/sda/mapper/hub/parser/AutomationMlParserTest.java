@@ -20,7 +20,7 @@ class AutomationMlParserTest {
 
     private InputStream fixture() {
         InputStream stream = getClass().getResourceAsStream(
-            "/device-descriptions/automationml/sample-caex.aml");
+            "/device-descriptions/reference-formats/sample-caex.aml");
         if (stream == null) {
             throw new IllegalStateException("Fixture sample-caex.aml not found");
         }

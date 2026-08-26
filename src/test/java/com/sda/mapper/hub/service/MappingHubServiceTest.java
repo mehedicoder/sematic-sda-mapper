@@ -33,6 +33,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -76,7 +77,7 @@ class MappingHubServiceTest {
     void shouldRunFullPipelineOnAasUpload() {
         MappingHubService service = createService();
         PipelineResult result = service.processUpload("pump-aas.json",
-            fixture("/device-descriptions/aas/pump-aas.json"));
+            fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json"));
 
         assertEquals("PumpModule-FT101", result.model().assets().get(0).name());
         assertEquals(1, service.getSession().getFiles().size());
@@ -92,7 +93,7 @@ class MappingHubServiceTest {
     void shouldLogAllStages() {
         MappingHubService service = createService();
         PipelineResult result = service.processUpload("pump-aas.json",
-            fixture("/device-descriptions/aas/pump-aas.json"));
+            fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json"));
 
         List<String> lines = result.consoleLines();
         assertTrue(lines.stream().anyMatch(l -> l.startsWith("[PARSE]")));
@@ -107,7 +108,7 @@ class MappingHubServiceTest {
     void shouldDeriveInferredEntities() {
         MappingHubService service = createService();
         PipelineResult result = service.processUpload("pump-aas.json",
-            fixture("/device-descriptions/aas/pump-aas.json"));
+            fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json"));
 
         assertTrue(result.inferred().stream().anyMatch(e -> e.className().equals("Sensor")));
         assertTrue(result.inferred().stream().anyMatch(e -> e.className().equals("Capability")));
@@ -119,7 +120,7 @@ class MappingHubServiceTest {
     void shouldReRunPipeline() {
         MappingHubService service = createService();
         service.processUpload("pump-aas.json",
-            fixture("/device-descriptions/aas/pump-aas.json"));
+            fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json"));
 
         PipelineResult rerun = service.reRunPipeline();
 
@@ -134,7 +135,7 @@ class MappingHubServiceTest {
     void shouldKeepModelStableAcrossReRuns() {
         MappingHubService service = createService();
         PipelineResult first = service.processUpload("pump-aas.json",
-            fixture("/device-descriptions/aas/pump-aas.json"));
+            fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json"));
         PipelineResult second = service.reRunPipeline();
 
         assertEquals(first.model().allEntities().size(), second.model().allEntities().size());
@@ -145,7 +146,7 @@ class MappingHubServiceTest {
     void shouldBuildManifest() throws Exception {
         MappingHubService service = createService();
         service.processUpload("pump-aas.json",
-            fixture("/device-descriptions/aas/pump-aas.json"));
+            fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json"));
 
         String manifest = service.buildManifest();
         assertTrue(manifest.contains("\"manifestVersion\""));
@@ -158,7 +159,7 @@ class MappingHubServiceTest {
     void shouldReset() {
         MappingHubService service = createService();
         service.processUpload("pump-aas.json",
-            fixture("/device-descriptions/aas/pump-aas.json"));
+            fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json"));
 
         service.reset();
 
@@ -166,6 +167,36 @@ class MappingHubServiceTest {
         assertTrue(service.getSession().getUploadedFormats().isEmpty());
         assertTrue(service.getSession().getModel().isEmpty());
         assertTrue(service.getSession().getInferred().isEmpty());
+    }
+
+    @Test
+    @DisplayName("Should remove a single uploaded file and rebuild the model from the rest")
+    void shouldRemoveUploadedFileAndRebuildModel() {
+        MappingHubService service = createService();
+        service.processUpload("a.json", fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json"));
+        service.processUpload("b.json", fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json"));
+        assertEquals(2, service.getSession().getFiles().size());
+
+        PipelineResult afterRemove = service.removeUploadedFile(0);
+
+        assertEquals(1, service.getSession().getFiles().size());
+        assertFalse(afterRemove.model().isEmpty(),
+            "model must be rebuilt from the remaining upload");
+        assertTrue(afterRemove.model().assets().stream()
+            .anyMatch(a -> "PumpModule-FT101".equals(a.name())));
+    }
+
+    @Test
+    @DisplayName("Should clear the model when the last uploaded file is removed")
+    void shouldClearModelWhenLastFileRemoved() {
+        MappingHubService service = createService();
+        service.processUpload("only.json", fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json"));
+        assertEquals(1, service.getSession().getFiles().size());
+
+        PipelineResult afterRemove = service.removeUploadedFile(0);
+
+        assertTrue(service.getSession().getFiles().isEmpty());
+        assertTrue(afterRemove.model().isEmpty());
     }
 
     @Test
@@ -249,10 +280,10 @@ class MappingHubServiceTest {
     void shouldEnrichWithSupplementaryUploads() {
         MappingHubService service = createService();
         service.processUpload("pump-aas.json",
-            fixture("/device-descriptions/aas/pump-aas.json"));
+            fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json"));
 
         PipelineResult result = service.processUpload("pump-opcua.json",
-            fixture("/device-descriptions/opcua/pump-opcua-datasheet.json"));
+            fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-opcua-datasheet.json"));
 
         assertEquals(2, service.getSession().getFiles().size());
         assertEquals(2, service.getSession().getUploadedFormats().size());
@@ -313,7 +344,7 @@ class MappingHubServiceTest {
             + "{\"className\":\"CommunicationBinding\",\"label\":\"OPC-UA\",\"reason\":\"uses opcua\"}]";
         MappingHubService service = createServiceWithLlm(new LlmTranslationService(props, stub));
         service.processUpload("pump-aas.json",
-            fixture("/device-descriptions/aas/pump-aas.json"));
+            fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json"));
 
         assertTrue(service.isLlmAvailable(), "LLM must be available when configured");
         java.util.List<ConceptHint> hints = service.suggestConcepts();

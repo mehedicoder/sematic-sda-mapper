@@ -33,7 +33,7 @@ import java.util.Map;
 
 /**
  * Parses AAS (Asset Administration Shell) files, both the JSON AAS sample
- * format used by {@code device-descriptions/aas} and a best-effort XML variant,
+ * format used by {@code device-descriptions/use-cases/REQ-001-flowmeter-diagnostics} and a best-effort XML variant,
  * into canonical entities: assets, skills, skill parameters, communication
  * bindings, use cases (operations), process variables, observations, data
  * connectors, semantic concepts and safety classes.

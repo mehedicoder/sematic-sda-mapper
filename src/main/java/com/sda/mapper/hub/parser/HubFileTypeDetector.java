@@ -46,6 +46,9 @@ public class HubFileTypeDetector {
         if (lower.endsWith(".aml")) {
             return Optional.of(AssetFileFormat.MTP_AML);
         }
+        if (lower.endsWith(".ttl") || lower.endsWith(".rdf")) {
+            return Optional.of(AssetFileFormat.REQUIREMENT_TTL);
+        }
         return Optional.empty();
     }
 
@@ -70,6 +73,10 @@ public class HubFileTypeDetector {
     }
 
     private Optional<AssetFileFormat> sniff(String text) {
+        if (text.contains("usecaserequirement") && text.contains("requiredcapability")
+                && text.contains("capabilitytype")) {
+            return Optional.of(AssetFileFormat.REQUIREMENT_TTL);
+        }
         if (text.contains("mtpaml") || text.contains("mtp-aml") || text.contains("opcuaserver")) {
             return Optional.of(AssetFileFormat.MTP_AML);
         }

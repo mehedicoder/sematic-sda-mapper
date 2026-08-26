@@ -7,6 +7,7 @@ import com.sda.mapper.hub.model.CanonicalEntity;
 import com.sda.mapper.hub.model.EntityOrigin;
 import com.sda.mapper.hub.model.SessionOverview;
 import com.sda.mapper.hub.model.UploadedFileInfo;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -142,16 +143,46 @@ public class MappingHubPersistenceService {
      */
     public UUID saveUploadedFile(UUID sessionId, UploadedFileInfo info, byte[] content) {
         ensureSession(sessionId);
+        String hash = sha256(content);
+        UUID existing = findUploadedFileId(sessionId, hash);
+        if (existing != null) {
+            return existing;
+        }
         UUID fileId = UUID.randomUUID();
-        jdbcTemplate.update("""
-            INSERT INTO mapping_hub_uploaded_file (
-                id, session_id, original_file_name, detected_format, content_type,
-                file_size_bytes, sha256_hash, content, parse_status, uploaded_at
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?)
-            """, fileId, sessionId, info.fileName(), info.format().name(), contentType(info.fileName()),
-            content.length, sha256(content), content, Timestamp.from(Instant.now()));
-        return fileId;
+        try {
+            jdbcTemplate.update("""
+                INSERT INTO mapping_hub_uploaded_file (
+                    id, session_id, original_file_name, detected_format, content_type,
+                    file_size_bytes, sha256_hash, content, parse_status, uploaded_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?)
+                """, fileId, sessionId, info.fileName(), info.format().name(), contentType(info.fileName()),
+                content.length, hash, content, Timestamp.from(Instant.now()));
+            return fileId;
+        } catch (DuplicateKeyException e) {
+            UUID again = findUploadedFileId(sessionId, hash);
+            if (again != null) {
+                return again;
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * Returns the id of an already-stored upload with the same session and content
+     * hash, or {@code null} when no such row exists. Used to make re-uploading the
+     * same file idempotent instead of failing the unique constraint.
+     *
+     * @param sessionId the session owning the upload
+     * @param hash      the SHA-256 content hash
+     * @return the existing upload row id, or {@code null}
+     */
+    private UUID findUploadedFileId(UUID sessionId, String hash) {
+        List<UUID> ids = jdbcTemplate.query(
+            "SELECT id FROM mapping_hub_uploaded_file WHERE session_id = ? AND sha256_hash = ?",
+            (rs, rn) -> UUID.fromString(rs.getString("id")),
+            sessionId, hash);
+        return ids.isEmpty() ? null : ids.get(0);
     }
 
     /**

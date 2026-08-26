@@ -169,6 +169,32 @@ class MappingHubViewTest {
     }
 
     @Test
+    @DisplayName("Should render the active-requirements bar with dropdown and Add button")
+    void shouldRenderRequirementBar() throws Exception {
+        MappingHubView view = createView();
+        String text = fullText(view.getElement());
+        assertTrue(text.contains("Active requirements"),
+            "Hub must expose a requirement activation bar");
+        assertTrue(text.contains("Add"),
+            "Requirement bar must provide an Add control");
+    }
+
+    @Test
+    @DisplayName("Should render a removable chip for an activated requirement")
+    void shouldShowChipForActivatedRequirement() throws Exception {
+        MappingHubView view = createView();
+        MappingHubService hubService = getField(view, "hubService", MappingHubService.class);
+        hubService.addActiveRequirement("REQ-001");
+
+        java.lang.reflect.Method refresh = MappingHubView.class.getDeclaredMethod("refresh");
+        refresh.setAccessible(true);
+        refresh.invoke(view);
+
+        assertTrue(fullText(view.getElement()).contains("REQ-001"),
+            "Activated requirement must appear as a chip in the hub");
+    }
+
+    @Test
     @DisplayName("Should select a class and refresh the detail panel")
     void shouldRefreshDetailOnClassSelection() throws Exception {
         MappingHubView view = createView();
@@ -242,7 +268,7 @@ class MappingHubViewTest {
     @DisplayName("Should process an uploaded AAS file and refresh dashboard, console and export button")
     void shouldProcessUploadAndRefreshView() throws Exception {
         byte[] content;
-        try (InputStream in = getClass().getResourceAsStream("/device-descriptions/aas/pump-aas.json")) {
+        try (InputStream in = getClass().getResourceAsStream("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json")) {
             assertNotNull(in, "Fixture pump-aas.json not found");
             content = in.readAllBytes();
         }

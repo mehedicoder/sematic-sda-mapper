@@ -20,7 +20,7 @@ class OpcUaModelParserTest {
     private final OpcUaModelParser parser = new OpcUaModelParser();
 
     private InputStream fixture() {
-        InputStream stream = getClass().getResourceAsStream("/device-descriptions/opcua/pump-opcua-datasheet.json");
+        InputStream stream = getClass().getResourceAsStream("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-opcua-datasheet.json");
         if (stream == null) {
             throw new IllegalStateException("Fixture pump-opcua-datasheet.json not found");
         }

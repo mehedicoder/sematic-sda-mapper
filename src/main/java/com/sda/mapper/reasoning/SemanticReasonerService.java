@@ -25,8 +25,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Property;
 
 /**
  * Executes SPARQL matching queries against the CSS-SDA ontology model
@@ -146,6 +152,119 @@ public class SemanticReasonerService {
         }
     }
 
+    /**
+     * Resolves every requirement declared in the ontology model (the Service
+     * Catalogue) against the available offerings and returns the matches.
+     *
+     * <p>This is the paper's Semantic Reasoner path (&#167;4.3): requirements are
+     * matched against the catalogue of semantically mapped Capabilities/Skills/
+     * Services through ontology-driven matching. Only requirements that
+     * actually declare a capability ({@code mapsToCapability}) are resolved.</p>
+     *
+     * @return the matched service results for all resolvable catalogue requirements
+     */
+    public List<ServiceMatchResult> matchAllRequirements() {
+        Model model = ontologyModelLoader.getModel();
+        Resource reqType = model.createResource(SDA_NS + "UseCaseRequirement");
+        Property mapsToCapability = model.createProperty(SDA_NS + "mapsToCapability");
+        List<ServiceMatchResult> results = new ArrayList<>();
+        model.listSubjectsWithProperty(RDF.type, reqType).forEachRemaining(res -> {
+            if (res.isURIResource() && res.hasProperty(mapsToCapability)) {
+                ServiceMatchResult result = matchByRequirementId(res.getLocalName());
+                if (result != null && result.matched()) {
+                    results.add(result);
+                }
+            }
+        });
+        return results;
+    }
+
+    /**
+     * Lists every requirement declared in the ontology model (the Service
+     * Catalogue) that can be matched against available offerings.
+     *
+     * @return the catalogue requirements (id, label and mapped capability type)
+     */
+    public List<CatalogueRequirement> listCatalogueRequirements() {
+        Model model = ontologyModelLoader.getModel();
+        Resource reqType = model.createResource(SDA_NS + "UseCaseRequirement");
+        Property mapsToCapability = model.createProperty(SDA_NS + "mapsToCapability");
+        List<CatalogueRequirement> result = new ArrayList<>();
+        model.listSubjectsWithProperty(RDF.type, reqType).forEachRemaining(res -> {
+            if (res.isURIResource() && res.hasProperty(mapsToCapability)) {
+                String id = res.getLocalName();
+                String label = res.hasProperty(RDFS.label)
+                    ? res.getProperty(RDFS.label).getString() : id;
+                String capabilityType = res.getProperty(mapsToCapability).getResource().getLocalName();
+                result.add(new CatalogueRequirement(id, label, capabilityType));
+            }
+        });
+        return result;
+    }
+
+    /**
+     * A requirement available in the Service Catalogue for activation in the
+     * Mapping Hub.
+     *
+     * @param id            the requirement identifier (e.g. {@code REQ-001})
+     * @param label         the human-readable requirement label
+     * @param capabilityType the capability type the requirement maps to
+     */
+    public record CatalogueRequirement(String id, String label, String capabilityType) {
+    }
+
+    /**
+     * Lists the distinct capability types advertised by the offered capabilities
+     * in the catalogue. These are the values a user can pick when defining a
+     * manual requirement so it can be matched against an offering.
+     *
+     * @return the offered capability types
+     */
+    public List<String> listOfferedCapabilityTypes() {
+        Model model = ontologyModelLoader.getModel();
+        Property capabilityType = model.createProperty(SDA_NS + "capabilityType");
+        Resource offeredCapability = model.createResource(SDA_NS + "OfferedCapability");
+        Set<String> types = new LinkedHashSet<>();
+        model.listSubjectsWithProperty(RDF.type, offeredCapability).forEachRemaining(res -> {
+            if (res.hasProperty(capabilityType)) {
+                types.add(res.getProperty(capabilityType).getString());
+            }
+        });
+        return new ArrayList<>(types);
+    }
+
+    /**
+     * Matches a manually entered requirement (defined only by an identifier and a
+     * required capability type) against the Service Catalogue. The requirement is
+     * materialised as a {@code UseCaseRequirement} &#8594; {@code RequiredCapability}
+     * (with the given {@code capabilityType}) and joined to the offered
+     * capabilities on {@code capabilityType}, exactly like a seeded requirement.
+     *
+     * @param requirementId the user-supplied requirement identifier
+     * @param capabilityType the required capability type (must exist on an offering)
+     * @return the matched service result, or a no-match when nothing offers it
+     */
+    public ServiceMatchResult matchManualRequirement(String requirementId, String capabilityType) {
+        if (capabilityType == null || capabilityType.isBlank()) {
+            return ServiceMatchResult.noMatch("Manual requirement " + requirementId
+                + " has no capability type to match");
+        }
+        Model reqModel = ModelFactory.createDefaultModel();
+        reqModel.setNsPrefix("sda", SDA_NS);
+        reqModel.setNsPrefix("", INST_NS);
+        String reqLocal = "manual-" + requirementId.trim().replaceAll("[^A-Za-z0-9-_]", "-");
+        Resource req = reqModel.createResource(INST_NS + reqLocal);
+        req.addProperty(RDF.type, reqModel.createResource(SDA_NS + "UseCaseRequirement"));
+        req.addProperty(reqModel.createProperty(SDA_NS + "requirementID"), requirementId);
+        Resource reqCap = reqModel.createResource(INST_NS + reqLocal + "-cap");
+        reqCap.addProperty(RDF.type, reqModel.createResource(SDA_NS + "RequiredCapability"));
+        reqCap.addProperty(reqModel.createProperty(SDA_NS + "capabilityType"), capabilityType);
+        req.addProperty(reqModel.createProperty(SDA_NS + "mapsToCapability"), reqCap);
+
+        Model union = ModelFactory.createUnion(reqModel, ontologyModelLoader.getModel());
+        return matchGeneric(reqLocal, union);
+    }
+
     private ServiceMatchResult matchRequirement(String requirementId) {
         Model model = ontologyModelLoader.getModel();
         Resource reqResource = model.getResource(INST_NS + requirementId);
@@ -158,7 +277,7 @@ public class SemanticReasonerService {
         boolean hasCapability = reqResource.hasProperty(
             model.createProperty(SDA_NS + "mapsToCapability"));
         if (hasCapability) {
-            return matchGeneric(requirementId);
+            return matchGeneric(requirementId, ontologyModelLoader.getModel());
         }
         // Legacy dynamic path: requirement described only by constraints
         // (protocol / accessMode / recall / latency / SIL / zone / determinism)
@@ -166,12 +285,11 @@ public class SemanticReasonerService {
         return matchInline(extractRequirementParams(reqResource), requirementId);
     }
 
-    private ServiceMatchResult matchGeneric(String requirementId) {
+    private ServiceMatchResult matchGeneric(String requirementId, Model model) {
         try {
             String queryStr = sparqlQueryLoader.loadQuery(GENERIC_QUERY)
                 .replace("__REQ_ID__", requirementId);
             Query query = QueryFactory.create(queryStr);
-            Model model = ontologyModelLoader.getModel();
 
             ServiceMatchResult outcome = tracedSparqlExecutor.execute(GENERIC_QUERY, () -> {
                 try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {

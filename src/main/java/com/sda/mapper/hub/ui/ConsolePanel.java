@@ -1,7 +1,6 @@
 package com.sda.mapper.hub.ui;
 
 import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.Scroller;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 
@@ -21,10 +20,6 @@ public class ConsolePanel extends VerticalLayout {
         addClassName("hub-console");
         setPadding(false);
         setSpacing(true);
-
-        Span title = new Span("Console");
-        title.addClassName("hub-console-title");
-        add(title);
 
         output = new Div();
         output.addClassName("hub-console-output");

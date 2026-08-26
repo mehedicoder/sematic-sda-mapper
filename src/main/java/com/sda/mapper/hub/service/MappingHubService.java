@@ -6,6 +6,7 @@ import com.sda.mapper.hub.model.CanonicalEntity;
 import com.sda.mapper.hub.model.CapabilityMatch;
 import com.sda.mapper.hub.model.CoverageStatus;
 import com.sda.mapper.hub.model.EntityOrigin;
+import com.sda.mapper.hub.model.RequiredCapability;
 import com.sda.mapper.hub.model.GapReport;
 import com.sda.mapper.hub.model.Recommendation;
 import com.sda.mapper.hub.model.UploadedFileInfo;
@@ -20,12 +21,16 @@ import com.sda.mapper.llm.LlmNotConfiguredException;
 import com.sda.mapper.llm.LlmTranslationService;
 import com.sda.mapper.llm.TranslationResult;
 import com.sda.mapper.observability.PipelineAuditPublisher;
+import com.sda.mapper.reasoning.SemanticReasonerService;
+import com.sda.mapper.reasoning.ServiceMatchResult;
 import com.sda.mapper.observability.PipelineMetrics;
 import com.sda.mapper.observability.PipelineStageObserver;
 import com.sda.mapper.observability.PipelineTracingContext;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
 import org.apache.jena.rdf.model.Model;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -47,6 +52,8 @@ import java.util.UUID;
 @Service
 public class MappingHubService {
 
+    private static final Logger log = LoggerFactory.getLogger(MappingHubService.class);
+
     private final CanonicalParserRegistry parserRegistry;
     private final HubFileTypeDetector fileTypeDetector;
     private final LiftService liftService;
@@ -64,6 +71,7 @@ public class MappingHubService {
     private final PipelineAuditPublisher auditPublisher;
     private final PipelineMetrics metrics;
     private final LlmTranslationService llmTranslationService;
+    private final SemanticReasonerService semanticReasonerService;
 
     private PipelineResult lastResult;
     private String lastRawFormat;
@@ -113,7 +121,8 @@ public class MappingHubService {
             new PipelineTracingContext(ObservationRegistry.NOOP),
             new PipelineAuditPublisher(null),
             new PipelineMetrics(new SimpleMeterRegistry()),
-            llmTranslationService);
+            llmTranslationService,
+            null);
     }
 
     /**
@@ -142,7 +151,8 @@ public class MappingHubService {
                              PipelineTracingContext tracingContext,
                              PipelineAuditPublisher auditPublisher,
                              PipelineMetrics metrics,
-                             LlmTranslationService llmTranslationService) {
+                             LlmTranslationService llmTranslationService,
+                             SemanticReasonerService semanticReasonerService) {
         this.parserRegistry = parserRegistry;
         this.fileTypeDetector = fileTypeDetector;
         this.liftService = liftService;
@@ -160,6 +170,7 @@ public class MappingHubService {
         this.auditPublisher = auditPublisher;
         this.metrics = metrics;
         this.llmTranslationService = llmTranslationService;
+        this.semanticReasonerService = semanticReasonerService;
     }
 
     /**
@@ -192,7 +203,7 @@ public class MappingHubService {
         }
         logs.add("[PARSE] Extracted " + parsed.allEntities().size() + " entities from " + fileName);
 
-        session.ingest(info, parsed);
+        session.ingest(info, parsed, content);
         return runStages(info, logs, fileId, parsed.allEntities());
     }
 
@@ -227,6 +238,40 @@ public class MappingHubService {
         session.reset();
         this.lastRawFormat = null;
         this.lastRawContent = null;
+    }
+
+    /**
+     * Removes a single uploaded file from the session and rebuilds the canonical
+     * model from the remaining uploads, then re-runs the dynamic pipeline stages
+     * so coverage and matches reflect the removal.
+     *
+     * @param index 0-based position of the file in the upload queue
+     * @return the pipeline result after rebuilding and re-running
+     */
+    public PipelineResult removeUploadedFile(int index) {
+        session.removeFileAt(index);
+        rebuildModelFromUploads();
+        return reRunPipeline();
+    }
+
+    /**
+     * Rebuilds the accumulated canonical model by re-parsing every remaining
+     * uploaded file. Required because the model is a merged accumulation with no
+     * per-entity provenance, so removing one file means recomputing from the
+     * others.
+     */
+    private void rebuildModelFromUploads() {
+        session.getModel().clear();
+        for (MappingHubSession.UploadedFile uf : session.getUploads()) {
+            try {
+                CanonicalAssetModel parsed = parserRegistry.parse(
+                    new ByteArrayInputStream(uf.content()), uf.fileName(), uf.format());
+                session.getModel().merge(parsed);
+            } catch (ParsingException e) {
+                log.warn("Skipping re-parse of {} during file removal: {}",
+                    uf.fileName(), e.getMessage());
+            }
+        }
     }
 
     /**
@@ -478,7 +523,30 @@ public class MappingHubService {
                 logs.add("[MATCH] " + report.blockingGaps().size() + " blocking gap(s) detected");
             }
 
-            matches = semanticMatchService.match(model, inferred);
+                matches = semanticMatchService.match(model, inferred);
+                if (semanticReasonerService != null) {
+                    for (MappingHubSession.ActiveRequirement active : session.getActiveRequirements()) {
+                        ServiceMatchResult catalogueMatch;
+                        if (active.capabilityType() != null && !active.capabilityType().isBlank()) {
+                            catalogueMatch = semanticReasonerService.matchManualRequirement(
+                                active.id(), active.capabilityType());
+                        } else {
+                            catalogueMatch = semanticReasonerService.matchByRequirementId(active.id());
+                        }
+                        if (catalogueMatch != null && catalogueMatch.matched()) {
+                            matches.add(toCapabilityMatch(catalogueMatch, active.id()));
+                        }
+                    }
+                    for (RequiredCapability rc : model.requiredCapabilities()) {
+                        if (rc.functionClass() != null && !rc.functionClass().isBlank()) {
+                            ServiceMatchResult catalogueMatch = semanticReasonerService
+                                .matchManualRequirement(rc.id(), rc.functionClass());
+                            if (catalogueMatch != null && catalogueMatch.matched()) {
+                                matches.add(toCapabilityMatch(catalogueMatch, rc.id()));
+                            }
+                        }
+                    }
+                }
             metrics.recordMatchResult(matches.isEmpty() ? "no-hit" : "hit");
             logs.add("[MATCH] SPARQL match: " + matches.size() + " semantic capability match(es)");
             for (CapabilityMatch match : matches) {
@@ -499,6 +567,89 @@ public class MappingHubService {
         PipelineResult result = new PipelineResult(file, model, inferred, report, matches, recommendations, List.copyOf(logs));
         this.lastResult = result;
         return result;
+    }
+
+    private CapabilityMatch toCapabilityMatch(ServiceMatchResult r, String originalReqId) {
+        String displayReq = originalReqId != null && !originalReqId.isBlank()
+            ? originalReqId
+            : (r.requirementId() != null ? r.requirementId().replace("manual-", "") : "unknown");
+        String id = "HUB-REQ-" + displayReq;
+        return new CapabilityMatch(
+            id,
+            displayReq,
+            r.capabilityName() != null ? r.capabilityName() : "",
+            r.skillName() != null ? r.skillName() : "",
+            r.serviceName() != null ? r.serviceName() : "",
+            r.bindingLabel() != null ? r.bindingLabel() : "",
+            r.protocol() != null ? r.protocol() : "",
+            r.networkZone() != null ? r.networkZone() : "",
+            r.safetyIntegrityLevel() != null ? r.safetyIntegrityLevel() : "");
+    }
+
+    /**
+     * Returns the requirements available in the Service Catalogue that the user
+     * can activate for matching in the hub.
+     *
+     * @return the catalogue requirements, or empty when the reasoner is disabled
+     */
+    public List<com.sda.mapper.reasoning.SemanticReasonerService.CatalogueRequirement>
+            getAvailableRequirements() {
+        if (semanticReasonerService == null) {
+            return List.of();
+        }
+        return semanticReasonerService.listCatalogueRequirements();
+    }
+
+    /**
+     * Activates a catalogue requirement and re-runs the pipeline so its match
+     * against the Service Catalogue is resolved and shown.
+     *
+     * @param requirementId the requirement identifier to activate
+     * @return the pipeline result after re-running
+     */
+    public PipelineResult addActiveRequirement(String requirementId) {
+        session.addActiveRequirement(requirementId);
+        return reRunPipeline();
+    }
+
+    /**
+     * Returns the capability types advertised by the offered capabilities in the
+     * catalogue, for use as options when a user defines a manual requirement.
+     *
+     * @return the offered capability types, or empty when the reasoner is disabled
+     */
+    public List<String> getOfferedCapabilityTypes() {
+        if (semanticReasonerService == null) {
+            return List.of();
+        }
+        return semanticReasonerService.listOfferedCapabilityTypes();
+    }
+
+    /**
+     * Registers a user-defined requirement (identifier, description and required
+     * capability type) and re-runs the pipeline so it is matched against the
+     * Service Catalogue via its required capability.
+     *
+     * @param requirementId the user-supplied requirement identifier
+     * @param description   the requirement description
+     * @param capabilityType the required capability type
+     * @return the pipeline result after re-running
+     */
+    public PipelineResult addManualRequirement(String requirementId, String description,
+                                              String capabilityType) {
+        session.addActiveRequirement(requirementId, description, capabilityType);
+        return reRunPipeline();
+    }
+
+    /**
+     * Deactivates a previously activated requirement and re-runs the pipeline.
+     *
+     * @param requirementId the requirement identifier to deactivate
+     * @return the pipeline result after re-running
+     */
+    public PipelineResult removeActiveRequirement(String requirementId) {
+        session.removeActiveRequirement(requirementId);
+        return reRunPipeline();
     }
 
     private UUID startRun() {

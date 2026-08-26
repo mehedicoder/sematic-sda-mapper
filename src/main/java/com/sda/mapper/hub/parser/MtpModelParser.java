@@ -23,7 +23,7 @@ import java.util.Map;
 
 /**
  * Parses MTP (Module Type Package) AML XML files, as used by
- * {@code device-descriptions/mtp}, into canonical entities: skills and skill
+ * {@code device-descriptions/use-cases/REQ-001-flowmeter-diagnostics}, into canonical entities: skills and skill
  * parameters from {@code Service} blocks, communication bindings from
  * {@code OpcUaServer} blocks and process variables from {@code OpcUaNode}
  * blocks of the data assembly.

@@ -20,7 +20,7 @@ class MtpModelParserTest {
     private final MtpModelParser parser = new MtpModelParser();
 
     private InputStream fixture() {
-        InputStream stream = getClass().getResourceAsStream("/device-descriptions/mtp/pump-module-mtp.xml");
+        InputStream stream = getClass().getResourceAsStream("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-module-mtp.xml");
         if (stream == null) {
             throw new IllegalStateException("Fixture pump-module-mtp.xml not found");
         }

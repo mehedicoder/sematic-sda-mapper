@@ -147,7 +147,7 @@ class MappingHubServiceRequesterJourneyTest {
     void shouldRunPipelineFromAasUpload() throws Exception {
         MappingHubView view = createView();
 
-        upload(view, "pump-aas.json", fixture("/device-descriptions/aas/pump-aas.json"));
+        upload(view, "pump-aas.json", fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json"));
 
         assertPipelineRanCleanly(consoleLines(view));
         PipelineResult result = lastResult(view);
@@ -163,7 +163,7 @@ class MappingHubServiceRequesterJourneyTest {
     void shouldRunPipelineFromMtpUpload() throws Exception {
         MappingHubView view = createView();
 
-        upload(view, "pump-module-mtp.xml", fixture("/device-descriptions/mtp/pump-module-mtp.xml"));
+        upload(view, "pump-module-mtp.xml", fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-module-mtp.xml"));
 
         assertPipelineRanCleanly(consoleLines(view));
         assertTrue(lastResult(view).gapReport().coveragePercent() > 0);
@@ -175,7 +175,7 @@ class MappingHubServiceRequesterJourneyTest {
         MappingHubView view = createView();
 
         upload(view, "pump-opcua-datasheet.json",
-            fixture("/device-descriptions/opcua/pump-opcua-datasheet.json"));
+            fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-opcua-datasheet.json"));
 
         assertPipelineRanCleanly(consoleLines(view));
         assertTrue(lastResult(view).gapReport().coveragePercent() > 0);
@@ -186,7 +186,7 @@ class MappingHubServiceRequesterJourneyTest {
     void shouldRunPipelineFromAutomationMlUpload() throws Exception {
         MappingHubView view = createView();
 
-        upload(view, "sample-caex.aml", fixture("/device-descriptions/automationml/sample-caex.aml"));
+        upload(view, "sample-caex.aml", fixture("/device-descriptions/reference-formats/sample-caex.aml"));
 
         assertPipelineRanCleanly(consoleLines(view));
         assertTrue(consoleLines(view).stream()
@@ -198,7 +198,7 @@ class MappingHubServiceRequesterJourneyTest {
     @DisplayName("Should recover gracefully from an invalid upload without blocking the requester")
     void shouldRecoverFromInvalidUpload() throws Exception {
         MappingHubView view = createView();
-        upload(view, "pump-aas.json", fixture("/device-descriptions/aas/pump-aas.json"));
+        upload(view, "pump-aas.json", fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json"));
         int linesAfterValidRun = consoleLines(view).size();
 
         // Unsupported file: the view surfaces the error (notification) and does
@@ -224,9 +224,9 @@ class MappingHubServiceRequesterJourneyTest {
         MappingHubView view = createView();
         MappingHubService hubService = field(view, "hubService", MappingHubService.class);
 
-        upload(view, "pump-aas.json", fixture("/device-descriptions/aas/pump-aas.json"));
+        upload(view, "pump-aas.json", fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json"));
         upload(view, "pump-opcua-datasheet.json",
-            fixture("/device-descriptions/opcua/pump-opcua-datasheet.json"));
+            fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-opcua-datasheet.json"));
 
         assertEquals(2, hubService.getSession().getFiles().size(),
             "both uploads accumulate in the session");
@@ -239,7 +239,7 @@ class MappingHubServiceRequesterJourneyTest {
     void shouldCompleteJourneyWithManualEntry() throws Exception {
         MappingHubView view = createView();
 
-        upload(view, "pump-aas.json", fixture("/device-descriptions/aas/pump-aas.json"));
+        upload(view, "pump-aas.json", fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json"));
 
         saveManual(view, new ManualEntity(
             "UseCaseRequirement", "REQ-UAT-JOURNEY", "Flowmeter health monitoring",
@@ -269,7 +269,7 @@ class MappingHubServiceRequesterJourneyTest {
     void shouldReportMatchesFromOntologyStateOnly() throws Exception {
         MappingHubView view = createView();
 
-        upload(view, "pump-aas.json", fixture("/device-descriptions/aas/pump-aas.json"));
+        upload(view, "pump-aas.json", fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json"));
 
         List<String> lines = consoleLines(view);
         String sparqlLine = lines.stream()
@@ -292,7 +292,7 @@ class MappingHubServiceRequesterJourneyTest {
     void shouldReasonToMatchedServiceAndExportDeploymentManifest() throws Exception {
         MappingHubView view = createView();
 
-        upload(view, "pump-aas.json", fixture("/device-descriptions/aas/pump-aas.json"));
+        upload(view, "pump-aas.json", fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json"));
 
         // The offered side (inferred from the upload) advertises a capability
         // type. The only journey gap is the demand side, which the requester
@@ -364,7 +364,7 @@ class MappingHubServiceRequesterJourneyTest {
             + "{\"className\":\"CommunicationBinding\",\"label\":\"OPC-UA\",\"reason\":\"uses opcua\"}]";
         MappingHubView view = createView(new LlmTranslationService(props, stub));
 
-        upload(view, "pump-aas.json", fixture("/device-descriptions/aas/pump-aas.json"));
+        upload(view, "pump-aas.json", fixture("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json"));
 
         MappingHubService hubService = field(view, "hubService", MappingHubService.class);
         List<ConceptHint> hints = hubService.suggestConcepts();

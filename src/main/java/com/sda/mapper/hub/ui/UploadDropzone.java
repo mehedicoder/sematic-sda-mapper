@@ -4,11 +4,15 @@ import com.sda.mapper.hub.model.AssetFileFormat;
 import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.upload.Receiver;
 import com.vaadin.flow.component.upload.Upload;
-import com.vaadin.flow.component.upload.receivers.MemoryBuffer;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -18,7 +22,7 @@ import java.util.function.Consumer;
  */
 public class UploadDropzone {
 
-    private final MemoryBuffer buffer = new MemoryBuffer();
+    private final PerFileReceiver receiver = new PerFileReceiver();
     private final Upload upload;
 
     /**
@@ -32,7 +36,7 @@ public class UploadDropzone {
     public UploadDropzone(String dropLabel, List<AssetFileFormat> acceptedFormats,
                           BiConsumer<String, byte[]> onFileReceived,
                           Consumer<String> onError) {
-        upload = new Upload(buffer);
+        upload = new Upload(receiver);
         upload.setDropLabel(new Div(new Text(dropLabel)));
         upload.setUploadButton(new Button("Browse files"));
         upload.addClassName("hub-dropzone");
@@ -42,13 +46,12 @@ public class UploadDropzone {
                 .toArray(String[]::new));
         }
         upload.addSucceededListener(event -> {
-            try {
-                String fileName = event.getFileName();
-                byte[] content = buffer.getInputStream().readAllBytes();
-                onFileReceived.accept(fileName, content);
-            } catch (IOException e) {
-                onError.accept("Could not read uploaded file: " + e.getMessage());
+            byte[] content = receiver.consume(event.getFileName());
+            if (content == null) {
+                onError.accept("Could not read uploaded file: " + event.getFileName());
+                return;
             }
+            onFileReceived.accept(event.getFileName(), content);
         });
         upload.addFailedListener(event -> onError.accept(
             "Upload failed: " + event.getReason()));
@@ -72,6 +75,31 @@ public class UploadDropzone {
             case MTP_AML -> List.of("application/xml", ".xml", ".aml");
             case AUTOMATION_ML -> List.of("application/xml", ".xml", ".aml");
             case OPCUA_JSON -> List.of("application/json", ".json");
+            case REQUIREMENT_TTL -> List.of("text/turtle", ".ttl", ".rdf");
         };
+    }
+
+    /**
+     * Per-file in-memory receiver. Unlike {@code MemoryBuffer}, which keeps a
+     * single shared buffer that the next upload overwrites, this keeps a
+     * separate stream per file name so multiple dropped files each retain their
+     * own content. The buffer is removed once consumed to avoid name collisions
+     * when a file with the same name is uploaded again.
+     */
+    static class PerFileReceiver implements Receiver {
+
+        private final Map<String, ByteArrayOutputStream> buffers = new ConcurrentHashMap<>();
+
+        @Override
+        public OutputStream receiveUpload(String fileName, String mimeType) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            buffers.put(fileName, out);
+            return out;
+        }
+
+        byte[] consume(String fileName) {
+            ByteArrayOutputStream out = buffers.remove(fileName);
+            return out == null ? null : out.toByteArray();
+        }
     }
 }

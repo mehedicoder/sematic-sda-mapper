@@ -4,31 +4,41 @@ Example device description source files for testing the semantic pipeline.
 
 ## File Structure
 
+Upload sample files are grouped by **use case / upload session** so that every
+file you would drag into the Mapping Hub dropzone together lives in one folder.
+Standalone format samples with no specific use case live under `reference-formats/`.
+
 ```
 device-descriptions/
-├── aas/
-│   ├── pump-aas.json          # AAS for Pump Module FT101
-│   └── motor-aas.json         # AAS for Motor Module EM101
-├── mtp/
-│   ├── pump-module-mtp.xml    # MTP AML for Pump Module FT101
-│   └── mixer-module-mtp.xml   # MTP AML for Mixer Module MX101
-├── opcua/
-│   ├── pump-opcua-datasheet.json           # OPC UA datasheet for Pump FT101
-│   └── temperature-sensor-opcua-datasheet.json  # OPC UA datasheet for Temp Sensor
+├── use-cases/
+│   ├── REQ-001-flowmeter-diagnostics/   # Use case A — Flowmeter (NE 107)
+│   │   ├── pump-aas.json                #   AAS for Pump Module FT101
+│   │   ├── pump-module-mtp.xml          #   MTP AML for Pump Module FT101
+│   │   ├── pump-opcua-datasheet.json    #   OPC UA datasheet for Pump FT101
+│   │   ├── requirement-flowdiagnostics.ttl  # supplementary requirement upload
+│   │   └── req001-uaserver-nodeset-complete.xml
+│   ├── REQ-002-fermentation-skid/       # Use case B — Fermentation Skid
+│   │   ├── mixer-module-mtp.xml         #   MTP AML for Mixer Module MX101
+│   │   └── req002-mtp-fermentation-skid*.xml
+│   └── REQ-003-hvac-plant/              # Use case C — HVAC Plant
+│       ├── temperature-sensor-opcua-datasheet.json
+│       └── req003-uaserver-ahu01*.json
+├── reference-formats/
+│   ├── motor-aas.json                   # AAS for Motor Module EM101 (no use case)
+│   └── sample-caex.aml                  # AutomationML / CAEX smoke-test sample
 └── README.md
 ```
 
 ## Device Cross-Reference
 
 The same physical device is described in multiple formats to enable
-multi-source parsing and semantic lifting:
+multi-source parsing and semantic lifting. Under `use-cases/REQ-001-flowmeter-diagnostics/`:
 
 | Physical Device | AAS File | MTP File | OPC UA Datasheet |
 |----------------|----------|----------|------------------|
-| Pump Module FT101 | `aas/pump-aas.json` | `mtp/pump-module-mtp.xml` | `opcua/pump-opcua-datasheet.json` |
-| Motor Module EM101 | `aas/motor-aas.json` | -- | -- |
-| Mixer Module MX101 | -- | `mtp/mixer-module-mtp.xml` | -- |
-| Temperature Sensor | -- | -- | `opcua/temperature-sensor-opcua-datasheet.json` |
+| Pump Module FT101 | `use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json` | `use-cases/REQ-001-flowmeter-diagnostics/pump-module-mtp.xml` | `use-cases/REQ-001-flowmeter-diagnostics/pump-opcua-datasheet.json` |
+| Mixer Module MX101 | -- | `use-cases/REQ-002-fermentation-skid/mixer-module-mtp.xml` | -- |
+| Temperature Sensor | -- | -- | `use-cases/REQ-003-hvac-plant/temperature-sensor-opcua-datasheet.json` |
 
 ## Semantic Mapping
 
@@ -127,3 +137,23 @@ All device descriptions use realistic values from the process automation domain:
 - **Determinism Classes**: SoftRealTime, HardRealTime
 - **Network Zones**: OT-Zone-1, OT-Zone-2, OT-Zone-3, IT-Zone
 - **IEC Semantic IDs**: IEC-61987-42 (flow), IEC-61987-22 (temperature), VDI/VDE/NAMUR 2658
+
+## Use-Case Bundles
+
+The `use-cases/` subfolder groups every upload file that belongs to a single
+paper use case together in one folder:
+
+| Folder | Paper use case | Input format | Expected matched service |
+|--------|---------------|--------------|--------------------------|
+| `use-cases/REQ-001-flowmeter-diagnostics/` | A — Flowmeter (NE 107) diagnostics | OPC UA NodeSet (XML) | `SVC-FlowmeterDiagnostics` |
+| `use-cases/REQ-002-fermentation-skid/` | B — Fermentation Skid | MTP AML (XML) | `SVC-FermentationSkid` |
+| `use-cases/REQ-003-hvac-plant/` | C — HVAC Plant | OPC UA datasheet (JSON) | `SVC-HVACTempAnalysis` |
+
+`use-cases/REQ-001-flowmeter-diagnostics/requirement-flowdiagnostics.ttl` is a
+supplementary **requirement file** that can be uploaded together with the Pump
+FT101 device files in that same folder to match the seeded Flowmeter Diagnostics
+Service via its `FlowDiagnostics` capability.
+
+These files are also the canonical source for the manual UAT instructions in
+`docs/use-case-inputs/README.md`. The previously duplicated copies under
+`docs/use-case-inputs/formats/` have been removed.

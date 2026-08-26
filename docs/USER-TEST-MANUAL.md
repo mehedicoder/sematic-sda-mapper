@@ -134,29 +134,37 @@ carry `runId` / `sessionId` / `requirementId` MDC entries plus trace/span ids.
 
 ### 4.5 UAT Input Files & Combined Matching Sessions
 
-The sample device descriptions for the paper's use cases are collected in
-`docs/use-case-inputs/` (copies of the repo samples). They can be dragged into the
-Mapping Hub dropzone for manual UAT, or used to drive the REST matcher.
+The sample upload files for the paper's use cases are collected in a single
+canonical location: `src/main/resources/device-descriptions/`. They can be
+dragged into the Mapping Hub dropzone for manual UAT, or used to drive the REST
+matcher. (The previous duplicate copies under `docs/use-case-inputs/formats/`
+have been removed.)
 
 #### Per-use-case upload (one file per session)
 
-| File (relative to `docs/use-case-inputs/`) | Use case | Expected matched service |
-|--------------------------------------------|----------|--------------------------|
-| `REQ-001-flowmeter-diagnostics/req001-uaserver-nodeset-complete.xml` | A — Flowmeter (NE 107) | `SVC-FlowmeterDiagnostics` |
-| `REQ-002-fermentation-skid/req002-mtp-fermentation-skid-complete.xml` | B — Fermentation Skid | `SVC-FermentationSkid` |
-| `REQ-003-hvac-plant/req003-uaserver-ahu01-complete.json` | C — HVAC Plant | `SVC-HVACTempAnalysis` |
+| File (relative to `src/main/resources/device-descriptions/`) | Use case | Expected matched service |
+|-------------------------------------------------------------|----------|--------------------------|
+| `use-cases/REQ-001-flowmeter-diagnostics/req001-uaserver-nodeset-complete.xml` | A — Flowmeter (NE 107) | `SVC-FlowmeterDiagnostics` |
+| `use-cases/REQ-002-fermentation-skid/req002-mtp-fermentation-skid-complete.xml` | B — Fermentation Skid | `SVC-FermentationSkid` |
+| `use-cases/REQ-003-hvac-plant/req003-uaserver-ahu01-complete.json` | C — HVAC Plant | `SVC-HVACTempAnalysis` |
 | `REQ-004-process-variable-analysis/` (no upload file — ontology-native) | D — Process Variable Analysis | `SVC-ProcessVariableAnalytics` (via `requirementId`) |
-| `formats/aas/pump-aas.json`, `formats/mtp/pump-module-mtp.xml`, `formats/opcua/pump-opcua-datasheet.json`, `formats/automationml/sample-caex.aml` | format smoke tests | respective service / category |
+| `use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json`, `use-cases/REQ-001-flowmeter-diagnostics/pump-module-mtp.xml`, `use-cases/REQ-001-flowmeter-diagnostics/pump-opcua-datasheet.json`, `reference-formats/sample-caex.aml` | format smoke tests | respective service / category |
+
+#### Supplementary requirement upload
+
+`use-cases/REQ-001-flowmeter-diagnostics/requirement-flowdiagnostics.ttl` can be uploaded through the Mapping
+Hub dropzone to match the seeded Flowmeter Diagnostics Service via its
+`FlowDiagnostics` capability (see `docs/use-case-inputs/README.md`).
 
 #### Combined "full paper" session (upload everything together)
 
 1. Open **Mapping Hub** once and stay on the view — the canonical model **accumulates**
    across uploads within the session.
 2. Drag in, one after another (or multi-select):
-   - `REQ-001-flowmeter-diagnostics/req001-uaserver-nodeset-complete.xml`
-   - `REQ-002-fermentation-skid/req002-mtp-fermentation-skid-complete.xml`
-   - `REQ-003-hvac-plant/req003-uaserver-ahu01-complete.json`
-   - optionally `formats/opcua/temperature-sensor-opcua-datasheet.json` for a PVA-style temperature source
+    - `use-cases/REQ-001-flowmeter-diagnostics/req001-uaserver-nodeset-complete.xml`
+    - `use-cases/REQ-002-fermentation-skid/req002-mtp-fermentation-skid-complete.xml`
+    - `use-cases/REQ-003-hvac-plant/req003-uaserver-ahu01-complete.json`
+    - optionally `opcua/temperature-sensor-opcua-datasheet.json` for a PVA-style temperature source
 3. After **each** upload the pipeline re-runs Parse → Lift → Infer → Match over all
    accumulated entities; the Coverage Dashboard and matched-services list grow.
 4. Expected matched services in the combined session:
@@ -395,8 +403,8 @@ A ready-made Grafana dashboard visualizing these metrics ships at
 
 ## 11. Evaluation / Paper Use-Case Scenarios
 
-The input files for these scenarios are in `docs/use-case-inputs/` (see §4.5 for the
-combined-session upload workflow). Match each requirement via
+The input files for these scenarios are in `src/main/resources/device-descriptions/`
+(see §4.5 for the combined-session upload workflow). Match each requirement via
 `POST /api/v1/requirements/match`:
 
 | Use case | requirementId | Expected service | Notes |

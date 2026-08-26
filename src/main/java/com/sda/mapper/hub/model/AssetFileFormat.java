@@ -11,7 +11,8 @@ public enum AssetFileFormat {
     AAS_JSON("AAS JSON", "json", "AAS Parser"),
     MTP_AML("MTP AML", "aml", "MTP Parser"),
     OPCUA_JSON("OPC UA JSON", "json", "OPC UA Parser"),
-    AUTOMATION_ML("AutomationML", "aml", "AutomationML Parser");
+    AUTOMATION_ML("AutomationML", "aml", "AutomationML Parser"),
+    REQUIREMENT_TTL("Requirement TTL", "ttl", "Requirement Parser");
 
     private final String label;
     private final String extension;
@@ -61,6 +62,7 @@ public enum AssetFileFormat {
             case MTP_AML -> EntityOrigin.MTP;
             case OPCUA_JSON -> EntityOrigin.OPC_UA;
             case AUTOMATION_ML -> EntityOrigin.AML;
+            case REQUIREMENT_TTL -> EntityOrigin.REQUIREMENT;
         };
     }
 }

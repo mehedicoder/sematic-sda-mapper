@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -40,6 +41,18 @@ class SemanticReasonerServiceTest {
         assertTrue(result.matched(), "REQ-001 should match a service");
         assertEquals("Flowmeter Diagnostics Service", result.serviceName(),
             "REQ-001 should match SVC-FlowmeterDiagnostics");
+    }
+
+    @Test
+    @DisplayName("Should resolve every catalogue requirement via matchAllRequirements and include REQ-001")
+    void shouldResolveAllCatalogueRequirements() {
+        List<ServiceMatchResult> results = reasoner.matchAllRequirements();
+        assertFalse(results.isEmpty(), "catalogue must yield at least one requirement match");
+        boolean req001Present = results.stream()
+            .anyMatch(r -> "REQ-001".equals(r.requirementId())
+                && "Flowmeter Diagnostics Service".equals(r.serviceName())
+                && r.matched());
+        assertTrue(req001Present, "matchAllRequirements must surface REQ-001 -> Flowmeter Diagnostics Service");
     }
 
     @Test

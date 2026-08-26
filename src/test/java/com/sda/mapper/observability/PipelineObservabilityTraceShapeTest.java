@@ -70,6 +70,7 @@ class PipelineObservabilityTraceShapeTest {
             new PipelineTracingContext(registry),
             publisher,
             new PipelineMetrics(meterRegistry),
+            null,
             null);
     }
 
@@ -79,7 +80,7 @@ class PipelineObservabilityTraceShapeTest {
         MappingHubService service = createService();
 
         try (InputStream in = getClass()
-                .getResourceAsStream("/device-descriptions/aas/pump-aas.json")) {
+                .getResourceAsStream("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json")) {
             byte[] content = in.readAllBytes();
             service.processUpload("pump-aas.json", content);
         } catch (Exception e) {
@@ -177,7 +178,7 @@ class PipelineObservabilityTraceShapeTest {
 
     private byte[] fixture() {
         try (InputStream in = getClass()
-                .getResourceAsStream("/device-descriptions/aas/pump-aas.json")) {
+                .getResourceAsStream("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json")) {
             return in.readAllBytes();
         } catch (Exception e) {
             throw new IllegalStateException(e);

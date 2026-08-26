@@ -149,21 +149,17 @@
   border-radius: 12px;
 }
 
-.hub-console-row {
+.hub-top-row {
   flex-wrap: wrap;
 }
 
-.hub-console-row > .hub-console {
+.hub-top-row > * {
   flex: 1 1 320px;
   min-width: 280px;
 }
 
-.hub-console-row > * {
-  min-width: 0;
-}
-
 @media (max-width: 900px) {
-  .hub-console-row {
+  .hub-top-row {
     flex-direction: column;
   }
 }

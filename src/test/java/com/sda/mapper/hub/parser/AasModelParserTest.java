@@ -25,7 +25,7 @@ class AasModelParserTest {
     private final AasModelParser parser = new AasModelParser();
 
     private InputStream fixture() {
-        InputStream stream = getClass().getResourceAsStream("/device-descriptions/aas/pump-aas.json");
+        InputStream stream = getClass().getResourceAsStream("/device-descriptions/use-cases/REQ-001-flowmeter-diagnostics/pump-aas.json");
         if (stream == null) {
             throw new IllegalStateException("Fixture pump-aas.json not found");
         }

@@ -17,6 +17,11 @@ import com.sda.mapper.hub.persistence.MappingHubGraphService;
 import com.sda.mapper.hub.persistence.MappingHubPersistenceService;
 import com.sda.mapper.reasoning.SparqlQueryLoader;
 import com.sda.mapper.service.OntologyDataService;
+import com.sda.mapper.llm.ChatCompletionsClient;
+import com.sda.mapper.llm.ConceptHint;
+import com.sda.mapper.llm.LlmNotConfiguredException;
+import com.sda.mapper.llm.LlmProperties;
+import com.sda.mapper.llm.LlmTranslationService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -53,7 +58,8 @@ class MappingHubServiceTest {
             new SemanticMatchService(new SparqlQueryLoader()),
             recommendationService,
             new ManifestExportService(matchingService, recommendationService),
-            new MappingHubSession());
+            new MappingHubSession(),
+            null);
     }
 
     private byte[] fixture(String path) {
@@ -196,7 +202,8 @@ class MappingHubServiceTest {
             hubSession,
             persistence,
             mock(CanonicalTripleMapper.class),
-            mock(MappingHubGraphService.class));
+            mock(MappingHubGraphService.class),
+            null);
 
         PipelineResult result = service.resumeSession(persistedId);
 
@@ -231,7 +238,8 @@ class MappingHubServiceTest {
             new MappingHubSession(),
             persistence,
             mock(CanonicalTripleMapper.class),
-            mock(MappingHubGraphService.class));
+            mock(MappingHubGraphService.class),
+            null);
 
         assertThrows(SessionResumeException.class, () -> service.resumeSession(persistedId));
     }
@@ -280,5 +288,58 @@ class MappingHubServiceTest {
         assertEquals("Flow within 0-100 l/min", updated.acceptanceCondition());
         assertTrue(result.consoleLines().stream().anyMatch(l -> l.startsWith("[EDIT]")),
             "Editing must log an [EDIT] stage");
+    }
+
+    @Test
+    @DisplayName("Should report LLM unavailable and reject suggestions when no LLM service is wired")
+    void shouldRejectLlmWhenNotConfigured() {
+        MappingHubService service = createService();
+        assertTrue(!service.isLlmAvailable(), "LLM must be unavailable without a wired service");
+        assertThrows(LlmNotConfiguredException.class, service::suggestConcepts);
+        assertThrows(LlmNotConfiguredException.class,
+            () -> service.addConceptSuggestion(
+                new ConceptHint("RequiredCapability", "x", "y", "z")));
+    }
+
+    @Test
+    @DisplayName("Should translate an upload into a concept suggestion and produce a match when accepted")
+    void shouldSuggestAndApplyConceptFromLlm() {
+        LlmProperties props = new LlmProperties();
+        props.setEnabled(true);
+        props.setApiKey("test-key");
+        ChatCompletionsClient stub = (system, user) -> "["
+            + "{\"className\":\"RequiredCapability\",\"label\":\"FlowControl demand\","
+            + "\"reason\":\"pump needs flow control\",\"capabilityType\":\"FlowControl\"},"
+            + "{\"className\":\"CommunicationBinding\",\"label\":\"OPC-UA\",\"reason\":\"uses opcua\"}]";
+        MappingHubService service = createServiceWithLlm(new LlmTranslationService(props, stub));
+        service.processUpload("pump-aas.json",
+            fixture("/device-descriptions/aas/pump-aas.json"));
+
+        assertTrue(service.isLlmAvailable(), "LLM must be available when configured");
+        java.util.List<ConceptHint> hints = service.suggestConcepts();
+        assertEquals(1, hints.size(), "unsupported CommunicationBinding hint must be skipped");
+        assertEquals("RequiredCapability", hints.get(0).className());
+
+        PipelineResult result = service.addConceptSuggestion(hints.get(0));
+        assertTrue(result.matches().size() >= 1,
+            "accepted AI suggestion must reason to a semantic capability match");
+    }
+
+    private MappingHubService createServiceWithLlm(LlmTranslationService llm) {
+        OntologyDataService ontologyDataService = new OntologyDataService();
+        MatchingService matchingService = new MatchingService(ontologyDataService);
+        RecommendationService recommendationService = new RecommendationService();
+        return new MappingHubService(
+            new CanonicalParserRegistry(List.of(
+                new AasModelParser(), new MtpModelParser(), new OpcUaModelParser())),
+            new HubFileTypeDetector(),
+            new LiftService(),
+            new InferenceService(),
+            matchingService,
+            new SemanticMatchService(new SparqlQueryLoader()),
+            recommendationService,
+            new ManifestExportService(matchingService, recommendationService),
+            new MappingHubSession(),
+            llm);
     }
 }

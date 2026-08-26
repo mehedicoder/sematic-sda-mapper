@@ -14,6 +14,7 @@ import com.sda.mapper.hub.model.CoverageEntry;
 import com.sda.mapper.hub.model.GapReport;
 import com.sda.mapper.hub.model.Recommendation;
 import com.sda.mapper.hub.model.UploadedFileInfo;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -40,6 +41,7 @@ public class ManifestExportService {
      * @param matchingService        the matching service
      * @param recommendationService  the recommendation service
      */
+    @Autowired
     public ManifestExportService(MatchingService matchingService,
                                  RecommendationService recommendationService) {
         this(matchingService, recommendationService, new DeploymentManifestGenerator());

@@ -15,6 +15,10 @@ import com.sda.mapper.hub.persistence.MappingHubPersistenceService;
 import com.sda.mapper.hub.parser.CanonicalParserRegistry;
 import com.sda.mapper.hub.parser.HubFileTypeDetector;
 import com.sda.mapper.hub.parser.ParsingException;
+import com.sda.mapper.llm.ConceptHint;
+import com.sda.mapper.llm.LlmNotConfiguredException;
+import com.sda.mapper.llm.LlmTranslationService;
+import com.sda.mapper.llm.TranslationResult;
 import com.sda.mapper.observability.PipelineAuditPublisher;
 import com.sda.mapper.observability.PipelineMetrics;
 import com.sda.mapper.observability.PipelineStageObserver;
@@ -27,6 +31,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -58,8 +63,11 @@ public class MappingHubService {
     private final PipelineTracingContext tracingContext;
     private final PipelineAuditPublisher auditPublisher;
     private final PipelineMetrics metrics;
+    private final LlmTranslationService llmTranslationService;
 
     private PipelineResult lastResult;
+    private String lastRawFormat;
+    private String lastRawContent;
 
     /**
      * Creates the mapping hub service with all pipeline stages and default
@@ -73,10 +81,11 @@ public class MappingHubService {
                              SemanticMatchService semanticMatchService,
                              RecommendationService recommendationService,
                              ManifestExportService manifestExportService,
-                             MappingHubSession session) {
+                             MappingHubSession session,
+                             LlmTranslationService llmTranslationService) {
         this(parserRegistry, fileTypeDetector, liftService, inferenceService, matchingService,
             semanticMatchService, recommendationService, manifestExportService, session,
-            null, null, null);
+            null, null, null, llmTranslationService);
     }
 
     /**
@@ -94,7 +103,8 @@ public class MappingHubService {
                              @Lazy MappingHubSession session,
                              MappingHubPersistenceService persistenceService,
                              CanonicalTripleMapper tripleMapper,
-                             MappingHubGraphService graphService) {
+                             MappingHubGraphService graphService,
+                             LlmTranslationService llmTranslationService) {
         this(parserRegistry, fileTypeDetector, liftService, inferenceService, matchingService,
             semanticMatchService, recommendationService, manifestExportService, session,
             persistenceService, tripleMapper, graphService,
@@ -102,7 +112,8 @@ public class MappingHubService {
                 new PipelineAuditPublisher(null), new PipelineMetrics(new SimpleMeterRegistry())),
             new PipelineTracingContext(ObservationRegistry.NOOP),
             new PipelineAuditPublisher(null),
-            new PipelineMetrics(new SimpleMeterRegistry()));
+            new PipelineMetrics(new SimpleMeterRegistry()),
+            llmTranslationService);
     }
 
     /**
@@ -130,7 +141,8 @@ public class MappingHubService {
                              PipelineStageObserver stageObserver,
                              PipelineTracingContext tracingContext,
                              PipelineAuditPublisher auditPublisher,
-                             PipelineMetrics metrics) {
+                             PipelineMetrics metrics,
+                             LlmTranslationService llmTranslationService) {
         this.parserRegistry = parserRegistry;
         this.fileTypeDetector = fileTypeDetector;
         this.liftService = liftService;
@@ -147,6 +159,7 @@ public class MappingHubService {
         this.tracingContext = tracingContext;
         this.auditPublisher = auditPublisher;
         this.metrics = metrics;
+        this.llmTranslationService = llmTranslationService;
     }
 
     /**
@@ -165,6 +178,9 @@ public class MappingHubService {
         UploadedFileInfo info = new UploadedFileInfo(fileName, format, content.length);
         UUID fileId = saveUploadedFile(info, content);
         logs.add("[PARSE] " + info.describe());
+
+        this.lastRawFormat = format.label();
+        this.lastRawContent = new String(content, StandardCharsets.UTF_8);
 
         CanonicalAssetModel parsed;
         try {
@@ -209,6 +225,8 @@ public class MappingHubService {
     public void reset() {
         deletePersistedSession();
         session.reset();
+        this.lastRawFormat = null;
+        this.lastRawContent = null;
     }
 
     /**
@@ -270,6 +288,73 @@ public class MappingHubService {
      */
     public PipelineAuditPublisher getAuditPublisher() {
         return auditPublisher;
+    }
+
+    /**
+     * Whether the optional LLM semantic-translation feature is currently usable
+     * for concept suggestions.
+     *
+     * @return {@code true} when an LLM translation service is wired and
+     *         configured (enabled + API key present)
+     */
+    public boolean isLlmAvailable() {
+        return llmTranslationService != null && llmTranslationService.isAvailable();
+    }
+
+    /**
+     * Suggests SDA ontology concepts for the most recently uploaded device
+     * description by translating it through the optional LLM feature.
+     *
+     * <p>The returned hints are filtered to the classes the manual-entry path
+     * can ingest; unsupported classes are skipped by {@link ConceptHintMapper}.
+     * This is a suggestion source only &mdash; the concepts still have to be
+     * explicitly accepted through {@link #addConceptSuggestion(ConceptHint)}
+     * before they enter the pipeline, so LLM output can never silently override
+     * parser, lift or match results.</p>
+     *
+     * @return the supported concept hints derived from the last upload
+     * @throws LlmNotConfiguredException when the feature is unavailable or no
+     *                                    device description has been uploaded
+     */
+    public List<ConceptHint> suggestConcepts() {
+        if (llmTranslationService == null) {
+            throw new LlmNotConfiguredException(
+                "LLM translation is not available in this context.");
+        }
+        if (lastRawContent == null) {
+            throw new LlmNotConfiguredException(
+                "Upload a device description before requesting AI concept suggestions.");
+        }
+        long start = System.nanoTime();
+        try {
+            TranslationResult result = llmTranslationService.translate(lastRawFormat, lastRawContent);
+            List<ConceptHint> supported = ConceptHintMapper.filterSupported(result.hints());
+            metrics.recordLlmSuggestion("success", (System.nanoTime() - start) / 1_000_000);
+            return supported;
+        } catch (RuntimeException e) {
+            metrics.recordLlmSuggestion("failure", (System.nanoTime() - start) / 1_000_000);
+            throw e;
+        }
+    }
+
+    /**
+     * Accepts an AI-suggested concept, converting it into a manual entity and
+     * feeding it through the standard manual-entry pipeline path.
+     *
+     * @param hint the concept hint to accept
+     * @return the pipeline result after re-running with the accepted concept
+     * @throws LlmNotConfiguredException when the feature is not available
+     * @throws IllegalArgumentException  when the hint class cannot be ingested
+     */
+    public PipelineResult addConceptSuggestion(ConceptHint hint) {
+        if (llmTranslationService == null) {
+            throw new LlmNotConfiguredException(
+                "LLM translation is not available in this context.");
+        }
+        com.sda.mapper.hub.model.ManualEntity manual = ConceptHintMapper.toManualEntity(hint);
+        com.sda.mapper.hub.model.CanonicalEntity entity =
+            com.sda.mapper.hub.model.ManualEntityConverter.toTyped(manual);
+        return addManualEntity(entity);
     }
 
     /**

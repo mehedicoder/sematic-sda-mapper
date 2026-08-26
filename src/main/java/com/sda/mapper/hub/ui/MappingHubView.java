@@ -8,6 +8,7 @@ import com.sda.mapper.hub.model.UploadedFileInfo;
 import com.sda.mapper.hub.parser.ParsingException;
 import com.sda.mapper.hub.service.MappingHubService;
 import com.sda.mapper.hub.service.PipelineResult;
+import com.sda.mapper.llm.ConceptHint;
 import com.sda.mapper.model.OntologyClass;
 import com.sda.mapper.model.OntologyLayer;
 
@@ -61,6 +62,7 @@ public class MappingHubView extends VerticalLayout {
     private final ClassDetailPanel detailPanel;
     private final VerticalLayout fileQueue;
     private final VerticalLayout dashboard;
+    private final ConceptSuggestionPanel suggestionPanel;
     private Button exportButton;
 
     private final StageTimeline stageTimeline = new StageTimeline();
@@ -108,6 +110,12 @@ public class MappingHubView extends VerticalLayout {
         uploadAndConsole.setAlignItems(FlexComponent.Alignment.STRETCH);
         add(uploadAndConsole);
 
+        suggestionPanel = new ConceptSuggestionPanel(
+            hubService.isLlmAvailable(),
+            hubService::suggestConcepts,
+            this::onConceptSuggestionAdd);
+        add(createSuggestionSection());
+
         dashboard = new VerticalLayout();
         dashboard.addClassName("hub-dashboard-panel");
         dashboard.setPadding(false);
@@ -149,6 +157,17 @@ public class MappingHubView extends VerticalLayout {
         header.setPadding(false);
         header.setSpacing(false);
         return header;
+    }
+
+    private VerticalLayout createSuggestionSection() {
+        H2 title = new H2("AI Concept Suggestions");
+        title.addClassNames(LumoUtility.Margin.Bottom.NONE, "section-title");
+
+        var section = new VerticalLayout(title, suggestionPanel);
+        section.addClassName("hub-suggestion-section");
+        section.setPadding(true);
+        section.setSpacing(true);
+        return section;
     }
 
     private VerticalLayout createObservabilitySection() {
@@ -315,6 +334,26 @@ public class MappingHubView extends VerticalLayout {
     }
 
     /**
+     * Accepts an AI-suggested concept from the suggestion panel, converts it to
+     * a manual entity and re-runs the pipeline through the standard manual-entry
+     * path (so the LLM output is a suggestion, never an override).
+     *
+     * @param hint the accepted concept hint
+     */
+    private void onConceptSuggestionAdd(ConceptHint hint) {
+        try {
+            lastResult = hubService.addConceptSuggestion(hint);
+            refresh();
+            Notification.show("Added " + (hint.label() != null ? hint.label() : hint.className())
+                + " (AI suggestion)", 3000, Notification.Position.TOP_CENTER);
+        } catch (MappingException e) {
+            showError(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            showError(e.getMessage());
+        }
+    }
+
+    /**
      * Selects a layer tab and re-renders the class browser.
      *
      * @param layerId the layer id or {@code "ALL"}
@@ -344,6 +383,7 @@ public class MappingHubView extends VerticalLayout {
         renderClassList();
         renderDetail();
         exportButton.setEnabled(true);
+        suggestionPanel.setSuggestEnabled(hubService.isLlmAvailable());
     }
 
     private void renderClassList() {

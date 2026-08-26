@@ -15,6 +15,9 @@ import com.sda.mapper.hub.parser.MtpModelParser;
 import com.sda.mapper.hub.parser.OpcUaModelParser;
 import com.sda.mapper.reasoning.SparqlQueryLoader;
 import com.sda.mapper.service.OntologyDataService;
+import com.sda.mapper.llm.ChatCompletionsClient;
+import com.sda.mapper.llm.LlmProperties;
+import com.sda.mapper.llm.LlmTranslationService;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
@@ -53,7 +56,28 @@ class MappingHubViewTest {
             new SemanticMatchService(new SparqlQueryLoader()),
             recommendationService,
             new ManifestExportService(matchingService, recommendationService),
-            new MappingHubSession());
+            new MappingHubSession(),
+            null);
+        return new MappingHubView(hubService, ontologyDataService,
+            new ManualEntryFormFactory(ontologyDataService));
+    }
+
+    private MappingHubView createViewWithLlm(LlmTranslationService llm) {
+        OntologyDataService ontologyDataService = new OntologyDataService();
+        MatchingService matchingService = new MatchingService(ontologyDataService);
+        RecommendationService recommendationService = new RecommendationService();
+        MappingHubService hubService = new MappingHubService(
+            new CanonicalParserRegistry(List.of(
+                new AasModelParser(), new MtpModelParser(), new OpcUaModelParser())),
+            new HubFileTypeDetector(),
+            new LiftService(),
+            new InferenceService(),
+            matchingService,
+            new SemanticMatchService(new SparqlQueryLoader()),
+            recommendationService,
+            new ManifestExportService(matchingService, recommendationService),
+            new MappingHubSession(),
+            llm);
         return new MappingHubView(hubService, ontologyDataService,
             new ManualEntryFormFactory(ontologyDataService));
     }
@@ -245,6 +269,29 @@ class MappingHubViewTest {
         } finally {
             UI.setCurrent(null);
         }
+    }
+
+    @Test
+    @DisplayName("Should disable the AI suggestion button when LLM translation is unavailable")
+    void shouldDisableSuggestionButtonWhenLlmUnavailable() throws Exception {
+        MappingHubView view = createView();
+        ConceptSuggestionPanel panel = getField(view, "suggestionPanel", ConceptSuggestionPanel.class);
+        assertFalse(panel.getSuggestButton().isEnabled(),
+            "AI suggestion button must be disabled when LLM is not configured");
+    }
+
+    @Test
+    @DisplayName("Should enable the AI suggestion button when LLM translation is configured")
+    void shouldEnableSuggestionButtonWhenLlmAvailable() throws Exception {
+        LlmProperties props = new LlmProperties();
+        props.setEnabled(true);
+        props.setApiKey("test-key");
+        ChatCompletionsClient stub = (system, user) -> "[]";
+        MappingHubView view = createViewWithLlm(new LlmTranslationService(props, stub));
+
+        ConceptSuggestionPanel panel = getField(view, "suggestionPanel", ConceptSuggestionPanel.class);
+        assertTrue(panel.getSuggestButton().isEnabled(),
+            "AI suggestion button must be enabled when LLM is configured");
     }
 
     private static <T> T getField(Object target, String name, Class<T> type) throws Exception {

@@ -71,14 +71,18 @@ public class SemanticReasonerService {
     public SemanticReasonerService(OntologyModelLoader ontologyModelLoader,
                                    SparqlQueryLoader sparqlQueryLoader,
                                    RDeployService rDeployService) {
-        this(ontologyModelLoader, sparqlQueryLoader, rDeployService,
-            new TracedSparqlExecutor(new PipelineMetrics(new SimpleMeterRegistry())),
-            new MatchDimensionTagger(),
-            new PipelineStageObserver(ObservationRegistry.NOOP,
-                new PipelineAuditPublisher(null), new PipelineMetrics(new SimpleMeterRegistry())),
-            new PipelineTracingContext(ObservationRegistry.NOOP),
-            new PipelineAuditPublisher(null),
-            new PipelineMetrics(new SimpleMeterRegistry()));
+        PipelineAuditPublisher sharedPublisher = new PipelineAuditPublisher(null);
+        PipelineMetrics metrics = new PipelineMetrics(new SimpleMeterRegistry());
+        this.ontologyModelLoader = ontologyModelLoader;
+        this.sparqlQueryLoader = sparqlQueryLoader;
+        this.rDeployService = rDeployService;
+        this.tracedSparqlExecutor = new TracedSparqlExecutor(metrics);
+        this.dimensionTagger = new MatchDimensionTagger();
+        this.stageObserver = new PipelineStageObserver(
+            ObservationRegistry.NOOP, sharedPublisher, metrics);
+        this.tracingContext = new PipelineTracingContext(ObservationRegistry.NOOP);
+        this.auditPublisher = sharedPublisher;
+        this.metrics = metrics;
     }
 
     /**

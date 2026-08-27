@@ -23,11 +23,18 @@ import com.sda.mapper.llm.TranslationResult;
 import com.sda.mapper.observability.PipelineAuditPublisher;
 import com.sda.mapper.reasoning.SemanticReasonerService;
 import com.sda.mapper.reasoning.ServiceMatchResult;
+import com.sda.mapper.reasoning.SparqlQueryLoader;
 import com.sda.mapper.observability.PipelineMetrics;
 import com.sda.mapper.observability.PipelineStageObserver;
 import com.sda.mapper.observability.PipelineTracingContext;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
+import org.apache.jena.query.Query;
+import org.apache.jena.query.QueryExecution;
+import org.apache.jena.query.QueryExecutionFactory;
+import org.apache.jena.query.QueryFactory;
+import org.apache.jena.query.QuerySolution;
+import org.apache.jena.query.ResultSet;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.slf4j.Logger;
@@ -74,6 +81,7 @@ public class MappingHubService {
     private final PipelineMetrics metrics;
     private final LlmTranslationService llmTranslationService;
     private final SemanticReasonerService semanticReasonerService;
+    private final SparqlQueryLoader sparqlQueryLoader;
 
     private PipelineResult lastResult;
     private String lastRawFormat;
@@ -124,6 +132,7 @@ public class MappingHubService {
             new PipelineAuditPublisher(null),
             new PipelineMetrics(new SimpleMeterRegistry()),
             llmTranslationService,
+            null,
             null);
     }
 
@@ -152,9 +161,10 @@ public class MappingHubService {
                              PipelineStageObserver stageObserver,
                              PipelineTracingContext tracingContext,
                              PipelineAuditPublisher auditPublisher,
-                             PipelineMetrics metrics,
-                             LlmTranslationService llmTranslationService,
-                             SemanticReasonerService semanticReasonerService) {
+                              PipelineMetrics metrics,
+                              LlmTranslationService llmTranslationService,
+                              SemanticReasonerService semanticReasonerService,
+                              SparqlQueryLoader sparqlQueryLoader) {
         this.parserRegistry = parserRegistry;
         this.fileTypeDetector = fileTypeDetector;
         this.liftService = liftService;
@@ -173,6 +183,7 @@ public class MappingHubService {
         this.metrics = metrics;
         this.llmTranslationService = llmTranslationService;
         this.semanticReasonerService = semanticReasonerService;
+        this.sparqlQueryLoader = sparqlQueryLoader;
     }
 
     /**
@@ -653,10 +664,74 @@ public class MappingHubService {
                 + recommendations.size() + " recommendation(s)");
         }
 
+        try (PipelineStageObserver.Stage stage = stageObserver.begin("CATALOG", runId, session.getId(), null)) {
+            int projected = projectCatalog();
+            stage.detail("Projected " + projected + " offered services into catalog_service");
+            logs.add("[CATALOG] Persisted " + projected
+                + " offered services to catalog_service (source of truth for Service Catalog view)");
+        } catch (Exception e) {
+            log.warn("Catalog projection skipped: {}", e.getMessage());
+        }
+
         completeRun(runId, report);
         PipelineResult result = new PipelineResult(file, model, inferred, report, matches, recommendations, List.copyOf(logs));
         this.lastResult = result;
         return result;
+    }
+
+    /**
+     * Projects the offered services (base ontology unioned with every uploaded
+     * instance triple for the session) into the durable {@code catalog_service}
+     * table, which the Service Catalog view reads as its source of truth. This
+     * makes all uploaded services visible in the catalogue and survives restarts.
+     *
+     * @return the number of projected service rows
+     */
+    private int projectCatalog() {
+        if (sparqlQueryLoader == null || graphService == null) {
+            return 0;
+        }
+        Model unified = graphService.hydrateUnifiedGraph(session.getId());
+        String queryStr = sparqlQueryLoader.loadQuery("queries/service-catalog.rq");
+        Query query = QueryFactory.create(queryStr);
+        List<MappingHubPersistenceService.CatalogServiceRow> rows = new ArrayList<>();
+        try (QueryExecution qe = QueryExecutionFactory.create(query, unified)) {
+            ResultSet rs = qe.execSelect();
+            while (rs.hasNext()) {
+                QuerySolution sol = rs.next();
+                String iri = sol.contains("service") && sol.get("service").isResource()
+                    ? sol.getResource("service").getURI() : null;
+                if (iri == null) {
+                    continue;
+                }
+                rows.add(new MappingHubPersistenceService.CatalogServiceRow(
+                    iri,
+                    getLiteral(sol, "serviceLabel"),
+                    getLiteral(sol, "capabilityLabel"),
+                    getLiteral(sol, "skillLabel"),
+                    getLiteral(sol, "protocol"),
+                    getLiteral(sol, "accessMode"),
+                    getLiteral(sol, "securityMode"),
+                    sol.contains("recall") && sol.get("recall").isLiteral()
+                        ? sol.getLiteral("recall").getDouble() : 0.0,
+                    sol.contains("latency") && sol.get("latency").isLiteral()
+                        ? sol.getLiteral("latency").getInt() : 0,
+                    getLiteral(sol, "connectorLabel"),
+                    getLiteral(sol, "deployLabel"),
+                    getLiteral(sol, "sil"),
+                    getLiteral(sol, "determinism"),
+                    getLiteral(sol, "networkZone")));
+            }
+        }
+        persistenceService.replaceCatalogServices(session.getId(), rows);
+        return rows.size();
+    }
+
+    private static String getLiteral(QuerySolution sol, String var) {
+        if (sol.contains(var) && sol.get(var).isLiteral()) {
+            return sol.getLiteral(var).getString();
+        }
+        return null;
     }
 
     private CapabilityMatch toCapabilityMatch(ServiceMatchResult r, String originalReqId) {

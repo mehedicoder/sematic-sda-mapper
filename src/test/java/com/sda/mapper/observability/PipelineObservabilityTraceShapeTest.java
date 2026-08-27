@@ -71,7 +71,7 @@ class PipelineObservabilityTraceShapeTest {
             publisher,
             new PipelineMetrics(meterRegistry),
             null,
-            null);
+            null, null);
     }
 
     @Test

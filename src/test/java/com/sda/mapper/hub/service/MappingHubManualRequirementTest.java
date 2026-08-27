@@ -67,7 +67,7 @@ class MappingHubManualRequirementTest {
             new PipelineAuditPublisher(null),
             metrics,
             null,
-            reasoner);
+            reasoner, null);
     }
 
     @Test

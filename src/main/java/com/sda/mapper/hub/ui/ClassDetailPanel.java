@@ -8,6 +8,8 @@ import com.sda.mapper.hub.model.ManualEntity;
 import com.sda.mapper.hub.model.CoverageStatus;
 import com.sda.mapper.hub.model.GapReport;
 import com.sda.mapper.hub.model.UploadedFileInfo;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.sda.mapper.model.OntologyClass;
 import com.sda.mapper.model.OntologyLayer;
 import com.sda.mapper.service.OntologyDataService;
@@ -478,10 +480,16 @@ public class ClassDetailPanel extends VerticalLayout {
     private Div createEmptyState() {
         Div empty = new Div();
         empty.addClassName("hub-empty-state");
+        // Add empty-state icon using VerticalLayout-style spacing via add
+        Icon emptyIcon = new Icon(VaadinIcon.INFO_CIRCLE);
+        emptyIcon.addClassName("hub-empty-icon");
+        empty.add(emptyIcon);
         empty.add(new Span("No class selected"));
         Span hint = new Span("Pick a class from the browser to inspect coverage, "
             + "provenance and gap actions.");
         hint.addClassName("hub-gap-hint");
+        // Boost contrast color
+        hint.getStyle().set("color", "#94A3B8");
         empty.add(hint);
         return empty;
     }

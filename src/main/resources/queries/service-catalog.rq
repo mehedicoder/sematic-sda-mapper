@@ -12,9 +12,9 @@ SELECT ?service ?serviceLabel ?capabilityLabel ?skillLabel
        ?deployLabel ?sil ?determinism ?networkZone
 WHERE {
     ?service      a                  sda:Service ;
-                 rdfs:label          ?serviceLabel ;
-                 sda:reportedRecall  ?recall ;
-                 sda:reportedLatency ?latency .
+                 rdfs:label          ?serviceLabel .
+    OPTIONAL { ?service sda:reportedRecall  ?recall }
+    OPTIONAL { ?service sda:reportedLatency ?latency }
 
     # Capability chain: Service ← isImplementedBy ← Skill ← realisedBy ← OfferedCapability
     OPTIONAL {

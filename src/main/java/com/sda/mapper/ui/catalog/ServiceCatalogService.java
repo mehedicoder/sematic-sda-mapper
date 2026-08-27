@@ -1,105 +1,70 @@
 package com.sda.mapper.ui.catalog;
 
-import com.sda.mapper.ontology.OntologyModelLoader;
-import com.sda.mapper.reasoning.SparqlExecutionException;
-import com.sda.mapper.reasoning.SparqlQueryLoader;
-import org.apache.jena.query.Query;
-import org.apache.jena.query.QueryExecution;
-import org.apache.jena.query.QueryExecutionFactory;
-import org.apache.jena.query.QueryFactory;
-import org.apache.jena.query.QuerySolution;
-import org.apache.jena.query.ResultSet;
-import org.apache.jena.rdf.model.Model;
+import com.sda.mapper.hub.persistence.MappingHubPersistenceService;
+import com.sda.mapper.hub.service.MappingHubSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Executes a SPARQL query against the CSS-SDA ontology to extract
- * all registered services for the Service Catalog view.
+ * Loads the offered-service catalogue for the Service Catalog view.
+ *
+ * <p>The catalogue is the durable {@code catalog_service} table populated by the
+ * mapping hub pipeline (a projection of the base ontology unioned with every
+ * uploaded instance triple). Reading from PostgreSQL instead of the live,
+ * in-memory RDF model means all uploaded services are listed and the catalogue
+ * survives application restarts.</p>
  */
 @Service
 public class ServiceCatalogService {
 
     private static final Logger log = LoggerFactory.getLogger(ServiceCatalogService.class);
 
-    private static final String CATALOG_QUERY_PATH = "queries/service-catalog.rq";
+    private final MappingHubPersistenceService persistenceService;
+    private final MappingHubSession session;
 
-    private final OntologyModelLoader ontologyModelLoader;
-    private final SparqlQueryLoader sparqlQueryLoader;
-
-    public ServiceCatalogService(OntologyModelLoader ontologyModelLoader,
-                                  SparqlQueryLoader sparqlQueryLoader) {
-        this.ontologyModelLoader = ontologyModelLoader;
-        this.sparqlQueryLoader = sparqlQueryLoader;
+    public ServiceCatalogService(MappingHubPersistenceService persistenceService,
+                                 MappingHubSession session) {
+        this.persistenceService = persistenceService;
+        this.session = session;
     }
 
     /**
-     * Loads all services from the ontology catalog.
+     * Loads all offered services for the current session from the catalogue table.
      *
-     * @return list of {@link ServiceCatalogEntry} for every registered service
-     * @throws SparqlExecutionException if the SPARQL query fails
+     * @return list of {@link ServiceCatalogEntry} for every registered service;
+     *         returns empty list if no session is available (e.g. headless startup)
      */
     public List<ServiceCatalogEntry> loadCatalog() {
-        Model model = ontologyModelLoader.getModel();
-        String queryStr = sparqlQueryLoader.loadQuery(CATALOG_QUERY_PATH);
-        Query query = QueryFactory.create(queryStr);
-
-        List<ServiceCatalogEntry> entries = new ArrayList<>();
-
-        try (QueryExecution qe = QueryExecutionFactory.create(query, model)) {
-            ResultSet rs = qe.execSelect();
-            while (rs.hasNext()) {
-                QuerySolution sol = rs.next();
-                entries.add(extractEntry(sol));
-            }
+        if (session == null) {
+            log.info("Service catalog loaded from store: 0 entries (no Vaadin session)");
+            return List.of();
         }
-
-        log.info("Service catalog loaded: {} entries", entries.size());
+        List<MappingHubPersistenceService.CatalogServiceRow> rows =
+            persistenceService.loadCatalogEntries(session.getId());
+        List<ServiceCatalogEntry> entries = rows.stream().map(this::toEntry).toList();
+        log.info("Service catalog loaded from store: {} entries", entries.size());
         return entries;
     }
 
-    private ServiceCatalogEntry extractEntry(QuerySolution sol) {
+    private ServiceCatalogEntry toEntry(MappingHubPersistenceService.CatalogServiceRow row) {
         return new ServiceCatalogEntry(
-            getString(sol, "serviceLabel"),
-            getString(sol, "capabilityLabel"),
-            getString(sol, "skillLabel"),
-            getString(sol, "protocol"),
-            getString(sol, "accessMode"),
-            getString(sol, "securityMode"),
-            getDouble(sol, "recall"),
-            getInt(sol, "latency"),
-            getString(sol, "image"),
-            getString(sol, "connectorLabel"),
-            getString(sol, "informationModel"),
-            getString(sol, "deployLabel"),
-            getString(sol, "sil"),
-            getString(sol, "determinism"),
-            getString(sol, "networkZone")
-        );
-    }
-
-    private static String getString(QuerySolution sol, String var) {
-        if (sol.contains(var) && sol.get(var).isLiteral()) {
-            return sol.getLiteral(var).getString();
-        }
-        return null;
-    }
-
-    private static double getDouble(QuerySolution sol, String var) {
-        if (sol.contains(var) && sol.get(var).isLiteral()) {
-            return sol.getLiteral(var).getDouble();
-        }
-        return 0.0;
-    }
-
-    private static int getInt(QuerySolution sol, String var) {
-        if (sol.contains(var) && sol.get(var).isLiteral()) {
-            return sol.getLiteral(var).getInt();
-        }
-        return 0;
+            row.serviceName(),
+            row.capabilityName(),
+            row.skillName(),
+            row.protocol(),
+            row.accessMode(),
+            row.securityMode(),
+            row.recall(),
+            row.latencyMs(),
+            null, // containerImage — not part of the catalogue projection
+            row.connectorName(),
+            null, // informationModel — not part of the catalogue projection
+            row.deploymentName(),
+            row.safetyIntegrityLevel(),
+            row.determinismClass(),
+            row.networkZone());
     }
 }

@@ -80,7 +80,7 @@ class MappingHubAboxUploadTest {
             new PipelineAuditPublisher(null),
             new PipelineMetrics(new SimpleMeterRegistry()),
             null,
-            reasoner);
+            reasoner, null);
     }
 
     @Test

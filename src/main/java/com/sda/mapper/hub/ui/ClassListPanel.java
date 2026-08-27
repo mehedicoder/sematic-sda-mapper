@@ -77,9 +77,11 @@ public class ClassListPanel extends VerticalLayout {
 
         Span code = new Span(clazz.code());
         code.addClassName("hub-class-code");
+        code.setTitle(clazz.code());
 
         Span name = new Span(clazz.name());
         name.addClassName("hub-class-name");
+        name.setTitle(clazz.name());
 
         row.add(dot, code, name);
 

@@ -4,22 +4,17 @@ import com.sda.mapper.hub.model.AssetFileFormat;
 import com.sda.mapper.hub.model.CanonicalAssetModel;
 import com.sda.mapper.hub.model.CanonicalEntity;
 import com.sda.mapper.hub.model.UploadedFileInfo;
-import com.vaadin.flow.spring.annotation.VaadinSessionScope;
-import org.springframework.stereotype.Component;
-
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-
+import org.springframework.stereotype.Component;
 /**
- * Session-scoped state of the mapping hub: the accumulated canonical model,
+ * Session state of the mapping hub: the accumulated canonical model,
  * the uploaded files and formats, and the latest inferred entities. Uploads
  * enrich the model instead of replacing it, supporting iterative mapping.
  */
-@VaadinSessionScope
 @Component
 public class MappingHubSession {
 

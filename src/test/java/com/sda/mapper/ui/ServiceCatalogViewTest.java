@@ -1,5 +1,7 @@
 package com.sda.mapper.ui;
 
+import com.sda.mapper.hub.persistence.MappingHubPersistenceService;
+import com.sda.mapper.hub.service.MappingHubSession;
 import com.sda.mapper.hub.ui.RequirementMatchingPanel;
 import com.sda.mapper.ontology.OntologyModelLoader;
 import com.sda.mapper.reasoning.RequirementService;
@@ -18,20 +20,29 @@ import org.junit.jupiter.api.Test;
 import java.util.Collection;
 import java.util.List;
 
+import static org.mockito.Mockito.when;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("Service Catalog View UI")
 class ServiceCatalogViewTest {
 
     private ServiceCatalogView createView() {
-        OntologyModelLoader ontologyModelLoader = new OntologyModelLoader();
-        ontologyModelLoader.setFilePaths(List.of(
-            "ontology/sda_ontology_v2_structured.ttl",
-            "ontology/seed-services.ttl",
-            "ontology/seed-requirements.ttl"));
-        ontologyModelLoader.loadOntology();
-        SparqlQueryLoader sparqlQueryLoader = new SparqlQueryLoader();
-        ServiceCatalogService catalogService = new ServiceCatalogService(ontologyModelLoader, sparqlQueryLoader);
+        MappingHubPersistenceService persistence = org.mockito.Mockito.mock(MappingHubPersistenceService.class);
+        MappingHubSession session = org.mockito.Mockito.mock(MappingHubSession.class);
+        org.mockito.Mockito.when(session.getId()).thenReturn(java.util.UUID.randomUUID());
+        org.mockito.Mockito.doReturn(List.of(
+            new MappingHubPersistenceService.CatalogServiceRow(
+                null, "Fermentation Skid Service", null, null, null, null, null, 0.0, 0, null, null, null, null, null),
+            new MappingHubPersistenceService.CatalogServiceRow(
+                null, "Flowmeter Diagnostics Service", null, null, null, null, null, 0.0, 0, null, null, null, null, null),
+            new MappingHubPersistenceService.CatalogServiceRow(
+                null, "HVAC Temperature Analysis Service", null, null, null, null, null, 0.0, 0, null, null, null, null, null),
+            new MappingHubPersistenceService.CatalogServiceRow(
+                null, "Orphan Service", null, null, null, null, null, 0.0, 0, null, null, null, null, null),
+            new MappingHubPersistenceService.CatalogServiceRow(
+                null, "Process Variable Analytics Service", null, null, null, null, null, 0.0, 0, null, null, null, null, null)
+        )).when(persistence).loadCatalogEntries(org.mockito.Mockito.any());
+        ServiceCatalogService catalogService = new ServiceCatalogService(persistence, session);
         return new ServiceCatalogView(catalogService,
             new RequirementMatchingPanel(org.mockito.Mockito.mock(RequirementService.class)));
     }

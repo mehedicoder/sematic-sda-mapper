@@ -1,4 +1,25 @@
-/* ── CSS-SDA Mapper responsive styles ─────────────────────────────── */
+/* CSS-SDA Mapper responsive styles */
+
+/* Root typography variables */
+:root {
+    --lumo-font-family: "Inter", "Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    --lumo-font-size: 14px;
+    --lumo-line-height-single: 1.5;
+
+    /* Shared dark hub palette (kept in sync with hub-styles.css) */
+    --hub-bg: #0f172a;
+    --hub-panel: #1e293b;
+    --hub-border: #334155;
+    --hub-drop-bg: #1e293b;
+    --hub-text-1: #e2e8f0;
+    --hub-text-2: #94a3b8;
+    --hub-text-3: #64748b;
+    --hub-accent: #3b82f6;
+    --hub-ok: #10b981;
+    --hub-warn: #f59e0b;
+    --hub-error: #ef4444;
+    --hub-selected-bg: #1e3a5f;
+}
 
 /* Desktop: drawer always visible */
 @media (min-width: 1024px) {
@@ -32,11 +53,13 @@
     }
 }
 
-/* Header bar spacing */
+/* Header bar */
 .header-bar {
     width: 100%;
     display: flex;
     align-items: center;
+    background-color: var(--lumo-upper-level-background-color);
+    padding: 8px 16px;
     gap: 8px;
 }
 
@@ -58,31 +81,90 @@
 /* Navigation links styling */
 .drawer-nav-link {
     display: block;
-    padding: 10px 16px;
-    margin: 5px 0;
+    padding: 12px 16px;
+    margin: 4px 0;
     color: var(--lumo-body-text-color);
     text-decoration: none;
     border-radius: var(--lumo-border-radius-m);
     transition: background-color 0.2s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
 }
 
-.drawer-nav-link:hover {
+/* Currently active drawer link */
+.drawer-nav-link.active {
     background-color: var(--lumo-contrast-10pct);
+    font-weight: var(--lumo-font-weight-semibold);
 }
 
-/* Responsive text sizing */
-@media (max-width: 599px) {
-    h1 {
-        font-size: var(--lumo-font-size-l) !important;
+/* Ensure drawer has minimum width */
+@media (min-width: 600px) {
+    .app-layout__drawer {
+        min-width: 240px;
     }
-    h2 {
-        font-size: var(--lumo-fontSize-s) !important;
-    }
+}
+
+/* ── Ontology panel top padding ─────────────────────────────────────── */
+.hub-body {
+    padding-top: 24px;
+}
+
+/* ── Drop zone text contrast ────────────────────────────────────────── */
+.hub-upload-area .hub-dropzone .v-upload-drop-label {
+    color: var(--lumo-contrast-100pct) !important;
+}
+
+/* ── Class list item padding ───────────────────────────────────────── */
+.hub-class-item {
+    padding: 8px 12px;
+    margin: 4px 0;
+    border-radius: var(--lumo-border-radius-s);
+}
+
+/* ── Layer tabs (pill-style) ────────────────────────────────────────── */
+.hub-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 4px 0;
+    background-color: var(--lumo-base-light);
+    border-radius: var(--lumo-border-radius-m) var(--lumo-border-radius-m) 0 0;
+    margin: -4px 0 8px 0;
+}
+
+.hub-tab {
+    flex: 0 0 auto;
+    margin: 2px 4px;
+    padding: 6px 12px;
+    background-color: var(--lumo-lighter);
+    border-radius: var(--lumo-border-radius-s);
+    white-space: nowrap;
+    transition: background-color 0.2s;
+}
+
+.hub-tab:hover {
+    background-color: var(--lumo-lighter);
+}
+
+.hub-tab--active {
+    background-color: var(--lumo-primary);
+    color: var(--lumo-primary-contrast-color);
+}
+
+.hub-tab--active:hover {
+    background-color: var(--lumo-primary-dark);
+}
+
+.hub-tab-badge {
+    margin-left: 4px;
+    font-size: var(--lumo-font-size-s);
 }
 
 /* ── Service Catalog grid responsive columns ────────────────────────── */
-
-/* Tablet (≤1023px): hide low-priority columns */
+/* Tablet (=1023px): hide low-priority columns */
 @media (max-width: 1023px) {
     vaadin-grid::part(capabilityName),
     vaadin-grid::part(skillName),
@@ -92,7 +174,7 @@
     }
 }
 
-/* Mobile (≤599px): hide more columns, keep essential ones */
+/* Mobile (=599px): hide more columns, keep essential ones */
 @media (max-width: 599px) {
     vaadin-grid::part(capabilityName),
     vaadin-grid::part(skillName),
@@ -103,4 +185,389 @@
     vaadin-grid::part(containerImage) {
         display: none;
     }
+}
+
+/* ── Ontology Visualizer (aligned to MappingHubView hub palette) ────── */
+.ontology-root {
+    --lumo-font-family: "Inter", "Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    font-family: var(--lumo-font-family);
+    font-size: var(--lumo-font-size);
+    line-height: var(--lumo-line-height-single);
+    color: var(--hub-text-1);
+    background: var(--hub-bg);
+    padding: 16px;
+    margin: 0;
+    gap: 16px;
+}
+
+.ontology-root > * {
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+}
+
+.ontology-stats {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.ontology-stats-pill {
+    background-color: var(--hub-panel);
+    border: 1px solid var(--hub-border);
+    border-radius: var(--lumo-border-radius-s);
+    padding: 6px 12px;
+    font-size: var(--lumo-font-size-s);
+    color: var(--hub-text-2);
+}
+
+.ontology-stats-pill strong {
+    font-weight: 600;
+    color: var(--hub-text-1);
+}
+
+.ontology-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 4px;
+    padding: 4px 0;
+    margin: -4px 0 8px 0;
+}
+
+.ontology-tab {
+    flex: 0 0 auto;
+    margin: 2px 4px;
+    padding: 6px 12px;
+    background-color: var(--hub-panel);
+    border: 1px solid var(--hub-border);
+    border-radius: 999px;
+    white-space: nowrap;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+    color: var(--hub-text-2);
+    font-weight: 600;
+}
+
+.ontology-tab:hover {
+    color: var(--hub-text-1);
+    border-color: var(--hub-accent);
+}
+
+.ontology-tab--active {
+    background-color: rgba(59, 130, 246, 0.18);
+    border-color: var(--hub-accent);
+    color: var(--hub-text-1);
+}
+
+.ontology-tab--active:hover {
+    background-color: rgba(59, 130, 246, 0.28);
+}
+
+.ontology-tab-badge {
+    margin-left: 4px;
+    font-size: var(--lumo-font-size-s);
+}
+
+.ontology-class-list {
+    --lumo-font-family: "Inter", "Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    font-family: var(--lumo-font-family);
+    width: 320px;
+    flex: none;
+    max-height: 400px;
+    overflow-y: auto;
+    background-color: var(--hub-panel);
+    border: 1px solid var(--hub-border);
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.ontology-class-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    margin: 2px 0;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background-color: transparent;
+    color: var(--hub-text-2);
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.ontology-class-item:hover {
+    background-color: var(--hub-drop-bg);
+}
+
+.ontology-class-item--derived {
+    padding-left: 24px;
+    border-left: 1px dashed var(--hub-border);
+    font-size: var(--lumo-font-size-xs);
+    background-color: var(--hub-bg);
+}
+
+.ontology-class-item--selected {
+    background-color: var(--hub-selected-bg);
+    border-color: var(--hub-accent);
+    color: var(--hub-text-1);
+}
+
+.ontology-class-code {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--hub-text-3);
+    flex-shrink: 0;
+    min-width: 26px;
+}
+
+.ontology-class-name {
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.ontology-class-item .ontology-class-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ontology-empty-state {
+    --lumo-font-family: "Inter", "Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    font-family: var(--lumo-font-family);
+    padding: 48px 24px;
+    text-align: center;
+}
+
+.ontology-empty-icon {
+    width: 48px;
+    height: 48px;
+    color: #64748b;
+    margin-bottom: 16px;
+}
+
+.ontology-empty-state .hub-gap-hint {
+    color: #94a3b8 !important;
+    font-size: var(--lumo-font-size-s);
+}
+
+.ontology-detail-panel {
+    --lumo-font-family: "Inter", "Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    font-family: var(--lumo-font-family);
+    overflow-y: auto;
+    overflow-x: auto;
+    padding: 24px;
+    min-width: 0;
+    background-color: var(--hub-panel);
+    border: 1px solid var(--hub-border);
+    border-radius: 8px;
+}
+
+.ontology-main {
+    --lumo-font-family: "Inter", "Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    font-family: var(--lumo-font-family);
+    min-height: 0;
+    min-width: 0;
+}
+
+.ontology-graph {
+    --lumo-font-family: "Inter", "Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    font-family: var(--lumo-font-family);
+    display: flex;
+    align-items: stretch;
+    gap: 16px;
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    min-width: 0;
+    background-color: var(--hub-bg);
+    border: 1px solid var(--hub-border);
+    border-radius: 8px;
+    padding: 16px;
+    margin: 16px 0;
+}
+
+.graph-side {
+    flex: 1 1 0;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+}
+
+.graph-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.node {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    padding: 8px 12px;
+    margin: 4px;
+    border-radius: var(--lumo-border-radius-s);
+    background-color: var(--hub-drop-bg);
+    color: var(--hub-text-1);
+    font-size: var(--lumo-font-size-s);
+    transition: background-color 0.2s;
+}
+
+.node--selected {
+    background-color: var(--hub-selected-bg);
+    border: 1px solid var(--hub-accent);
+}
+
+.node--core {
+    background-color: #3b82f522;
+    color: #3b82f5;
+}
+
+.node--supporting {
+    background-color: #a855f722;
+    color: #a855f7;
+}
+
+.node .ontology-class-code {
+    font-size: var(--lumo-font-size-xs);
+    color: #64748b;
+}
+
+.node .ontology-class-name {
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.graph-edge {
+    padding: 4px 8px;
+    margin: 2px;
+    border-radius: var(--lumo-border-radius-xs);
+    background-color: var(--hub-drop-bg);
+    border: 1px solid var(--hub-border);
+    font-size: var(--lumo-font-size-xs);
+    color: var(--hub-text-3);
+}
+
+.graph-edge--core {
+    background-color: #3b82f522;
+    color: #3b82f5;
+}
+
+.graph-edge--inherited {
+    background-color: #a855f722;
+    color: #a855f7;
+    border: 1px dashed #a855f7;
+}
+
+.ontology-card {
+    --lumo-font-family: "Inter", "Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    font-family: var(--lumo-font-family);
+    background-color: var(--hub-drop-bg);
+    border: 1px solid var(--hub-border);
+    border-radius: 6px;
+    padding: 12px;
+    margin: 8px 0;
+    width: 100%;
+}
+
+.ontology-card--core {
+    border: 1px solid #3b82f5;
+}
+
+.ontology-card--supporting {
+    border: 1px solid #a855f7;
+}
+
+.ontology-card--inherited {
+    opacity: 0.7;
+}
+
+.ontology-card .ontology-label {
+    font-weight: 600;
+    color: #3b82f5;
+}
+
+.ontography-domain {
+    color: #10b981;
+}
+
+.ontography-range {
+    color: #f59e0b;
+}
+
+.section-title {
+    font-size: var(--lumo-font-size-l);
+    font-weight: 600;
+    color: var(--hub-text-1);
+}
+
+/* ── Ontotype property section ───────────────────────────────────────── */
+.ontotype-property-section {
+    --lumo-font-family: "Inter", "Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    font-family: var(--lumo-font-family);
+}
+
+.ontotype-property-card {
+    --lumo-font-family: "Inter", "Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    font-family: var(--lumo-font-family);
+    background-color: var(--hub-drop-bg);
+    border: 1px solid var(--hub-border);
+    border-radius: 6px;
+    padding: 12px;
+    margin: 8px 0;
+    width: 100%;
+}
+
+.ontotype-property-card .ontotype-label {
+    font-weight: 600;
+    color: #64748b;
+}
+
+.ontotype-property-card .ontotype-type-badge {
+    font-size: var(--lumo-font-size-xs);
+    color: #f59e0b;
+    border: 1px solid #334155;
+    border-radius: 999px;
+    padding: 0 8px;
+    background-color: #f1f5f9;
+}
+
+.ontotype-property-card .ontotype-domain-range {
+    display: flex;
+    gap: 12px;
+    font-size: var(--lumo-font-size-xs);
+    color: #64748b;
+}
+
+.ontotype-label {
+    font-weight: 600;
+    color: #64748b;
+}
+
+.ontotype-type-badge {
+    font-size: var(--lumo-font-size-xs);
+    color: #f59e0b;
+    border: 1px solid #334155;
+    border-radius: 999px;
+    padding: 0 8px;
+    background-color: #f1f5f9;
+}
+
+.ontotype-domain-range {
+    display: flex;
+    gap: 12px;
+    font-size: var(--lumo-font-size-xs);
+    color: #64748b;
+}
+
+.ontotype-domain {
+    color: #10b981;
+}
+
+.ontotype-range {
+    color: #f59e0b;
 }

@@ -32,8 +32,12 @@ class MainLayoutTest {
             var loader = new com.sda.mapper.ontology.OntologyModelLoader();
             loader.setFilePath("ontology/sda_ontology_v2_structured.ttl");
             loader.loadOntology();
-            var queryLoader = new com.sda.mapper.reasoning.SparqlQueryLoader();
-            var catalogService = new com.sda.mapper.ui.catalog.ServiceCatalogService(loader, queryLoader);
+            var persistence = org.mockito.Mockito.mock(com.sda.mapper.hub.persistence.MappingHubPersistenceService.class);
+            var session = org.mockito.Mockito.mock(com.sda.mapper.hub.service.MappingHubSession.class);
+            org.mockito.Mockito.when(session.getId()).thenReturn(java.util.UUID.randomUUID());
+            var catalogService = new com.sda.mapper.ui.catalog.ServiceCatalogService(persistence, session);
+            org.mockito.Mockito.doReturn(java.util.Collections.emptyList())
+                .when(persistence).loadCatalogEntries(org.mockito.Mockito.any());
             var requirementService = org.mockito.Mockito.mock(com.sda.mapper.reasoning.RequirementService.class);
             new com.sda.mapper.ui.catalog.ServiceCatalogView(catalogService,
                 new com.sda.mapper.hub.ui.RequirementMatchingPanel(requirementService));

@@ -193,8 +193,8 @@ public class OntologyView extends VerticalLayout {
 
     private VerticalLayout createClassListPanel() {
         var panel = new VerticalLayout();
-        panel.setWidth("280px");
-        panel.setMinWidth("280px");
+        panel.setWidth("320px");
+        panel.setMinWidth("320px");
         panel.setPadding(false);
         panel.setSpacing(true);
         panel.addClassName("ontology-class-list");

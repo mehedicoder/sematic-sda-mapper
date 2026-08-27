@@ -295,7 +295,116 @@ public class MappingHubPersistenceService {
      * @param sessionId owning session id
      */
     public void deleteSessionData(UUID sessionId) {
+        jdbcTemplate.update("DELETE FROM catalog_service WHERE session_id = ?", sessionId);
         jdbcTemplate.update("DELETE FROM mapping_hub_session WHERE id = ?", sessionId);
+    }
+
+    /**
+     * Replaces the offered-service catalogue rows for a session with the supplied
+     * projection (whole-session refresh: delete-then-insert keeps the table in
+     * sync with the latest pipeline run, including removed uploads).
+     *
+     * @param sessionId owning session id
+     * @param rows      the catalogue service rows to persist
+     */
+    public void replaceCatalogServices(UUID sessionId, List<CatalogServiceRow> rows) {
+        jdbcTemplate.update("DELETE FROM catalog_service WHERE session_id = ?", sessionId);
+        if (rows.isEmpty()) {
+            return;
+        }
+        jdbcTemplate.batchUpdate(
+            "INSERT INTO catalog_service (id, session_id, service_iri, service_name, capability_name, "
+                + "skill_name, protocol, access_mode, security_mode, recall, latency_ms, connector_name, "
+                + "deployment_name, safety_integrity_level, determinism_class, network_zone) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            rows,
+            rows.size(),
+            (ps, row) -> {
+                ps.setObject(1, UUID.randomUUID());
+                ps.setObject(2, sessionId);
+                ps.setString(3, row.serviceIri());
+                ps.setString(4, row.serviceName());
+                ps.setString(5, row.capabilityName());
+                ps.setString(6, row.skillName());
+                ps.setString(7, row.protocol());
+                ps.setString(8, row.accessMode());
+                ps.setString(9, row.securityMode());
+                ps.setDouble(10, row.recall());
+                ps.setInt(11, row.latencyMs());
+                ps.setString(12, row.connectorName());
+                ps.setString(13, row.deploymentName());
+                ps.setString(14, row.safetyIntegrityLevel());
+                ps.setString(15, row.determinismClass());
+                ps.setString(16, row.networkZone());
+            });
+    }
+
+    /**
+     * Loads the offered-service catalogue rows for a session (the Service Catalog
+     * view's source of truth).
+     *
+     * @param sessionId owning session id
+     * @return the catalogue service rows
+     */
+    public List<CatalogServiceRow> loadCatalogEntries(UUID sessionId) {
+        return jdbcTemplate.query(
+            "SELECT service_iri, service_name, capability_name, skill_name, protocol, access_mode, "
+                + "security_mode, recall, latency_ms, connector_name, deployment_name, "
+                + "safety_integrity_level, determinism_class, network_zone "
+                + "FROM catalog_service WHERE session_id = ? ORDER BY service_name",
+            (rs, rn) -> new CatalogServiceRow(
+                rs.getString("service_iri"),
+                rs.getString("service_name"),
+                rs.getString("capability_name"),
+                rs.getString("skill_name"),
+                rs.getString("protocol"),
+                rs.getString("access_mode"),
+                rs.getString("security_mode"),
+                rs.getDouble("recall"),
+                rs.getInt("latency_ms"),
+                rs.getString("connector_name"),
+                rs.getString("deployment_name"),
+                rs.getString("safety_integrity_level"),
+                rs.getString("determinism_class"),
+                rs.getString("network_zone")),
+            sessionId);
+    }
+
+    /**
+     * Durable, queryable projection of a single offered service for the Service
+     * Catalog view. Decouples the UI from the live in-memory RDF model.
+     *
+     * @param serviceIri            the service's IRI (catalogue key within a session)
+     * @param serviceName           display name of the service
+     * @param capabilityName        offered capability label, or {@code null}
+     * @param skillName             implementing skill label, or {@code null}
+     * @param protocol              communication protocol, or {@code null}
+     * @param accessMode            binding access mode, or {@code null}
+     * @param securityMode          binding security mode, or {@code null}
+     * @param recall                reported recall metric
+     * @param latencyMs            reported latency in milliseconds
+     * @param connectorName         data connector label, or {@code null}
+     * @param deploymentName        deployment context label, or {@code null}
+     * @param safetyIntegrityLevel  SIL, or {@code null}
+     * @param determinismClass       determinism class, or {@code null}
+     * @param networkZone           network/ deployment zone, or {@code null}
+     */
+    public record CatalogServiceRow(
+        String serviceIri,
+        String serviceName,
+        String capabilityName,
+        String skillName,
+        String protocol,
+        String accessMode,
+        String securityMode,
+        double recall,
+        int latencyMs,
+        String connectorName,
+        String deploymentName,
+        String safetyIntegrityLevel,
+        String determinismClass,
+        String networkZone
+    ) {
     }
 
     /**

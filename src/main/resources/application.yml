@@ -88,6 +88,6 @@ app:
     provider: ${APP_LLM_PROVIDER:OPENROUTER}
     # api-key is supplied via APP_LLM_APIKEY (left blank by default)
     api-key: ${APP_LLM_APIKEY:}
-    model: ${APP_LLM_MODEL:mistralai/mistral-7b-instruct:free}
+    model: ${APP_LLM_MODEL:openrouter/free}
     # base-url / timeout-ms / temperature / max-tokens are optional;
     # provider presets supply the default base URL.

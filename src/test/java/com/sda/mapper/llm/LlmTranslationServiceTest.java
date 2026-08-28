@@ -22,7 +22,7 @@ class LlmTranslationServiceTest {
         LlmProperties props = new LlmProperties();
         props.setEnabled(true);
         props.setApiKey("test-key");
-        props.setModel("mistralai/mistral-7b-instruct:free");
+        props.setModel("openrouter/free");
         return props;
     }
 
@@ -37,7 +37,7 @@ class LlmTranslationServiceTest {
         assertThat(result.hints()).hasSize(2);
         assertThat(result.hints().get(0).className()).isEqualTo("Service");
         assertThat(result.hints().get(0).label()).isEqualTo("Pump Analytics Service");
-        assertThat(result.model()).isEqualTo("mistralai/mistral-7b-instruct:free");
+        assertThat(result.model()).isEqualTo("openrouter/free");
     }
 
     @Test

@@ -98,7 +98,7 @@ public class SettingsView extends VerticalLayout {
 
         TextField model = new TextField("Model");
         model.setValue(props.getModel());
-        model.setHelperText("Free default: mistralai/mistral-7b-instruct:free");
+        model.setHelperText("Free default: openrouter/free");
 
         TextField baseUrl = new TextField("Base URL (custom/Azure)");
         baseUrl.setValue(props.getBaseUrl() == null ? "" : props.getBaseUrl());

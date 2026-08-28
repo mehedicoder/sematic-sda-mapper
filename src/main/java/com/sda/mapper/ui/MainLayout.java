@@ -57,6 +57,7 @@ public class MainLayout extends AppLayout {
     private void createDrawerNavigation() {
         addToDrawer(createDrawerLink(VaadinIcon.SHARE, "Ontology Browser", OntologyView.class));
         addToDrawer(createDrawerLink(VaadinIcon.CLUSTER, "Mapping Hub", com.sda.mapper.hub.ui.MappingHubView.class));
+        addToDrawer(createDrawerLink(VaadinIcon.SERVER, "AI Mapping Studio", com.sda.mapper.ui.AiMappingStudioView.class));
         addToDrawer(createDrawerLink(VaadinIcon.GROUP, "Sessions", com.sda.mapper.hub.ui.SessionOverviewView.class));
         addToDrawer(createDrawerLink(VaadinIcon.BOOK, "Service Catalog", com.sda.mapper.ui.catalog.ServiceCatalogView.class));
         addToDrawer(createDrawerLink(VaadinIcon.DASHBOARD, "OPC UA Monitor", OpcUaVisualizationView.class));

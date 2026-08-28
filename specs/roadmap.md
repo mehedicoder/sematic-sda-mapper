@@ -367,7 +367,7 @@ The paper's Deployment Manager "orchestrates the selected services as Kubernetes
 
 ## Phase 18: Future / Optional (paper-stated plans, out of MVP scope)
 
-* [x] **LLM-based semantic translation** (paper p.7–8, p.12): **implemented (2026-08-25)** as a configurable feature. `LlmProperties` (`app.llm.*`, env-overridable: `APP_LLM_ENABLED`, `APP_LLM_PROVIDER`, `APP_LLM_APIKEY`, `APP_LLM_MODEL`) targets **OpenRouter with a free model by default** (`mistralai/mistral-7b-instruct:free`). `RestClientChatCompletionsClient` speaks the OpenAI-compatible Chat Completions API, so OpenRouter / OpenAI / Ollama / custom endpoints are all supported by changing `provider`/`baseUrl`/`apiKey`. `LlmTranslationService` maps AutomationML / OPC UA NodeSet / AAS device descriptions to candidate SDA ontology concepts; exposed via `LlmController` (`/api/v1/llm/translate`, `/status`) and a Settings view form. The API key is user-supplied and never returned by the status endpoint.
+* [x] **LLM-based semantic translation** (paper p.7–8, p.12): **implemented (2026-08-25)** as a configurable feature. `LlmProperties` (`app.llm.*`, env-overridable: `APP_LLM_ENABLED`, `APP_LLM_PROVIDER`, `APP_LLM_APIKEY`, `APP_LLM_MODEL`) targets **OpenRouter with a free model by default** (`openrouter/free`). `RestClientChatCompletionsClient` speaks the OpenAI-compatible Chat Completions API, so OpenRouter / OpenAI / Ollama / custom endpoints are all supported by changing `provider`/`baseUrl`/`apiKey`. `LlmTranslationService` maps AutomationML / OPC UA NodeSet / AAS device descriptions to candidate SDA ontology concepts; exposed via `LlmController` (`/api/v1/llm/translate`, `/status`) and a Settings view form. The API key is user-supplied and never returned by the status endpoint.
 * [ ] **SWRL fidelity**: `R-Deploy` / `R-Verify` remain the Java equivalents (`RDeployService` / `RVerifyService`), documented as functionally equivalent to the paper's SWRL rules. Migration to a SWRL engine (e.g. Jena SWRL) is **optional** and NOT implemented (would add a SWRL-engine dependency; only if paper-exact fidelity is required).
 * [x] **Property-name alignment to paper**: verified — the paper's `uses` (Skill → CommunicationBinding / DataConnector) was intentionally split into `sda:usesBinding` / `sda:usesConnector` during the Layer 2/3 naming pass; `R-Deploy`'s SWRL text was updated to match. No further change needed (documented in the ontology).
 * [x] **R2a hardening**: the `requiresConcept` + IEC 61987 CDD IRDI coverage (`FILTER NOT EXISTS`) is enforced on the canonical reasoner match path (`queries/match-service.rq`, exercised by `EvaluationTest` and the REST API) and the Process Variable Analysis path (`queries/process-variable-analysis.rq`). The hub semantic-match path (`hub-match-offered-required.rq`) joins on `conceptName` identity instead of skill-level coverage, so the separate coverage filter is not applicable there (it would be redundant and breaks its synthetic fixtures); this is an intentional, documented decision.
@@ -488,6 +488,66 @@ Prometheus SLIs scraped; final suite **556 tests, 0 failures**.
 
 ---
 
+## Phase 22: LLM-Augmented Mapping Pipeline — [x] Implemented (services + studio, 2026-08-27)
+
+**Goal** (paper §4.2/§4.3, Summary §5 — *future direction*)
+
+Run the **same** five-stage mapping pipeline as `MappingHubService` (`INSTANTIATE → LIFT → INFER → MATCH → CATALOG`, see `executeStages` lines 574–680) but **augment every stage with the LLM** so that heterogeneous, partially-structured, or free-text inputs can be lifted into the CSS-SDA ontology without hand-authored parsers or manual forms. The deterministic SPARQL/`SemanticReasonerService` matcher remains the **source of truth**; the LLM only *supplies candidates* that flow through the existing accepted manual-entry path (`ConceptHintMapper` → `ManualEntityConverter` → `addManualEntity`). This phase extends the seed delivered in Phase 18 (`LlmTranslationService`, `suggestConcepts`, `addConceptSuggestion`).
+
+Delivered as a **separate `AiMappingStudioView` ("AI Mapping Studio", route `/ai-mapping`)** — architecturally and visually distinct from the deterministic `MappingHubView` ("Mapping Hub"), while both share the same `MappingHubService` pipeline. The two views let users choose deterministic orchestration (Hub) vs LLM-assisted authoring/translation (Studio).
+
+**Paper grounding (verbatim from the extracted PDF):**
+
+- *Translation:* "It is planned to do this translation based on LLMs." (mapping AutomationML / OPC UA NodeSet / AAS / PA-DIM descriptions into the SDA ontology).
+- *Capability/Skill mapping:* "[14] suggests a promising way of Capability/Skill mapping based on LLM" and "constraints … using LLMs, especially for Skill … and AutomationML."
+- *Generative / next steps:* "the advantages of generative AI can perform the next steps of LLM based automation engineering."
+- *Agentic endgame (Summary §5):* "the ontology model is seen as the basis for the LLM orchestrated automation such as the engineering with Agentic AI."
+
+**Design principle (from the paper):** the ontology is a *designed, deterministic* scaffold; the LLM performs the *next steps* (translation, capability/skill mapping, requirement authoring, gap-fill). Therefore the LLM pipeline is **opt-in** (`app.llm.enabled`), **human-in-the-loop** (every LLM-produced entity is a draft requiring Accept), and **non-overriding** (LLM output never silently changes parser/lift/match results — identical to today's `addConceptSuggestion`).
+
+### Stage-by-stage mapping (deterministic → LLM-augmented)
+
+| Deterministic stage (current) | LLM augmentation (this phase) | Paper basis |
+|---|---|---|
+| `INSTANTIATE` — parse upload → canonical entities (`parserRegistry.parse`, `processUpload`) | **LLM-TRANSLATE**: extend `LlmTranslationService` to emit full `List<CanonicalEntity>` (not just `ConceptHint`s) for AML/AAS/OPC-UA/PA-DIM/datasheet inputs that the structural parsers cannot fully resolve | "translation based on LLMs" |
+| `LIFT` — `liftService.lift` derives Skill/Capability relations | **LLM-LIFT**: propose `mapsToCapability` / `realisedBy` / `exposedAs` / `operatesOn` for entities the deterministic `LiftService` leaves unlifted | Capability/Skill mapping via LLM [14] |
+| `INFER` — `inferenceService.infer` derives offered capabilities | **LLM-REQUIRE**: draft `UseCaseRequirement` + `VerificationCriterion` (acceptanceCondition) + `RequiredCapability` + `Stakeholder` from a free-text requirement (requirement authoring) | "translation … from requirement to deployment" |
+| `MATCH` — coverage + `semanticMatchService.match` + `recommendationService.recommend` | **LLM-MATCH-AUGMENT**: for `PARTIAL`/`MISSING` coverage, propose candidate concept-coverage links + natural-language explanations (R2a fill); **LLM-GAP-DRAFT**: emit a ready-to-accept `ManualEntity` per gap | generative-AI "next steps" |
+| orchestration (`executeStages`) | **LLM-AGENT** (`LlmMappingAgent`): given a use case, autonomously walks the 8-tuple path `UseCase→Requirement→Capability→Skill→Service→CommunicationBinding→DataConnector→DeploymentContext`, calling the deterministic reasoner + the LLM sub-steps and producing the mapping + manifest | "LLM orchestrated automation … Agentic AI" (§5) |
+
+**Tasks (sub-phases)**
+
+* [ ] **22a — LLM full-entity translation** (`LlmEntityTranslationService` extends `LlmTranslationService`): device description → `List<CanonicalEntity>` (structured JSON schema: className, name, attributes, relations). Reuses `ConceptHintMapper.filterSupported` + a new `ConceptHintMapper.toCanonicalEntities`. `MappingHubService.processUpload` gains an `llmTranslate` branch used when structural parser confidence is low / format unsupported; result enters via `addManualEntity` (accepted).
+* [x] **22b — LLM lift augmentor** (`LlmLiftAugmentor`): for entities without resolved `mapsToCapability`/`realisedBy`, call the LLM to propose these object properties; returned as draft `LlmLiftSuggestion` records (validated against an allowed-relation set + known entity ids), surfaced as Accept/Reject drafts in `AiMappingStudioView` ("Suggest lift relations (AI)"). Accepts materialise the proposed target individual via `addManualEntity` + `reRunPipeline`.
+* [ ] **22c — LLM requirement authoring** (`LlmRequirementAuthor` + UI "Draft requirement (AI)" button in `MappingHubView`/`RequirementView`): NL text → `UseCaseRequirement` graph (RequiredCapability + capabilityType + `VerificationCriterion` + constraints). Flows through `addManualRequirement`/`RequirementService.persist`. Directly serves use cases A–D (e.g. A: NE 107 flowmeter condition-monitoring requirement).
+* [x] **22d — LLM match augmentation + gap drafts** (`LlmMatchAugmentor`, `LlmGapDraftService`): gap report → LLM-proposed ready-to-accept entity drafts (`LlmGapDraft`) + human-readable explanations (`LlmGapExplanation`), validated against a fixed SDA class set; surfaced via `LlmGapDraftService`.
+* [x] **22e — LLM mapping agent (agentic)** (`LlmMappingAgent`): orchestrates 22a–22d for a whole use case (translate → lift → match-augment → manifest); emits a `LlmAgentRunPlan` + final `complete-manifest.json` (`LlmAgentResult`). Gated behind an explicit "Run with AI agent" action in `AiMappingStudioView`; deterministic fallback always available.
+* [x] **22f — Pipeline wiring + observability**: `MappingHubService` gains opt-in LLM steps via `setLlmAugmentors(...)` + `setRunWithLlm(boolean)` (no constructor change, default path untouched). When enabled, `executeStages` runs guarded `LLM-LIFT` and `LLM-MATCH-AUGMENT` stages that emit child spans through the existing `PipelineStageObserver` (Phase 21 instrumentation reused) and record results in `getLlmLiftSuggestions()` / `getLlmGapResult()`.
+* [ ] **22g — Separate view `AiMappingStudioView`** (route `/ai-mapping`, nav label **"AI Mapping Studio"**): a standalone, LLM-first workbench distinct from the deterministic `MappingHubView` ("Mapping Hub"). It reuses the same `MappingHubService` pipeline (`processUpload` / `reRunPipeline` / `addManualEntity`) and the new LLM services (22a–22e), but presents an AI-authored flow: paste/select a device description or free-text requirement → run the LLM-augmented pipeline → review LLM drafts (translated entities, lifted relations, drafted requirements, gap-fill entities) with **Accept/Reject** → export `complete-manifest.json`. Shares `ConceptSuggestionPanel` styling but as its own route (the earlier "embed in MappingHubView" plan is superseded by this separate-view decision). A "Run with AI agent" action triggers the 22e orchestrator; deterministic fallback always one click away.
+
+**Validation targets (reuse `docs/usecases/` — the four paper use cases):**
+
+* [ ] **A — Flowmeter NE 107 (REQ-001):** LLM translates the flowmeter OPC-UA/PA-DIM datasheet + drafts the NE 107 `VerificationCriterion`; matches `REQ-001` expected service (parity with deterministic baseline in `SeedServicesLoadTest`).
+* [ ] **B — Fermentation Skid (REQ-002/003):** LLM translates MTP AML → `Service`/`Skill`/`CommunicationBinding` (replaces manual suggestion clicks); `LLM-LIFT` resolves `mapsToCapability`.
+* [ ] **C — HVAC Plant (REQ-004):** LLM translates AAS + authors the HVAC `RequiredCapability`.
+* [ ] **D — Process Variable Analysis:** LLM authors the analytic `RequiredCapability` + `VerificationCriterion` (UCUM unit / CDD IRDI), validating R2a coverage fill.
+* [ ] Each new LLM service has unit tests with a **mock** `ChatCompletionsClient` (no network); parity tests assert LLM-augmented path converges to the same `CapabilityMatch` as the deterministic path for A–D.
+
+**Acceptance Criteria**
+
+* [ ] LLM-augmented pipeline runs the same 5 stages and produces an equivalent `complete-manifest.json` for REQ-001..004 as the deterministic pipeline, with every LLM entity passing through explicit Accept (no silent override).
+* [ ] Default pipeline (`reRunPipeline`) is unchanged when `app.llm.enabled=false`; LLM steps are skipped.
+* [ ] `LLM-*` stages appear as child spans in the Phase 21 trace + audit log; `sda.pipeline.*` metrics include LLM step timings.
+* [ ] New LLM services unit-tested with mock client; full suite stays green.
+
+**Constraints / risks (AGENTS safety rules):**
+
+* Reuses the existing `RestClientChatCompletionsClient` (OpenAI-compatible) — **no new dependency or infra** without explicit approval.
+* Deterministic `SemanticReasonerService` + SPARQL stays authoritative for MATCH; LLM is advisory only.
+* API key user-supplied, never returned by `LlmController` `/status` (preserves Phase 18 guarantee).
+
+---
+
 ## Summary of corrections vs. prior roadmap
 
 | Old claim (removed/not delivered) | Actual implementation |
@@ -503,4 +563,4 @@ Prometheus SLIs scraped; final suite **556 tests, 0 failures**.
 
 **Untracked / not committed (excluded from roadmap scope):** frontend POC files (`node_modules/`, `package*.json`, `tsconfig.json`, `types.d.ts`, `vite.config.ts`, `vite.generated.ts`) remain local-only and are not part of the build.
 
-**Still to implement (updated 2026-08-26):** Phases 15–21 are **[x] Completed**. The two remaining deferred extension points requiring explicit infrastructure approval (AGENTS safety rules) are: (1) Phase 17's real-cluster **Kubernetes backend** (applying manifests via a K8s client), and (2) Phase 18's **SWRL-engine migration** of R-Deploy/R-Verify. All other roadmap phases are complete.
+**Status (updated 2026-08-27):** Phases 15–21 are **[x] Completed**. **Phase 22 (LLM-Augmented Mapping Pipeline) is implemented** — sub-phases 22a–22g delivered as `LlmEntityTranslationService`, `LlmLiftAugmentor`, `LlmMatchAugmentor`, `LlmGapDraftService`, `LlmMappingAgent`, and the separate `AiMappingStudioView` (`/ai-mapping`), all reusing the deterministic `MappingHubService` pipeline with the LLM supplying advisory, human-in-the-loop drafts. The two remaining deferred extension points requiring explicit infrastructure approval (AGENTS safety rules) are: (1) Phase 17's real-cluster **Kubernetes backend** (applying manifests via a K8s client), and (2) Phase 18's **SWRL-engine migration** of R-Deploy/R-Verify.

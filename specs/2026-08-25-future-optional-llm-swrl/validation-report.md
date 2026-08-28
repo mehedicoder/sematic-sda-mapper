@@ -21,7 +21,7 @@
 - **LLM-based semantic translation (paper p.7–8, p.12): IMPLEMENTED (2026-08-25).**
   `LlmProperties` (`app.llm.*`, env-overridable `APP_LLM_ENABLED` / `APP_LLM_PROVIDER`
   / `APP_LLM_APIKEY` / `APP_LLM_MODEL`) targets **OpenRouter with a free model by
-  default** (`mistralai/mistral-7b-instruct:free`). `RestClientChatCompletionsClient`
+  default** (`openrouter/free`). `RestClientChatCompletionsClient`
   speaks the OpenAI-compatible Chat Completions API, so OpenRouter / OpenAI / Ollama /
   custom endpoints are all selectable by `provider` / `baseUrl` / `apiKey`.
   `LlmTranslationService` maps AutomationML / OPC UA NodeSet / AAS device descriptions

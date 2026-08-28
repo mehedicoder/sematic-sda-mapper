@@ -3,6 +3,7 @@ package com.sda.mapper.security;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.userdetails.User;
@@ -28,6 +29,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf
                 .csrfTokenRequestHandler(csrfHandler)
                 .ignoringRequestMatchers(
+                        request -> request.getRequestURI().startsWith("/api/"),
                     request -> request.getRequestURI().startsWith("/VAADIN/"),
                     request -> request.getRequestURI().startsWith("/HEARTBEAT/"),
                     request -> "uidl".equals(request.getParameter("v-r")),
@@ -43,6 +45,7 @@ public class SecurityConfig {
             .formLogin(form -> form
                 .permitAll()
             )
+                .httpBasic(Customizer.withDefaults())
             .logout(logout -> logout
                 .permitAll()
             );

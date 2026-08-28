@@ -266,7 +266,7 @@ The LLM feature is **opt-in** and configured by the user (no key is bundled).
 |------|--------|----------|
 | 8.1.1 | Open Settings → "LLM Semantic Translation" | Form with Enable, Provider, API key, Model, Base URL |
 | 8.1.2 | Set Provider = `OPENROUTER` (default) | Base URL field hidden (OpenRouter default used) |
-| 8.1.3 | Paste an OpenRouter API key, set Model to a free model (e.g. `mistralai/mistral-7b-instruct:free`) | Fields accept values |
+| 8.1.3 | Paste an OpenRouter API key, set Model to a free model (e.g. `openrouter/free`) | Fields accept values |
 | 8.1.4 | Enable the checkbox and click **Save LLM settings** | "LLM settings saved" notification; settings persist on the running bean |
 | 8.1.5 | Set Provider = `CUSTOM` or `AZURE` | Base URL field appears and is required |
 | 8.1.6 | (Optional) Provider = `OPENAI` / `OLLAMA` | Works with the corresponding key / local endpoint |
@@ -277,7 +277,7 @@ The LLM feature is **opt-in** and configured by the user (no key is bundled).
 export APP_LLM_ENABLED=true
 export APP_LLM_PROVIDER=OPENROUTER
 export APP_LLM_APIKEY=sk-or-...your-openrouter-key
-export APP_LLM_MODEL=mistralai/mistral-7b-instruct:free
+export APP_LLM_MODEL=openrouter/free
 ```
 
 Equivalent `app.llm.*` keys exist in `src/main/resources/application.yml` (the key is
@@ -401,6 +401,21 @@ curl -X POST http://localhost:8080/api/v1/llm/translate \
   -H "Content-Type: application/json" \
   -d '{"format":"AAS","content":"<...>"}'
 ```
+example 1: A flowmeter asset named "Cooling Water Flowmeter" exposes an OPC UA
+           CommunicationBinding at opc.tcp://192.168.1.60:4840 using the OPC-UA protocol.
+           It provides a "Diagnose Clogging" skill and a "Flowmeter Diagnostics" service.
+           It includes a flow ProcessVariable and a diagnostic Status sensor, both
+           reachable over OPC UA.
+
+example 2: An HVAC asset named "AHU-01" exposes a BACnet/OPC UA CommunicationBinding at
+           opc.tcp://192.168.1.70:4840 using the OPC-UA protocol. It provides a
+           "Regulate Temperature" skill and an "HVAC Temperature Monitoring" service,
+           with a supply-air temperature Sensor reachable over OPC UA.
+example 3: A pump asset named "Cooling Pump P-101" exposes an OPC UA CommunicationBinding at
+           opc.tcp://192.168.1.80:4840 using the OPC-UA protocol. It provides a
+           "Monitor Condition" skill and a "Pump Asset Condition Monitoring" service,
+           with a vibration Sensor and a status ProcessVariable reachable over OPC UA.
+
 
 ### 10.6 Pipeline audit history & observability SLIs · **Phase 21**
 

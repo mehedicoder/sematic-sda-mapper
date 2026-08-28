@@ -37,7 +37,7 @@ class LlmControllerTest {
     void statusShouldReportConfigured() {
         when(properties.isEnabled()).thenReturn(true);
         when(properties.getProvider()).thenReturn("OPENROUTER");
-        when(properties.getModel()).thenReturn("mistralai/mistral-7b-instruct:free");
+        when(properties.getModel()).thenReturn("openrouter/free");
         when(properties.isConfigured()).thenReturn(true);
 
         LlmStatusResponse status = controller.status();

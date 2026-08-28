@@ -1,71 +1,71 @@
 package com.sda.mapper.hub.ui;
 
-import com.vaadin.flow.component.upload.Receiver;
+import com.sda.mapper.hub.model.AssetFileFormat;
+import com.vaadin.flow.component.upload.Upload;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
+import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies that the per-file receiver keeps distinct content for multiple
- * uploaded files, which is the bug that broke uploading two files at once with
- * a shared {@code MemoryBuffer}.
+ * Verifies that the dropzone enables multiple file selection through the
+ * modern multi-file stream handler and accepts every supported input format.
  */
-@DisplayName("Per-file upload receiver")
+@DisplayName("Multi-file upload dropzone")
 class PerFileReceiverTest {
 
-    @Test
-    @DisplayName("Should keep distinct content for two uploaded files")
-    void distinctContentsForTwoFiles() throws IOException {
-        UploadDropzone.PerFileReceiver receiver = new UploadDropzone.PerFileReceiver();
-
-        OutputStream a = receiver.receiveUpload("pump-aas.json", "application/json");
-        a.write("CONTENT-A".getBytes(StandardCharsets.UTF_8));
-        a.close();
-
-        OutputStream b = receiver.receiveUpload("requirement.ttl", "text/turtle");
-        b.write("CONTENT-B".getBytes(StandardCharsets.UTF_8));
-        b.close();
-
-        assertArrayEquals("CONTENT-A".getBytes(StandardCharsets.UTF_8), receiver.consume("pump-aas.json"));
-        assertArrayEquals("CONTENT-B".getBytes(StandardCharsets.UTF_8), receiver.consume("requirement.ttl"));
+    private UploadDropzone createDropzone() {
+        return new UploadDropzone("drop", List.of(AssetFileFormat.values()),
+                (name, content) -> {
+                }, msg -> {
+        });
     }
 
     @Test
-    @DisplayName("Should return null for a file that was never received")
-    void unknownFileReturnsNull() {
-        UploadDropzone.PerFileReceiver receiver = new UploadDropzone.PerFileReceiver();
-        assertNull(receiver.consume("missing.json"));
+    @DisplayName("Should allow selecting more than one file at a time")
+    void allowsMultipleFiles() {
+        Upload upload = createDropzone().get();
+        assertTrue(upload.getMaxFiles() > 1,
+                "upload must be configured for multiple file selection");
     }
 
     @Test
-    @DisplayName("Should allow the same file name to be uploaded again after consumption")
-    void sameNameReUploaded() throws IOException {
-        UploadDropzone.PerFileReceiver receiver = new UploadDropzone.PerFileReceiver();
-
-        OutputStream first = receiver.receiveUpload("dup.json", "application/json");
-        first.write("FIRST".getBytes(StandardCharsets.UTF_8));
-        first.close();
-        assertArrayEquals("FIRST".getBytes(StandardCharsets.UTF_8), receiver.consume("dup.json"));
-
-        OutputStream second = receiver.receiveUpload("dup.json", "application/json");
-        second.write("SECOND".getBytes(StandardCharsets.UTF_8));
-        second.close();
-        assertArrayEquals("SECOND".getBytes(StandardCharsets.UTF_8), receiver.consume("dup.json"));
+    @DisplayName("Should configure accepted file extensions for the picker")
+    void configuresAcceptedExtensions() {
+        UploadDropzone dropzone = createDropzone();
+        List<String> accepted = dropzone.get().getAcceptedFileExtensions();
+        assertFalse(accepted.isEmpty(), "expected at least one accepted extension");
+        assertTrue(accepted.contains(".aml"), "expected MTP/AutomationML .aml to be accepted");
+        assertTrue(accepted.contains(".xml"), "expected AAS/OPC-UA XML to be accepted");
+        assertTrue(accepted.contains(".json"), "expected AAS/OPC-UA JSON to be accepted");
+        assertTrue(accepted.contains(".ttl"), "expected requirement/ABox .ttl to be accepted");
     }
 
     @Test
-    @DisplayName("Receiver should provide a writable output stream")
-    void providesWritableStream() {
-        Receiver receiver = new UploadDropzone.PerFileReceiver();
-        assertNotNull(receiver.receiveUpload("x.json", "application/json"));
+    @DisplayName("Every supported format contributes its extensions to the configured set")
+    void allFormatsAccepted() {
+        List<String> accepted = createDropzone().get().getAcceptedFileExtensions();
+        for (AssetFileFormat format : AssetFileFormat.values()) {
+            for (String ext : extensions(format)) {
+                assertTrue(accepted.contains(ext), "expected extension " + ext + " for " + format);
+            }
+        }
+    }
+
+    private static List<String> extensions(AssetFileFormat format) {
+        return switch (format) {
+            case AAS_XML -> List.of(".xml");
+            case AAS_JSON -> List.of(".json");
+            case MTP_AML -> List.of(".aml", ".xml");
+            case AUTOMATION_ML -> List.of(".aml", ".xml");
+            case OPCUA_JSON -> List.of(".json");
+            case OPCUA_XML -> List.of(".aml", ".xml");
+            case REQUIREMENT_TTL -> List.of(".ttl", ".rdf");
+            case ABOX_TTL -> List.of(".ttl", ".rdf");
+        };
     }
 }

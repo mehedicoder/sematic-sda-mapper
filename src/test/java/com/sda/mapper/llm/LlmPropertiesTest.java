@@ -14,7 +14,7 @@ class LlmPropertiesTest {
         LlmProperties props = new LlmProperties();
         assertThat(props.provider()).isEqualTo(LlmProvider.OPENROUTER);
         assertThat(props.effectiveBaseUrl()).isEqualTo("https://openrouter.ai/api/v1");
-        assertThat(props.getModel()).isEqualTo("mistralai/mistral-7b-instruct:free");
+        assertThat(props.getModel()).isEqualTo("openrouter/free");
     }
 
     @Test

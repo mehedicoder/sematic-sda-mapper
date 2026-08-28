@@ -15,6 +15,10 @@ services:
       DATABASE_PASSWORD: postgres
       OPC_UA_SERVER_HOST: nodered
       OPC_UA_SERVER_PORT: 4840
+      # --- LLM (AI Mapping Studio) UAT config: uncomment and set your OpenRouter key ---
+      # APP_LLM_ENABLED: "true"
+      # APP_LLM_APIKEY: "sk-or-..."
+      # APP_LLM_MODEL: "openrouter/free"
     ports:
       - "8080:8080"
     healthcheck:

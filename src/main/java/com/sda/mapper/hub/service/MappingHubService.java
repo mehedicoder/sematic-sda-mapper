@@ -8,6 +8,7 @@ import com.sda.mapper.hub.model.CoverageStatus;
 import com.sda.mapper.hub.model.EntityOrigin;
 import com.sda.mapper.hub.model.RequiredCapability;
 import com.sda.mapper.hub.model.GapReport;
+import com.sda.mapper.hub.model.ManualEntity;
 import com.sda.mapper.hub.model.Recommendation;
 import com.sda.mapper.hub.model.UploadedFileInfo;
 import com.sda.mapper.hub.persistence.CanonicalTripleMapper;
@@ -17,6 +18,11 @@ import com.sda.mapper.hub.parser.CanonicalParserRegistry;
 import com.sda.mapper.hub.parser.HubFileTypeDetector;
 import com.sda.mapper.hub.parser.ParsingException;
 import com.sda.mapper.llm.ConceptHint;
+import com.sda.mapper.llm.LlmEntityTranslationService;
+import com.sda.mapper.llm.LlmGapResult;
+import com.sda.mapper.llm.LlmLiftAugmentor;
+import com.sda.mapper.llm.LlmLiftSuggestion;
+import com.sda.mapper.llm.LlmMatchAugmentor;
 import com.sda.mapper.llm.LlmNotConfiguredException;
 import com.sda.mapper.llm.LlmTranslationService;
 import com.sda.mapper.llm.TranslationResult;
@@ -47,7 +53,9 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -83,9 +91,45 @@ public class MappingHubService {
     private final SemanticReasonerService semanticReasonerService;
     private final SparqlQueryLoader sparqlQueryLoader;
 
+    private LlmEntityTranslationService aiEntityTranslator;
+    private LlmLiftAugmentor aiLiftAugmentor;
+    private LlmMatchAugmentor aiMatchAugmentor;
+    private boolean runWithLlm = false;
+    private List<LlmLiftSuggestion> llmLiftSuggestions = new ArrayList<>();
+    private LlmGapResult llmGapResult;
+
     private PipelineResult lastResult;
     private String lastRawFormat;
     private String lastRawContent;
+
+    /**
+     * Opt-in LLM augmentation wiring (Phase 22). When {@code runWithLlm} is true and the
+     * augmentors are available, the deterministic pipeline additionally runs the LLM-LIFT and
+     * LLM-MATCH-AUGMENT steps. The default path is unchanged when this is not set.
+     */
+    public void setLlmAugmentors(LlmEntityTranslationService entityTranslator,
+                                 LlmLiftAugmentor liftAugmentor,
+                                 LlmMatchAugmentor matchAugmentor) {
+        this.aiEntityTranslator = entityTranslator;
+        this.aiLiftAugmentor = liftAugmentor;
+        this.aiMatchAugmentor = matchAugmentor;
+    }
+
+    public void setRunWithLlm(boolean runWithLlm) {
+        this.runWithLlm = runWithLlm;
+    }
+
+    public boolean isRunWithLlm() {
+        return runWithLlm;
+    }
+
+    public List<LlmLiftSuggestion> getLlmLiftSuggestions() {
+        return List.copyOf(llmLiftSuggestions);
+    }
+
+    public LlmGapResult getLlmGapResult() {
+        return llmGapResult;
+    }
 
     /**
      * Creates the mapping hub service with all pipeline stages and default
@@ -598,6 +642,25 @@ public class MappingHubService {
                 + " lifted entities (semantic concepts / information models)");
         }
 
+        if (runWithLlm && aiLiftAugmentor != null && aiLiftAugmentor.isAvailable()) {
+            try (PipelineStageObserver.Stage stage = stageObserver.begin("LLM-LIFT", runId, session.getId(), null)) {
+                llmLiftSuggestions = aiLiftAugmentor.suggestLifts(model.allEntities());
+                for (LlmLiftSuggestion suggestion : llmLiftSuggestions) {
+                    String targetId = "ai-lift-" + UUID.randomUUID();
+                    Map<String, Object> attributes = new LinkedHashMap<>();
+                    attributes.put("id", targetId);
+                    attributes.put("name", suggestion.targetName());
+                    attributes.put("relation", suggestion.relation());
+                    attributes.put("sourceEntityId", suggestion.entityId());
+                    model.addEntity(new ManualEntity(
+                        suggestion.targetClass(), targetId, suggestion.targetName(), attributes));
+                }
+                stage.detail("LLM proposed " + llmLiftSuggestions.size() + " lift relation(s)");
+            } catch (Exception e) {
+                log.warn("LLM-LIFT skipped: {}", e.getMessage());
+            }
+        }
+
         List<CanonicalEntity> inferred;
         try (PipelineStageObserver.Stage stage = stageObserver.begin("INFER", runId, session.getId(), null)) {
             inferred = inferenceService.infer(model);
@@ -658,6 +721,15 @@ public class MappingHubService {
             recommendations = recommendationService.recommend(
                 report, session.getUploadedFormats());
             logs.add("[MATCH] " + recommendations.size() + " recommendation(s) for supplementary uploads");
+
+            if (runWithLlm && aiMatchAugmentor != null && aiMatchAugmentor.isAvailable()) {
+                try (PipelineStageObserver.Stage llmStage = stageObserver.begin("LLM-MATCH-AUGMENT", runId, session.getId(), null)) {
+                    llmGapResult = aiMatchAugmentor.suggestGapDrafts(report, model.allEntities());
+                    llmStage.detail("LLM proposed " + llmGapResult.drafts().size() + " gap-fill draft(s)");
+                } catch (Exception e) {
+                    log.warn("LLM-MATCH-AUGMENT skipped: {}", e.getMessage());
+                }
+            }
 
             stage.detail("Coverage " + String.format(java.util.Locale.ROOT, "%.1f%%", report.coveragePercent())
                 + ", " + matches.size() + " SPARQL match(es), "

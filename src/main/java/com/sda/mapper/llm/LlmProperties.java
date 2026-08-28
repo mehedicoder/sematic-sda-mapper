@@ -31,7 +31,7 @@ public class LlmProperties {
     private String apiKey;
 
     /** Chat model id. Defaults to a free OpenRouter model. */
-    private String model = "mistralai/mistral-7b-instruct:free";
+    private String model = "openrouter/free";
 
     private double temperature = 0.2;
     private int maxTokens = 1024;

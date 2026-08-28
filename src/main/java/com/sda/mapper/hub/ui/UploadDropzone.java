@@ -4,25 +4,22 @@ import com.sda.mapper.hub.model.AssetFileFormat;
 import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.upload.Receiver;
 import com.vaadin.flow.component.upload.Upload;
+import com.vaadin.flow.server.streams.UploadHandler;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
- * Reusable styled upload dropzone backed by an in-memory receiver. Files are
- * handed to the consumer as {@code (fileName, content)} once fully received.
+ * Reusable styled upload dropzone backed by an in-memory multi-file stream
+ * handler. Files are handed to the consumer as {@code (fileName, content)} once
+ * fully received. Multiple files can be selected at once: the picker is a
+ * multi-select because the upload uses the server-side {@link UploadHandler}
+ * stream API rather than the legacy single-file {@code Receiver}.
  */
 public class UploadDropzone {
 
-    private final PerFileReceiver receiver = new PerFileReceiver();
     private final Upload upload;
 
     /**
@@ -36,27 +33,19 @@ public class UploadDropzone {
     public UploadDropzone(String dropLabel, List<AssetFileFormat> acceptedFormats,
                           BiConsumer<String, byte[]> onFileReceived,
                           Consumer<String> onError) {
-        upload = new Upload(receiver);
+        upload = new Upload(UploadHandler.inMemory(
+                (metadata, bytes) -> onFileReceived.accept(metadata.fileName(), bytes)));
         upload.setDropLabel(new Div(new Text(dropLabel)));
         upload.setUploadButton(new Button("Browse files"));
         upload.addClassName("hub-dropzone");
         if (acceptedFormats != null && !acceptedFormats.isEmpty()) {
-            upload.setAcceptedFileTypes(acceptedFormats.stream()
-                .flatMap(f -> mimeTypes(f).stream())
-                .toArray(String[]::new));
+            upload.setAcceptedFileExtensions(acceptedFormats.stream()
+                    .flatMap(f -> extensions(f).stream())
+                    .toArray(String[]::new));
         }
-        upload.addSucceededListener(event -> {
-            byte[] content = receiver.consume(event.getFileName());
-            if (content == null) {
-                onError.accept("Could not read uploaded file: " + event.getFileName());
-                return;
-            }
-            onFileReceived.accept(event.getFileName(), content);
-        });
-        upload.addFailedListener(event -> onError.accept(
-            "Upload failed: " + event.getReason()));
+        upload.setMaxFiles(50);
         upload.addFileRejectedListener(event -> onError.accept(
-            "File rejected: " + event.getErrorMessage()));
+                "File rejected: " + event.getErrorMessage()));
     }
 
     /**
@@ -68,40 +57,16 @@ public class UploadDropzone {
         return upload;
     }
 
-    private static List<String> mimeTypes(AssetFileFormat format) {
+    private static List<String> extensions(AssetFileFormat format) {
         return switch (format) {
-            case AAS_XML -> List.of("application/xml", ".xml");
-            case AAS_JSON -> List.of("application/json", ".json");
-            case MTP_AML -> List.of("application/xml", ".xml", ".aml");
-            case AUTOMATION_ML -> List.of("application/xml", ".xml", ".aml");
-            case OPCUA_JSON -> List.of("application/json", ".json");
-            case OPCUA_XML -> List.of("application/xml", ".xml", ".aml");
-            case REQUIREMENT_TTL -> List.of("text/turtle", ".ttl", ".rdf");
-            case ABOX_TTL -> List.of("text/turtle", ".ttl", ".rdf");
+            case AAS_XML -> List.of(".xml");
+            case AAS_JSON -> List.of(".json");
+            case MTP_AML -> List.of(".aml", ".xml");
+            case AUTOMATION_ML -> List.of(".aml", ".xml");
+            case OPCUA_JSON -> List.of(".json");
+            case OPCUA_XML -> List.of(".aml", ".xml");
+            case REQUIREMENT_TTL -> List.of(".ttl", ".rdf");
+            case ABOX_TTL -> List.of(".ttl", ".rdf");
         };
-    }
-
-    /**
-     * Per-file in-memory receiver. Unlike {@code MemoryBuffer}, which keeps a
-     * single shared buffer that the next upload overwrites, this keeps a
-     * separate stream per file name so multiple dropped files each retain their
-     * own content. The buffer is removed once consumed to avoid name collisions
-     * when a file with the same name is uploaded again.
-     */
-    static class PerFileReceiver implements Receiver {
-
-        private final Map<String, ByteArrayOutputStream> buffers = new ConcurrentHashMap<>();
-
-        @Override
-        public OutputStream receiveUpload(String fileName, String mimeType) {
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            buffers.put(fileName, out);
-            return out;
-        }
-
-        byte[] consume(String fileName) {
-            ByteArrayOutputStream out = buffers.remove(fileName);
-            return out == null ? null : out.toByteArray();
-        }
     }
 }

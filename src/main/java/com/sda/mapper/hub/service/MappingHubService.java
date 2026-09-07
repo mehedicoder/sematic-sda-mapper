@@ -46,7 +46,9 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
@@ -129,6 +131,21 @@ public class MappingHubService {
 
     public LlmGapResult getLlmGapResult() {
         return llmGapResult;
+    }
+
+    /**
+     * Projects the seed catalogue into the {@code catalog_service} table on
+     * application startup so the Service Catalog view is populated before any
+     * pipeline run.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void onApplicationReady() {
+        try {
+            int projected = projectCatalog();
+            log.info("Startup catalogue projection: {} seed services projected", projected);
+        } catch (Exception e) {
+            log.warn("Startup catalogue projection skipped: {}", e.getMessage());
+        }
     }
 
     /**
@@ -757,9 +774,12 @@ public class MappingHubService {
      * table, which the Service Catalog view reads as its source of truth. This
      * makes all uploaded services visible in the catalogue and survives restarts.
      *
+     * <p>Also called at application startup so the seed catalogue is visible
+     * immediately without requiring a pipeline run first.</p>
+     *
      * @return the number of projected service rows
      */
-    private int projectCatalog() {
+    int projectCatalog() {
         if (sparqlQueryLoader == null || graphService == null) {
             return 0;
         }

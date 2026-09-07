@@ -170,9 +170,9 @@
     sda:satisfiesConstraint :CON-REQ003 .
 
 :SVC-Orphan a sda:Service ;
-    rdfs:label "Orphan Service" ;
+    rdfs:label "Unmapped Standalone Service" ;
     sda:serviceID "SVC-ORPHAN-001" ;
-    sda:serviceName "Orphan Service" ;
+    sda:serviceName "Unmapped Standalone Service" ;
     sda:serviceType "Diagnostics" ;
     sda:reportedRecall 0.85 ;
     sda:reportedLatency 42 ;

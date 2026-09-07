@@ -1,0 +1,46 @@
+/* Shared dark palette for standard Lumo views that must match the
+   Mapping Hub / AI Mapping Studio appearance (Service Catalog,
+   Settings, OPC UA Monitor). The `theme="dark"` attribute applied by
+   the view makes Lumo components adopt the dark color scheme; this
+   stylesheet gives the view area the same page background and text
+   colours as the .hub-root views. */
+
+.dark-view {
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100%;
+    width: 100%;
+    margin: 0;
+}
+
+.dark-view h1,
+.dark-view h2,
+.dark-view h3 {
+    color: #e2e8f0;
+}
+
+.dark-view .dark-view-secondary {
+    color: #94a3b8;
+}
+
+/* Grid: keep the table light (white cells) with high-contrast dark row
+   text so data stays readable even though the page is dark. Cells live
+   in the grid shadow DOM, so they are styled via ::part() — attribute
+   selectors like [part~="cell"] from a global stylesheet cannot reach them. */
+.dark-view vaadin-grid {
+    --lumo-base-color: #ffffff;
+    --lumo-body-text-color: #1a1a1a;
+    --lumo-primary-text-color: #0b5cab;
+    --lumo-secondary-text-color: #55606e;
+    --lumo-header-text-color: #1a1a1a;
+    color: #1a1a1a;
+}
+
+.dark-view vaadin-grid::part(header-cell),
+.dark-view vaadin-grid::part(body-cell),
+.dark-view vaadin-grid::part(even-row-cell),
+.dark-view vaadin-grid::part(odd-row-cell),
+.dark-view vaadin-grid::part(selected-row-cell) {
+    color: #1a1a1a !important;
+    background-color: #ffffff;
+}

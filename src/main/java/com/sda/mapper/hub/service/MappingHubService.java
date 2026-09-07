@@ -27,6 +27,10 @@ import com.sda.mapper.llm.LlmNotConfiguredException;
 import com.sda.mapper.llm.LlmTranslationService;
 import com.sda.mapper.llm.TranslationResult;
 import com.sda.mapper.observability.PipelineAuditPublisher;
+import com.sda.mapper.observability.ReasoningTracePublisher;
+import com.sda.mapper.reasoning.ReasoningNode;
+import com.sda.mapper.reasoning.ReasoningTree;
+import com.sda.mapper.reasoning.ReasoningTreeBuilder;
 import com.sda.mapper.reasoning.SemanticReasonerService;
 import com.sda.mapper.reasoning.ServiceMatchResult;
 import com.sda.mapper.reasoning.SparqlQueryLoader;
@@ -59,6 +63,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 /**
  * Orchestrates the five pipeline stages of the mapping hub:
@@ -92,6 +97,8 @@ public class MappingHubService {
     private final LlmTranslationService llmTranslationService;
     private final SemanticReasonerService semanticReasonerService;
     private final SparqlQueryLoader sparqlQueryLoader;
+    private final ReasoningTreeBuilder reasoningTreeBuilder;
+    private final ReasoningTracePublisher reasoningTracePublisher;
 
     private LlmEntityTranslationService aiEntityTranslator;
     private LlmLiftAugmentor aiLiftAugmentor;
@@ -194,7 +201,9 @@ public class MappingHubService {
             new PipelineMetrics(new SimpleMeterRegistry()),
             llmTranslationService,
             null,
-            null);
+            null,
+            new ReasoningTreeBuilder(),
+            new ReasoningTracePublisher());
     }
 
     /**
@@ -223,9 +232,11 @@ public class MappingHubService {
                              PipelineTracingContext tracingContext,
                              PipelineAuditPublisher auditPublisher,
                               PipelineMetrics metrics,
-                              LlmTranslationService llmTranslationService,
-                              SemanticReasonerService semanticReasonerService,
-                              SparqlQueryLoader sparqlQueryLoader) {
+LlmTranslationService llmTranslationService,
+                               SemanticReasonerService semanticReasonerService,
+                               SparqlQueryLoader sparqlQueryLoader,
+                               ReasoningTreeBuilder reasoningTreeBuilder,
+                               ReasoningTracePublisher reasoningTracePublisher) {
         this.parserRegistry = parserRegistry;
         this.fileTypeDetector = fileTypeDetector;
         this.liftService = liftService;
@@ -245,6 +256,8 @@ public class MappingHubService {
         this.llmTranslationService = llmTranslationService;
         this.semanticReasonerService = semanticReasonerService;
         this.sparqlQueryLoader = sparqlQueryLoader;
+        this.reasoningTreeBuilder = reasoningTreeBuilder;
+        this.reasoningTracePublisher = reasoningTracePublisher;
     }
 
     /**
@@ -498,6 +511,16 @@ public class MappingHubService {
     }
 
     /**
+     * Returns the reasoning-trace publisher used to stream reasoning-tree nodes
+     * to live listeners (the Mapping Hub reasoning tree) during the MATCH stage.
+     *
+     * @return the reasoning trace publisher
+     */
+    public ReasoningTracePublisher getReasoningTracePublisher() {
+        return reasoningTracePublisher;
+    }
+
+    /**
      * Whether the optional LLM semantic-translation feature is currently usable
      * for concept suggestions.
      *
@@ -692,6 +715,7 @@ public class MappingHubService {
         GapReport report;
         List<CapabilityMatch> matches;
         List<Recommendation> recommendations;
+        List<ReasoningTree> reasoningTrees = new ArrayList<>();
         try (PipelineStageObserver.Stage stage = stageObserver.begin("MATCH", runId, session.getId(), null)) {
             report = matchingService.compute(model, inferred);
             logs.add(String.format("[MATCH] Coverage %.1f%% \u2014 %d present, %d inferred, %d partial, %d missing",
@@ -705,7 +729,10 @@ public class MappingHubService {
             }
 
                 matches = semanticMatchService.match(model, inferred);
-                if (semanticReasonerService != null) {
+                if (semanticReasonerService != null && reasoningTreeBuilder != null) {
+                    Model catalogModel = semanticReasonerService.getOntologyModel();
+                    Consumer<ReasoningNode> liveSink =
+                        reasoningTracePublisher != null ? reasoningTracePublisher::nodeAdded : null;
                     for (MappingHubSession.ActiveRequirement active : session.getActiveRequirements()) {
                         ServiceMatchResult catalogueMatch;
                         if (active.capabilityType() != null && !active.capabilityType().isBlank()) {
@@ -717,14 +744,25 @@ public class MappingHubService {
                         if (catalogueMatch != null && catalogueMatch.matched()) {
                             matches.add(toCapabilityMatch(catalogueMatch, active.id()));
                         }
+                        if (catalogueMatch != null) {
+                            reasoningTrees.add(reasoningTreeBuilder.build(catalogModel,
+                                active.id(), active.capabilityType(), catalogueMatch,
+                                runId.toString(), liveSink));
+                        }
                     }
                     for (RequiredCapability rc : model.requiredCapabilities()) {
-                        if (rc.functionClass() != null && !rc.functionClass().isBlank()) {
-                            ServiceMatchResult catalogueMatch = semanticReasonerService
-                                .matchManualRequirement(rc.id(), rc.functionClass());
-                            if (catalogueMatch != null && catalogueMatch.matched()) {
-                                matches.add(toCapabilityMatch(catalogueMatch, rc.id()));
-                            }
+                        if (rc.functionClass() == null || rc.functionClass().isBlank()) {
+                            continue;
+                        }
+                        ServiceMatchResult catalogueMatch = semanticReasonerService
+                            .matchManualRequirement(rc.id(), rc.functionClass());
+                        if (catalogueMatch != null && catalogueMatch.matched()) {
+                            matches.add(toCapabilityMatch(catalogueMatch, rc.id()));
+                        }
+                        if (catalogueMatch != null) {
+                            reasoningTrees.add(reasoningTreeBuilder.build(catalogModel,
+                                rc.id(), rc.functionClass(), catalogueMatch,
+                                runId.toString(), liveSink));
                         }
                     }
                 }
@@ -763,7 +801,8 @@ public class MappingHubService {
         }
 
         completeRun(runId, report);
-        PipelineResult result = new PipelineResult(file, model, inferred, report, matches, recommendations, List.copyOf(logs));
+        PipelineResult result = new PipelineResult(file, model, inferred, report, matches,
+            recommendations, List.copyOf(logs), List.copyOf(reasoningTrees));
         this.lastResult = result;
         return result;
     }

@@ -12,6 +12,7 @@ import com.sda.mapper.hub.service.PipelineResult;
 import com.sda.mapper.llm.ConceptHint;
 import com.sda.mapper.model.OntologyClass;
 import com.sda.mapper.model.OntologyLayer;
+import com.sda.mapper.observability.ReasoningTracePublisher;
 
 import com.sda.mapper.reasoning.SemanticReasonerService;
 import com.sda.mapper.service.OntologyDataService;
@@ -46,10 +47,11 @@ import java.util.stream.Collectors;
  * &rarr; Manifest with per-layer coverage, gap actions and context-aware
  * recommendations.
  *
- * <p>Consolidates pipeline observability into a single console at the top of
- * the view: a run log ({@link ConsolePanel}) that shows the per-stage pipeline
- * output (Parse, Instantiate, Lift, Infer, Match). Server push is enabled
- * application-wide via {@link SdaAppShell}.</p>
+ * <p>Consolidates pipeline observability: the run log ({@link ConsolePanel})
+ * still records every stage, and a {@link ReasoningTreePanel} renders the live
+ * ontology reasoning chain derived during the MATCH stage (requirement &rarr;
+ * capability &rarr; skill &rarr; service &rarr; binding/deployment context).
+ * Server push is enabled application-wide via {@link SdaAppShell}.</p>
  */
 @Route(value = "mapping-hub", layout = MainLayout.class)
 @PageTitle("Mapping Hub")
@@ -60,6 +62,7 @@ public class MappingHubView extends VerticalLayout {
     private final OntologyDataService ontologyDataService;
 
     private final ConsolePanel console;
+    private final ReasoningTreePanel reasoningTreePanel;
     private final LayerTabs layerTabs;
     private final ClassListPanel classListPanel;
     private final ClassDetailPanel detailPanel;
@@ -80,9 +83,11 @@ public class MappingHubView extends VerticalLayout {
      * @param hubService                the mapping hub pipeline service
      * @param ontologyDataService       the ontology data service
      * @param manualEntryFormFactory    the ontology-driven manual entry form factory
+     * @param reasoningTracePublisher   the reasoning-trace publisher for the live match tree
      */
     public MappingHubView(MappingHubService hubService, OntologyDataService ontologyDataService,
-                            ManualEntryFormFactory manualEntryFormFactory) {
+                            ManualEntryFormFactory manualEntryFormFactory,
+                            ReasoningTracePublisher reasoningTracePublisher) {
         this.hubService = hubService;
         this.ontologyDataService = ontologyDataService;
 
@@ -95,6 +100,7 @@ public class MappingHubView extends VerticalLayout {
         add(createHeader());
 
         console = new ConsolePanel();
+        reasoningTreePanel = new ReasoningTreePanel(reasoningTracePublisher);
         fileQueue = new VerticalLayout();
         fileQueue.addClassName("hub-file-queue");
         fileQueue.setPadding(false);
@@ -113,16 +119,16 @@ public class MappingHubView extends VerticalLayout {
         activeRequirementsLayout.setAlignItems(FlexComponent.Alignment.CENTER);
         activeRequirementsLayout.setWrap(true);
 
-        var consoleSection = createConsoleSection();
+        var reasoningSection = createReasoningSection();
         var uploadPanel = createUploadSection();
         uploadPanel.add(fileQueue);
 
-        var topRow = new HorizontalLayout(uploadPanel, consoleSection);
+        var topRow = new HorizontalLayout(uploadPanel, reasoningSection);
         topRow.addClassName("hub-top-row");
         topRow.setWidthFull();
         topRow.setSpacing(true);
         topRow.setAlignItems(FlexComponent.Alignment.STRETCH);
-        topRow.setFlexGrow(1, consoleSection);
+        topRow.setFlexGrow(1, reasoningSection);
         topRow.setFlexGrow(1, uploadPanel);
         add(topRow);
 
@@ -184,12 +190,12 @@ public class MappingHubView extends VerticalLayout {
         return section;
     }
 
-    private VerticalLayout createConsoleSection() {
-        H2 title = new H2("Pipeline Console");
+    private VerticalLayout createReasoningSection() {
+        H2 title = new H2("Ontology Reasoning (Match)");
         title.addClassNames(LumoUtility.Margin.Bottom.NONE, "section-title");
 
-        var section = new VerticalLayout(title, console);
-        section.addClassName("hub-console-section");
+        var section = new VerticalLayout(title, reasoningTreePanel);
+        section.addClassName("hub-reasoning-section");
         section.setPadding(true);
         section.setSpacing(true);
         return section;
@@ -201,15 +207,16 @@ public class MappingHubView extends VerticalLayout {
         section.setPadding(false);
         section.setSpacing(true);
 
-        HorizontalLayout badges = new HorizontalLayout(
-            formatBadge("AAS .xml", "hub-format--aas"),
-            formatBadge("MTP .aml/.xml", "hub-format--mtp"),
-            formatBadge("OPC UA .json", "hub-format--opcua")
-        );
+        List<Span> badgeSpans = new ArrayList<>();
+        for (AssetFileFormat format : AssetFileFormat.values()) {
+            badgeSpans.add(formatBadge(formatBadgeText(format), "hub-format--" + formatClass(format)));
+        }
+        HorizontalLayout badges = new HorizontalLayout(badgeSpans.toArray(new Span[0]));
         badges.setSpacing(true);
 
         UploadDropzone dropzone = new UploadDropzone(
-            "Drop AAS .xml, MTP .aml/.xml, AutomationML .aml/.xml, OPC UA .json, or a Requirement .ttl here",
+            "Drop AAS .xml/.json, MTP .aml/.xml, OPC UA .json/NodeSet .xml, AutomationML .aml/.xml, "
+                + "or a Requirement / ABox .ttl here",
             List.of(AssetFileFormat.values()),
             this::onUpload,
             this::showError);
@@ -217,6 +224,19 @@ public class MappingHubView extends VerticalLayout {
         section.add(badges);
         section.add(dropzone.get());
         return section;
+    }
+
+    private static String formatBadgeText(AssetFileFormat format) {
+        return switch (format) {
+            case AAS_XML -> "AAS .xml";
+            case AAS_JSON -> "AAS .json";
+            case MTP_AML -> "MTP .aml/.xml";
+            case OPCUA_JSON -> "OPC UA .json";
+            case OPCUA_XML -> "OPC UA NodeSet .xml/.aml";
+            case AUTOMATION_ML -> "AutomationML .aml/.xml";
+            case REQUIREMENT_TTL -> "Requirement .ttl/.rdf";
+            case ABOX_TTL -> "ABox .ttl/.rdf";
+        };
     }
 
     private Span formatBadge(String label, String cssClass) {
@@ -363,6 +383,7 @@ public class MappingHubView extends VerticalLayout {
 
     private void refresh() {
         console.logLines(lastResult.consoleLines());
+        reasoningTreePanel.show(lastResult.reasoningTrees());
         renderFileQueue();
         renderDashboard();
         renderActiveRequirements();

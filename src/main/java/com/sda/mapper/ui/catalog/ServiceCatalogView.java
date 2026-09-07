@@ -6,6 +6,7 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.details.Details;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.html.H2;
@@ -35,6 +36,7 @@ import java.util.List;
  */
 @Route(value = "catalog", layout = MainLayout.class)
 @PageTitle("Service Catalog")
+@CssImport("./dark-view.css")
 public class ServiceCatalogView extends VerticalLayout {
 
     private final ServiceCatalogService catalogService;
@@ -50,6 +52,8 @@ public class ServiceCatalogView extends VerticalLayout {
                               RequirementMatchingPanel requirementMatchingPanel) {
         this.catalogService = catalogService;
         this.requirementMatchingPanel = requirementMatchingPanel;
+        getElement().setAttribute("theme", "dark");
+        addClassName("dark-view");
         setSizeFull();
         setPadding(true);
         setSpacing(true);

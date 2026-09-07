@@ -85,6 +85,16 @@ class ServiceCatalogViewTest {
     }
 
     @Test
+    @DisplayName("Should use the dark theme matching the other hub views")
+    void shouldUseDarkTheme() {
+        ServiceCatalogView view = createView();
+        assertTrue(view.getElement().getAttribute("theme").contains("dark"),
+            "view theme must include the Lumo dark token");
+        assertTrue(view.getElement().getClassList().contains("dark-view"),
+            "view must carry the shared dark-view background class");
+    }
+
+    @Test
     @DisplayName("Should embed the requirement matching panel consolidated from the Mapping Hub")
     void shouldEmbedRequirementMatchingPanel() {
         ServiceCatalogView view = createView();

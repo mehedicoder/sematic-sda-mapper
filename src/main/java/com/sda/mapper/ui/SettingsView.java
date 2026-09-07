@@ -5,6 +5,7 @@ import com.sda.mapper.llm.LlmProvider;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H3;
@@ -29,12 +30,16 @@ import org.springframework.beans.factory.annotation.Autowired;
  */
 @Route(value = "settings", layout = MainLayout.class)
 @PageTitle("Settings")
+@CssImport("./dark-view.css")
 public class SettingsView extends VerticalLayout {
 
     @Autowired
     private LlmProperties llmProperties;
 
     public SettingsView() {
+        getElement().setAttribute("theme", "dark");
+        addClassName("dark-view");
+        setSizeFull();
         setPadding(true);
         setSpacing(true);
 

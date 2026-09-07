@@ -1,32 +1,31 @@
 ## Goal
-- Make all four documented use cases in `docs/usecases` fully work through the Mapping Hub UI and export a correct `complete-manifest.json` by fixing the two remaining hub-UI parser gaps (flat MTP + UA NodeSet XML).
+- Implement and complete the live ontology reasoning-tree feature in Mapping Hub: hide the console, stream reasoning nodes during the MATCH stage into a collapsible colour-coded tree (requirement → capability → skill → service → binding/connector/deployment/zone/safety + semantic-concept coverage), with truthful PASS/FAIL (directly-declared constraints only, else INFO/SKIPPED) — fully wired, compiled, tests written. The four `docs/usecases` acceptance gates remain green.
 
 ## Constraints & Preferences
 - AGENTS.md: no new deps/infra without approval; commit/push only when explicitly requested; reuse Vaadin UI test patterns.
+- Live reasoning nodes stream via `ReasoningTracePublisher` inside the existing MATCH stage using the stage `runId` (pipeline root trace `run.id` untouched); observability must never break pipeline behaviour (broadcast errors swallowed).
+- Status truthfulness: PASS/FAIL only for direct requirement-declared constraints (`sda:protocol`, `accessMode`, `minRecall`, `maxLatency`, `onPlantNetwork`, `safetyIntegrityLevel`, `determinismClass`, `networkZone`); otherwise INFO; `hasConstraint`/`hasParameter` intents INFO only.
 - Docker rebuild required for Java/resource changes.
 - Backward-compatible TTL vocabulary: `:title`/`:description` AND legacy `:requirementName`/`:requirementDescription` both supported.
-- Hub UI uses `HubFileTypeDetector` + `CanonicalParserRegistry` (hub parsers), **not** the pipeline `UploadService`/`ParserFactory` path.
-- New hub parser class must NOT share a Spring bean name with the existing pipeline `@Component com.sda.mapper.parser.OpcUaNodeSetParser` (same simple class name → `ConflictingBeanDefinitionException`). Named `OpcUaNodeSetXmlParser`.
 
 ## Progress
 ### Done
-- **A+B**: `RequirementTtlParser` lifts `UseCase`, `Stakeholder`, `UseCaseRequirementParameter`×2, `UseCaseRequirementConstraint`×2, `VerificationCriterion` via direct construction; backward-compatible `literalOrMulti` reads.
-- **C**: `ServiceMatchResult.bindingEndpointUri` added; populated from `sda:bindingEndpointUri` in `SemanticReasonerService`; `MappingHubService.toCapabilityMatch` uses real URI (fallback label).
-- **D**: `match-generic.rq` binds `?networkZone` via `COALESCE(?zone rdfs:label, ?zone sda:zoneName)` (fixed `:zoneName`→`sda:zoneName` bug).
-- **Gap 1 (flat MTP)**: `MtpModelParser` now handles flat MTP (no `<Instance>` wrapper) — parses `Service`/`Communication`/`DataAssembly` directly under root; added `baseName()` helper. Verified: `req002-mtp-fermentation-skid.xml` now parses via hub path.
-- **Gap 2 (UA NodeSet XML)**:
-  - Added `AssetFileFormat.OPCUA_XML` enum constant.
-  - `HubFileTypeDetector` detects `uanodeset`/`opcfoundation.org/ua/2011/03/uanodeset` (lowercase sniff) **before** the MTP_AML check.
-  - New hub parser `com.sda.mapper.hub.parser.OpcUaNodeSetXmlParser` (`@Component`, implements `CanonicalModelParser`) emits `DataConnector`(UAVariable/UAObject), `Skill`(UAMethod), `CommunicationBinding`(OPC-UA), `Service`, `SemanticConcept`(namespace URIs).
-  - Extended exhaustive switches: `AssetFileFormat.origin()` (`OPCUA_JSON, OPCUA_XML -> OPC_UA`), `MappingHubView.formatClass()` (adds `OPCUA_XML -> "opcua"`), `UploadDropzone.mimeTypes()` (adds `OPCUA_XML -> xml/aml`).
-- `HubUseCaseParsingTest` now registers `OpcUaNodeSetXmlParser` and includes **all** `docs/usecases` files (gap exclusions removed) — passes.
-- `UseCaseDocumentsParsingTest` (pipeline path) covers all files — passes.
-- `MappingHubAboxUploadTest` assertions: 5 L1 `PRESENT`, name `"Pump Asset Condition Monitoring"`, `endpointUrl` real opc.tcp URI, `networkZone` `"OT Production Zone Alpha"`.
-- **Acceptance gate added**: `UseCaseAcceptanceTest` runs all 4 `docs/usecases` folders end-to-end through `MappingHubService` (processUpload → reRunPipeline → buildManifest) and asserts a non-null `complete-manifest.json` + valid `coveragePercent`; Pump case additionally asserts the NE107 match / `Pump Asset Condition Monitoring` name / ≥75% coverage.
-- **Full suite: 611 tests, 0 failures, BUILD SUCCESS.** No commits made (per AGENTS.md).
+- **Reasoning tree (current feature)**:
+  - `ReasoningNode` record (13 fields, `INFO/PASS/FAIL/SKIPPED`, `NodeType` enum) + immutable `ReasoningTree` (`nodes()` emission order, `roots()`, `childrenOf()`, `size()`).
+  - `ReasoningTracePublisher` (`@Component`): live broadcast, mirrors `PipelineAuditPublisher`, swallows listener failures.
+  - `ReasoningTreeBuilder` (`@Component`): walks the `match-generic.rq` chain via direct model reads; per-build `Ctx` state (singleton-safe); optional `liveSink` streaming; `linkedServiceResource` matches via `serviceName` label with first-service fallback; direct-constraints map → PASS/FAIL vs INFO; SKIPPED for non-selected alternative offers; PASS/FAIL `MATCH_OUTCOME`; no-sink `build` overload.
+  - `PipelineResult` (hub) gained 8th field `List<ReasoningTree> reasoningTrees` + 7-arg overload defaulting to `List.of()`.
+  - `MappingHubService`: 19-arg `@Autowired` ctor now ends `(…, semanticReasonerService, sparqlQueryLoader, reasoningTreeBuilder, reasoningTracePublisher)`; 13-arg delegates with `new ReasoningTreeBuilder()`/`new ReasoningTracePublisher()`; MATCH stage builds one tree per active requirement per `model.requiredCapabilities()` via `reasoner.runMatch(catalogModel, capabilityType, requirementId, runId)` and streams node-by-node via `reasoningTracePublisher::nodeAdded`; `PipelineResult` uses `List.copyOf(reasoningTrees)`; `getReasoningTracePublisher()` added.
+  - `MappingHubView`: reasoning section replaces console section (`ReasoningTreePanel`, "Ontology Reasoning (Match)", class `hub-reasoning-section`); console kept behind a field + `console.logLines(...)` in `refresh()` so `MappingHubViewTest` stays green; `refresh()` calls `reasoningTreePanel.show(lastResult.reasoningTrees())`; 4-arg ctor with `ReasoningTracePublisher`.
+  - `ReasoningTreePanel`: subscribes in ctor (nodes arrive pre-attach), unsubscribes on `onDetach`; `show(List<ReasoningTree>)` resets + pins `activeRunId`; `onNode` filters by `activeRunId`, uses `ui.access(...)` when not on the UI thread; `MAX_NODES = 2000`; badges PASS/FAIL/SKIPPED/INFO via `statusClass`.
+  - `hub-styles.css` appended: `.hub-reasoning-section`, `.reasoning-tree-box/_empty/_node/_label/_badge--ok|error|skipped|info`, `.reasoning-node-detail`.
+  - All call sites updated: `MappingHubViewTest` (2), `MappingHubServiceRequesterJourneyTest` (pass publisher to view); big-ctor tests `UseCaseAcceptanceTest`, `MappingHubAboxUploadTest`, `MappingHubRequirementFileUploadTest`, `MappingHubManualRequirementTest`, `PipelineObservabilityTraceShapeTest` (trailing `new ReasoningTreeBuilder(), new ReasoningTracePublisher()`).
+  - **Tests written & green**: `ReasoningTreeBuilderTest` (5: full-chain PASS, declared-PASS/observed-INFO, declared-violation FAIL, skipped alternative offers, live-sink order), `ReasoningTreePanelTest` (4: show/count, clear stops streaming, active-run filtering, detach unsubscribes), `ReasoningTracePublisherTest` (3: broadcast, removal, failure-swallow). Non-empty-PASS/SERVICE-tree assertions added to `MappingHubAboxUploadTest` (Pump) + `UseCaseAcceptanceTest` (`reasoningTrees()` non-null in loop; PASS outcome + SERVICE hop for Pump). Fixed two pre-existing (HEAD) test bugs surfaced by the full run: `ReasoningTracePublisherTest` re-created `received::add` (new identity) when removing a listener, and `MappingHubServiceRequesterJourneyTest` pointed `motor-aas.json` at a non-existent `/device-descriptions/aas/` path (real file: `reference-formats/`); `MappingHubViewTest.shouldRenderCoreComponents` now asserts the reasoning section title instead of the (now detached) console text.
+  - **Full suite: 637 tests, 0 failures, BUILD SUCCESS** (`mvn -o test` from this machine).
+- **Four-use-case baseline (prior session, kept green)**: A+B `RequirementTtlParser`; C `bindingEndpointUri`; D `COALESCE(?zone rdfs:label, ?zone sda:zoneName)`; Gap 1 flat MTP in `MtpModelParser`; Gap 2 `OpcUaNodeSetXmlParser` + `AssetFileFormat.OPCUA_XML` + `HubFileTypeDetector` + view/dropzone switches; `UseCaseAcceptanceTest` authoritative 4-folder gate; `HubUseCaseParsingTest` + `UseCaseDocumentsParsingTest`.
 
 ### In Progress
-- (none — both gaps fixed and verified)
+- (none — reasoning tree feature complete, tests written and passing; that work awaiting full-suite run + Docker rebuild from this machine)
 
 ### Blocked
 - (none)
@@ -40,9 +39,9 @@
 - Hub UI flow: `MappingHubView` dropzone → `processUpload` → "Export Complete Manifest" → `hubService.buildManifest()` → `complete-manifest.json`.
 
 ## Next Steps
-1. (Optional) Manual Docker run to confirm all 4 use cases upload + export end-to-end in the live UI (rebuild image first).
-2. Commit only when user requests (per AGENTS.md).
-3. Optionally record Gap 1/Gap 2 work in `tasks.md`.
+1. (Optional) Manual Docker run to confirm all 4 use cases upload + export end-to-end in the live UI and the reasoning tree renders (rebuild image first — Java changes require it).
+2. Commit/push only when user requests (per AGENTS.md).
+3. Optionally record Gap 1/Gap 2 + reasoning-tree work in `tasks.md`.
 
 ## Acceptance Criteria
 All four documented use cases under `docs/usecases` must be **testable end-to-end** through the

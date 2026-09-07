@@ -32,4 +32,18 @@ class OpcUaVisualizationViewTest {
         assertNotNull(pageTitle, "OpcUaVisualizationView must have @PageTitle annotation");
         assertEquals("OPC UA Monitor", pageTitle.value());
     }
+
+    @Test
+    @DisplayName("Should use the dark theme matching the other hub views")
+    void shouldUseDarkTheme() {
+        OpcUaVisualizationView view = new OpcUaVisualizationView(requireService());
+        assertTrue(view.getElement().getAttribute("theme").contains("dark"),
+            "view theme must include the Lumo dark token");
+        assertTrue(view.getElement().getClassList().contains("dark-view"),
+            "view must carry the shared dark-view background class");
+    }
+
+    private com.sda.mapper.opcua.OpcUaVisualizationService requireService() {
+        return org.mockito.Mockito.mock(com.sda.mapper.opcua.OpcUaVisualizationService.class);
+    }
 }

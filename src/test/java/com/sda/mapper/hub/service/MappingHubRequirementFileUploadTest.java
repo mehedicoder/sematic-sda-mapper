@@ -13,8 +13,10 @@ import com.sda.mapper.observability.PipelineAuditPublisher;
 import com.sda.mapper.observability.PipelineMetrics;
 import com.sda.mapper.observability.PipelineStageObserver;
 import com.sda.mapper.observability.PipelineTracingContext;
+import com.sda.mapper.observability.ReasoningTracePublisher;
 import com.sda.mapper.reasoning.RDeployService;
 import com.sda.mapper.reasoning.SemanticReasonerService;
+import com.sda.mapper.reasoning.ReasoningTreeBuilder;
 import com.sda.mapper.reasoning.SparqlQueryLoader;
 import com.sda.mapper.service.OntologyDataService;
 import com.sda.mapper.support.DemoAboxBuilder;
@@ -88,7 +90,9 @@ class MappingHubRequirementFileUploadTest {
             new PipelineAuditPublisher(null),
             new PipelineMetrics(new SimpleMeterRegistry()),
             null,
-            reasoner, null);
+            reasoner, null,
+            new ReasoningTreeBuilder(),
+            new ReasoningTracePublisher());
     }
 
     @Test

@@ -14,6 +14,7 @@ import com.sda.mapper.hub.service.MatchingService;
 import com.sda.mapper.hub.service.PipelineResult;
 import com.sda.mapper.hub.service.RecommendationService;
 import com.sda.mapper.hub.service.SemanticMatchService;
+import com.sda.mapper.reasoning.ReasoningTreeBuilder;
 import com.sda.mapper.reasoning.SparqlQueryLoader;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.observation.Observation;
@@ -71,7 +72,9 @@ class PipelineObservabilityTraceShapeTest {
             publisher,
             new PipelineMetrics(meterRegistry),
             null,
-            null, null);
+            null, null,
+            new ReasoningTreeBuilder(),
+            new ReasoningTracePublisher());
     }
 
     @Test

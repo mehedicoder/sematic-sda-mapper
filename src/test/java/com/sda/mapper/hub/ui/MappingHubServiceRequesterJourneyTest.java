@@ -18,6 +18,7 @@ import com.sda.mapper.hub.service.PipelineResult;
 import com.sda.mapper.hub.service.RecommendationService;
 import com.sda.mapper.hub.service.SemanticMatchService;
 import com.sda.mapper.hub.model.OfferedCapability;
+import com.sda.mapper.observability.ReasoningTracePublisher;
 import com.sda.mapper.reasoning.SparqlQueryLoader;
 import com.sda.mapper.service.OntologyDataService;
 import com.sda.mapper.llm.ChatCompletionsClient;
@@ -88,7 +89,8 @@ class MappingHubServiceRequesterJourneyTest {
             new MappingHubSession(),
             llm);
         MappingHubView view = new MappingHubView(hubService, ontologyDataService,
-            new ManualEntryFormFactory(ontologyDataService));
+            new ManualEntryFormFactory(ontologyDataService),
+            new ReasoningTracePublisher());
         ui.add(view);
         return view;
     }
@@ -214,7 +216,8 @@ class MappingHubServiceRequesterJourneyTest {
             "rejected file never reaches parse stage");
 
         // The requester continues immediately with a valid file.
-        upload(view, "motor-aas.json", fixture("/device-descriptions/aas/motor-aas.json"));
+        upload(view, "motor-aas.json",
+            fixture("/device-descriptions/reference-formats/motor-aas.json"));
         assertPipelineRanCleanly(consoleLines(view));
     }
 

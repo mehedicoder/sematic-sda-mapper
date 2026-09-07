@@ -10,9 +10,12 @@ import com.sda.mapper.observability.PipelineAuditPublisher;
 import com.sda.mapper.observability.PipelineMetrics;
 import com.sda.mapper.observability.PipelineStageObserver;
 import com.sda.mapper.observability.PipelineTracingContext;
+import com.sda.mapper.observability.ReasoningTracePublisher;
 import com.sda.mapper.ontology.OntologyModelLoader;
 import com.sda.mapper.reasoning.RDeployService;
+import com.sda.mapper.reasoning.ReasoningNode;
 import com.sda.mapper.reasoning.SemanticReasonerService;
+import com.sda.mapper.reasoning.ReasoningTreeBuilder;
 import com.sda.mapper.reasoning.SparqlQueryLoader;
 import com.sda.mapper.service.OntologyDataService;
 import com.sda.mapper.support.DemoAboxBuilder;
@@ -80,7 +83,9 @@ class MappingHubAboxUploadTest {
             new PipelineAuditPublisher(null),
             new PipelineMetrics(new SimpleMeterRegistry()),
             null,
-            reasoner, null);
+            reasoner, null,
+            new ReasoningTreeBuilder(),
+            new ReasoningTracePublisher());
     }
 
     @Test
@@ -137,6 +142,19 @@ class MappingHubAboxUploadTest {
         assertEquals("opc.tcp://edge-node-01.plant.local:4840/sda/diagnostics",
             match.endpointUrl());
         assertEquals("OT Production Zone Alpha", match.networkZone());
+
+        // The MATCH stage must also derive the live reasoning tree for the
+        // pump requirement: it walks the full chain and ends in a PASS outcome.
+        assertFalse(result.reasoningTrees().isEmpty(),
+            "pump requirement must produce at least one reasoning tree");
+        assertTrue(result.reasoningTrees().stream().flatMap(t -> t.nodes().stream())
+                .anyMatch(n -> ReasoningNode.NodeType.MATCH_OUTCOME == n.type()
+                    && ReasoningNode.PASS.equals(n.status())),
+            "pump reasoning tree must end in a PASS match-outcome");
+        assertTrue(result.reasoningTrees().stream().flatMap(t -> t.nodes().stream())
+                .anyMatch(n -> ReasoningNode.NodeType.SEMANTIC_CONCEPT == n.type()
+                    && ReasoningNode.PASS.equals(n.status())),
+            "pump reasoning tree must reach the semantic-concept coverage hop");
     }
 
     @Test

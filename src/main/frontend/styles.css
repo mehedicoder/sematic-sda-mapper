@@ -81,7 +81,8 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     padding: 8px 12px;
     border: none;
     border-bottom: 1px solid #334155;
@@ -119,6 +120,20 @@
     border-radius: 999px;
     padding: 0 8px;
     white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Class list takes its natural width so long rows scroll (both axes)
+   inside the plain .ontology-class-scroll area instead of being clipped. */
+.ontology-class-list-content {
+    width: max-content;
+    min-width: 100%;
+}
+
+.ontology-class-scroll {
+    overflow-x: auto;
+    overflow-y: auto;
+    width: 100%;
 }
 
 .ontology-subclass-note {

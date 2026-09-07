@@ -14,7 +14,6 @@ import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
-import com.vaadin.flow.component.orderedlayout.Scroller;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
@@ -61,12 +60,13 @@ public class OntologyView extends VerticalLayout {
         classItemsPanel = new VerticalLayout();
         classItemsPanel.setPadding(false);
         classItemsPanel.setSpacing(false);
-        var classScroller = new Scroller(classItemsPanel);
-        classScroller.setWidthFull();
-        classScroller.setHeightFull();
-        classScroller.setScrollDirection(Scroller.ScrollDirection.VERTICAL);
-        classListPanel.add(classScroller);
-        classListPanel.setFlexGrow(1, classScroller);
+        classItemsPanel.addClassName("ontology-class-list-content");
+        var classListScroll = new Div();
+        classListScroll.addClassName("ontology-class-scroll");
+        classListScroll.setHeightFull();
+        classListPanel.add(classListScroll);
+        classListPanel.setFlexGrow(1, classListScroll);
+        classListScroll.add(classItemsPanel);
 
         detailPanel = new VerticalLayout();
         detailPanel.setWidthFull();
@@ -255,6 +255,7 @@ public class OntologyView extends VerticalLayout {
         if (clazz.derived()) {
             var badge = new Span("subclass of " + clazz.parent());
             badge.addClassName("ontology-subclass-badge");
+            badge.setTitle("subclass of " + clazz.parent());
             item.add(badge);
         }
 

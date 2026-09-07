@@ -16,9 +16,12 @@ import com.sda.mapper.observability.PipelineAuditPublisher;
 import com.sda.mapper.observability.PipelineMetrics;
 import com.sda.mapper.observability.PipelineStageObserver;
 import com.sda.mapper.observability.PipelineTracingContext;
+import com.sda.mapper.observability.ReasoningTracePublisher;
 import com.sda.mapper.ontology.OntologyModelLoader;
 import com.sda.mapper.reasoning.RDeployService;
+import com.sda.mapper.reasoning.ReasoningNode;
 import com.sda.mapper.reasoning.SemanticReasonerService;
+import com.sda.mapper.reasoning.ReasoningTreeBuilder;
 import com.sda.mapper.reasoning.SparqlQueryLoader;
 import com.sda.mapper.service.OntologyDataService;
 import com.sda.mapper.support.DemoAboxBuilder;
@@ -92,6 +95,8 @@ class UseCaseAcceptanceTest {
 
         PipelineResult result = service.reRunPipeline();
         assertNotNull(result, folder + ": pipeline returned null result");
+        assertNotNull(result.reasoningTrees(),
+            folder + ": reasoning tree list must never be null");
 
         String manifest = service.buildManifest();
         assertNotNull(manifest, folder + ": buildManifest() returned null");
@@ -119,6 +124,18 @@ class UseCaseAcceptanceTest {
             root.get("entities").get("UseCaseRequirement").get(0).get("name").asText());
         double coverage = root.get("coveragePercent").asDouble();
         assertTrue(coverage >= 75.0, "Pump coverage must reflect ABox supply, was " + coverage + "%");
+
+        // The MATCH stage derives the live reasoning tree for the pump
+        // requirement: it must reach the matched service and end in PASS.
+        assertFalse(result.reasoningTrees().isEmpty(),
+            "Pump Health must produce at least one reasoning tree");
+        assertTrue(result.reasoningTrees().stream().flatMap(t -> t.nodes().stream())
+                .anyMatch(n -> ReasoningNode.NodeType.MATCH_OUTCOME == n.type()
+                    && ReasoningNode.PASS.equals(n.status())),
+            "Pump reasoning tree must contain a PASS match-outcome hop");
+        assertTrue(result.reasoningTrees().stream().flatMap(t -> t.nodes().stream())
+                .anyMatch(n -> ReasoningNode.NodeType.SERVICE == n.type()),
+            "Pump reasoning tree must reach the matched service hop");
     }
 
     private MappingHubService buildService() {
@@ -156,6 +173,8 @@ class UseCaseAcceptanceTest {
             new PipelineAuditPublisher(null),
             new PipelineMetrics(new SimpleMeterRegistry()),
             null,
-            reasoner, null);
+            reasoner, null,
+            new ReasoningTreeBuilder(),
+            new ReasoningTracePublisher());
     }
 }

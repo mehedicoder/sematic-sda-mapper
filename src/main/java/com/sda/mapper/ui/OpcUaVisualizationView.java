@@ -7,6 +7,7 @@ import com.sda.mapper.opcua.OpcUaVisualizationService.ServerSnapshot;
 import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.treegrid.TreeGrid;
 import com.vaadin.flow.component.html.H2;
@@ -32,6 +33,7 @@ import java.util.stream.Stream;
 
 @Route(value = "opcua-visualization", layout = MainLayout.class)
 @PageTitle("OPC UA Monitor")
+@CssImport("./dark-view.css")
 public class OpcUaVisualizationView extends VerticalLayout {
 
     private final OpcUaVisualizationService visualizationService;
@@ -53,6 +55,8 @@ public class OpcUaVisualizationView extends VerticalLayout {
     }
 
     private void buildLayout() {
+        getElement().setAttribute("theme", "dark");
+        addClassName("dark-view");
         setSizeFull();
         setPadding(true);
         setSpacing(true);

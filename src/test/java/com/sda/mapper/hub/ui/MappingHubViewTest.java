@@ -13,6 +13,7 @@ import com.sda.mapper.hub.parser.CanonicalParserRegistry;
 import com.sda.mapper.hub.parser.HubFileTypeDetector;
 import com.sda.mapper.hub.parser.MtpModelParser;
 import com.sda.mapper.hub.parser.OpcUaModelParser;
+import com.sda.mapper.observability.ReasoningTracePublisher;
 import com.sda.mapper.reasoning.SparqlQueryLoader;
 import com.sda.mapper.service.OntologyDataService;
 import com.sda.mapper.llm.ChatCompletionsClient;
@@ -59,7 +60,8 @@ class MappingHubViewTest {
             new MappingHubSession(),
             null);
         return new MappingHubView(hubService, ontologyDataService,
-            new ManualEntryFormFactory(ontologyDataService));
+            new ManualEntryFormFactory(ontologyDataService),
+            new ReasoningTracePublisher());
     }
 
     private MappingHubView createViewWithLlm(LlmTranslationService llm) {
@@ -79,7 +81,8 @@ class MappingHubViewTest {
             new MappingHubSession(),
             llm);
         return new MappingHubView(hubService, ontologyDataService,
-            new ManualEntryFormFactory(ontologyDataService));
+            new ManualEntryFormFactory(ontologyDataService),
+            new ReasoningTracePublisher());
     }
 
     @Test
@@ -114,12 +117,23 @@ class MappingHubViewTest {
     }
 
     @Test
-    @DisplayName("Should render the header and console on construction")
+    @DisplayName("Should render the header and reasoning section on construction")
     void shouldRenderCoreComponents() throws Exception {
         MappingHubView view = createView();
         String text = fullText(view.getElement());
         assertTrue(text.contains("Semantic Mapping Hub"));
-        assertTrue(text.contains("Re-running pipeline"));
+        assertTrue(text.contains("Ontology Reasoning (Match)"));
+    }
+
+    @Test
+    @DisplayName("Should advertise every supported file format in the upload section")
+    void shouldAdvertiseAllSupportedFileFormats() throws Exception {
+        MappingHubView view = createView();
+        String text = fullText(view.getElement());
+        List.of("AAS .xml", "AAS .json", "MTP .aml/.xml", "OPC UA .json",
+            "OPC UA NodeSet .xml/.aml", "AutomationML .aml/.xml",
+            "Requirement .ttl/.rdf", "ABox .ttl/.rdf").forEach(label ->
+            assertTrue(text.contains(label), "upload section must advertise: " + label));
     }
 
     @Test

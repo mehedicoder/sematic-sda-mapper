@@ -23,9 +23,6 @@
 }
 
 .hub-root > * {
-  max-width: 1400px;
-  margin-left: auto;
-  margin-right: auto;
   width: 100%;
 }
 
@@ -101,6 +98,21 @@
   border-color: rgba(16, 185, 129, 0.4);
 }
 
+.hub-format--aml {
+  color: #f43f5e;
+  border-color: rgba(244, 63, 94, 0.4);
+}
+
+.hub-format--req {
+  color: #a78bfa;
+  border-color: rgba(167, 139, 250, 0.4);
+}
+
+.hub-format--abox {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
 .hub-dropzone {
   background: var(--hub-drop-bg);
   border: 2px dashed var(--hub-drop-border);
@@ -147,6 +159,87 @@
   background: var(--hub-surface, #0b1220);
   border: 1px solid var(--hub-border);
   border-radius: 12px;
+}
+
+.hub-reasoning-section {
+  background: var(--hub-surface, #0b1220);
+  border: 1px solid var(--hub-border);
+  border-radius: 12px;
+}
+
+.reasoning-tree-panel {
+  flex: 1 1 50%;
+  min-width: 0;
+}
+
+.reasoning-tree-box {
+  background: #0f172a;
+  border: 1px solid var(--hub-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--hub-text-2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.reasoning-tree-empty {
+  display: block;
+  color: var(--hub-text-3);
+}
+
+.reasoning-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reasoning-node-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reasoning-node-badge {
+  flex-shrink: 0;
+  min-width: 52px;
+  text-align: center;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.reasoning-node-badge--ok {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.reasoning-node-badge--error {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.reasoning-node-badge--skipped {
+  color: #64748b;
+  background: rgba(100, 116, 139, 0.15);
+  border: 1px solid rgba(100, 116, 139, 0.4);
+}
+
+.reasoning-node-badge--info {
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+.reasoning-node-detail {
+  font-size: 0.72rem;
+  color: var(--hub-text-3);
+  font-style: italic;
+  line-height: 1.4;
 }
 
 .hub-top-row {

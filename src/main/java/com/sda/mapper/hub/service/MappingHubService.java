@@ -31,6 +31,7 @@ import com.sda.mapper.observability.ReasoningTracePublisher;
 import com.sda.mapper.reasoning.ReasoningNode;
 import com.sda.mapper.reasoning.ReasoningTree;
 import com.sda.mapper.reasoning.ReasoningTreeBuilder;
+import com.sda.mapper.reasoning.ReasoningTreeExporter;
 import com.sda.mapper.reasoning.SemanticReasonerService;
 import com.sda.mapper.reasoning.ServiceMatchResult;
 import com.sda.mapper.reasoning.SparqlQueryLoader;
@@ -99,6 +100,7 @@ public class MappingHubService {
     private final SparqlQueryLoader sparqlQueryLoader;
     private final ReasoningTreeBuilder reasoningTreeBuilder;
     private final ReasoningTracePublisher reasoningTracePublisher;
+    private final ReasoningTreeExporter reasoningTreeExporter = new ReasoningTreeExporter();
 
     private LlmEntityTranslationService aiEntityTranslator;
     private LlmLiftAugmentor aiLiftAugmentor;
@@ -319,6 +321,18 @@ LlmTranslationService llmTranslationService,
         List<CapabilityMatch> matches = lastResult != null ? lastResult.matches() : List.of();
         return manifestExportService.build(session.getModel(), session.getInferred(),
             session.getFiles(), session.getUploadedFormats(), matches);
+    }
+
+    /**
+     * Exports the reasoner's derived match chain (see {@link ReasonerTreeExporter})
+     * as a JSON document for the last pipeline run, so the ontology reasoning
+     * tree can be downloaded, archived or audited independently of the UI.
+     *
+     * @return the pretty-printed JSON reasoning-tree export
+     */
+    public String buildReasoningTreeJson() {
+        List<ReasoningTree> trees = lastResult != null ? lastResult.reasoningTrees() : List.of();
+        return reasoningTreeExporter.export(trees);
     }
 
     /**

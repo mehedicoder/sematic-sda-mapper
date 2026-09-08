@@ -72,6 +72,7 @@ public class MappingHubView extends VerticalLayout {
     private final ComboBox<String> requirementCombo;
     private final HorizontalLayout activeRequirementsLayout;
     private Button exportButton;
+    private Button exportReasoningButton;
 
     private String selectedLayerId = "ALL";
     private String selectedClassName;
@@ -266,7 +267,10 @@ public class MappingHubView extends VerticalLayout {
         exportButton.addThemeName("primary");
         exportButton.addClickListener(e -> exportManifest());
 
-        var actions = new HorizontalLayout(runButton, resetButton, exportButton);
+        exportReasoningButton = new Button("Export Reasoning Tree");
+        exportReasoningButton.addClickListener(e -> exportReasoningTree());
+
+        var actions = new HorizontalLayout(runButton, resetButton, exportButton, exportReasoningButton);
         actions.setSpacing(true);
         return actions;
     }
@@ -391,6 +395,7 @@ public class MappingHubView extends VerticalLayout {
         renderClassList();
         renderDetail();
         exportButton.setEnabled(true);
+        exportReasoningButton.setEnabled(true);
         suggestionPanel.setSuggestEnabled(hubService.isLlmAvailable());
     }
 
@@ -570,6 +575,17 @@ public class MappingHubView extends VerticalLayout {
                 + "document.body.appendChild(a);a.click();document.body.removeChild(a);",
             json);
         Notification.show("Manifest exported", 3000, Notification.Position.TOP_CENTER);
+    }
+
+    private void exportReasoningTree() {
+        String json = hubService.buildReasoningTreeJson();
+        UI.getCurrent().getPage().executeJs(
+            "const a=document.createElement('a');"
+                + "a.href='data:application/json;charset=utf-8,'+encodeURIComponent($0);"
+                + "a.download='reasoning-tree.json';"
+                + "document.body.appendChild(a);a.click();document.body.removeChild(a);",
+            json);
+        Notification.show("Reasoning tree exported", 3000, Notification.Position.TOP_CENTER);
     }
 
     private void showError(String message) {
